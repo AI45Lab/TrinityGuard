@@ -66,19 +66,55 @@ class Safety_MAS:
 
     def _load_risk_tests(self):
         """Discover and load all risk test plugins."""
-        # For now, we'll manually register available tests
-        # In the future, this could scan the risk_tests directory
         self.logger.info("Loading risk tests...")
-        # Tests will be registered as they're implemented
-        pass
+
+        # Import all available risk tests
+        try:
+            from .risk_tests import JailbreakTest, MessageTamperingTest, CascadingFailuresTest
+
+            # Register each test
+            tests_to_register = [
+                ("jailbreak", JailbreakTest),
+                ("message_tampering", MessageTamperingTest),
+                ("cascading_failures", CascadingFailuresTest),
+            ]
+
+            for name, test_class in tests_to_register:
+                try:
+                    test_instance = test_class()
+                    self.risk_tests[name] = test_instance
+                    self.logger.info(f"Loaded risk test: {name}")
+                except Exception as e:
+                    self.logger.warning(f"Failed to load risk test '{name}': {str(e)}")
+
+        except ImportError as e:
+            self.logger.warning(f"Failed to import risk tests: {str(e)}")
 
     def _load_monitor_agents(self):
         """Discover and load all monitor agent plugins."""
-        # For now, we'll manually register available monitors
-        # In the future, this could scan the monitor_agents directory
         self.logger.info("Loading monitor agents...")
-        # Monitors will be registered as they're implemented
-        pass
+
+        # Import all available monitor agents
+        try:
+            from .monitor_agents import JailbreakMonitor, MessageTamperingMonitor, CascadingFailuresMonitor
+
+            # Register each monitor
+            monitors_to_register = [
+                ("jailbreak", JailbreakMonitor),
+                ("message_tampering", MessageTamperingMonitor),
+                ("cascading_failures", CascadingFailuresMonitor),
+            ]
+
+            for name, monitor_class in monitors_to_register:
+                try:
+                    monitor_instance = monitor_class()
+                    self.monitor_agents[name] = monitor_instance
+                    self.logger.info(f"Loaded monitor agent: {name}")
+                except Exception as e:
+                    self.logger.warning(f"Failed to load monitor '{name}': {str(e)}")
+
+        except ImportError as e:
+            self.logger.warning(f"Failed to import monitor agents: {str(e)}")
 
     def register_risk_test(self, name: str, test: BaseRiskTest):
         """Manually register a risk test.
