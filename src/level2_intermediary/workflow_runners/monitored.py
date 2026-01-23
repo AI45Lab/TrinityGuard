@@ -1,6 +1,6 @@
 """Monitored WorkflowRunner implementation."""
 
-from typing import Optional, Callable, List
+from typing import Optional, Callable, List, Dict
 import uuid
 
 from .base import WorkflowRunner
