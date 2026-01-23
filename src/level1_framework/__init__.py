@@ -2,6 +2,7 @@
 
 from .base import BaseMAS, AgentInfo, WorkflowResult
 from .ag2_wrapper import AG2MAS, create_ag2_mas_from_config
+from .examples import create_math_solver_mas, MathSolverMAS
 
 __all__ = [
     "BaseMAS",
@@ -9,4 +10,6 @@ __all__ = [
     "WorkflowResult",
     "AG2MAS",
     "create_ag2_mas_from_config",
+    "create_math_solver_mas",
+    "MathSolverMAS",
 ]
