@@ -1,17 +1,16 @@
 """AG2 (AutoGen) framework wrapper implementation."""
 
-from typing import List, Dict, Any, Optional
-import json
+from typing import List, Dict, Any, Optional, Callable
+import time
 
 try:
     from autogen import ConversableAgent, GroupChat, GroupChatManager
 except ImportError:
-    # Fallback for pyautogen package name
     try:
         from pyautogen import ConversableAgent, GroupChat, GroupChatManager
     except ImportError:
         raise ImportError(
-            "AG2/AutoGen not installed. Install with: pip install pyautogen"
+            "AG2/AutoGen not installed. Install with: pip install ag2"
         )
 
 from .base import BaseMAS, AgentInfo, WorkflowResult
@@ -38,40 +37,70 @@ class AG2MAS(BaseMAS):
         self._group_chat = group_chat
         self._manager = manager
         self._message_history: List[Dict] = []
-
-        # Register message interception
-        self._setup_message_interception()
+        self._hooks_installed = False
 
     def _setup_message_interception(self):
         """Set up message interception for all agents."""
-        for agent in self._agents.values():
-            # Store original send method
-            original_send = agent.send
+        for agent_name, agent in self._agents.items():
+            self._wrap_agent_send(agent, agent_name)
 
-            # Create wrapper that applies hooks
-            def send_wrapper(message: Dict, recipient: ConversableAgent,
-                           request_reply: bool = None, silent: bool = False):
-                # Apply message hooks
-                modified_message = self._apply_message_hooks(message)
+    def _wrap_agent_send(self, agent: ConversableAgent, agent_name: str):
+        """Wrap a single agent's send method for interception.
 
-                # Log message
-                self._message_history.append({
-                    "from": agent.name,
-                    "to": recipient.name,
-                    "content": modified_message.get("content", ""),
-                    "timestamp": self._get_timestamp()
-                })
+        Args:
+            agent: The agent to wrap
+            agent_name: Name of the agent (captured for closure)
+        """
+        original_send = agent.send
+        mas_ref = self  # Capture reference to self
 
-                # Call original send with modified message
-                return original_send(modified_message, recipient, request_reply, silent)
+        def send_wrapper(message, recipient, request_reply=None, silent=False):
+            # Normalize message to dict
+            if isinstance(message, str):
+                msg_dict = {"content": message}
+            else:
+                msg_dict = message.copy() if isinstance(message, dict) else {"content": str(message)}
 
-            # Replace send method
-            agent.send = send_wrapper
+            # Build hook message format
+            hook_msg = {
+                "from": agent_name,
+                "to": recipient.name if hasattr(recipient, 'name') else str(recipient),
+                "content": msg_dict.get("content", ""),
+            }
 
-    def _get_timestamp(self) -> float:
-        """Get current timestamp."""
-        import time
-        return time.time()
+            # Apply message hooks
+            modified_hook_msg = mas_ref._apply_message_hooks(hook_msg)
+
+            # Update message with modified content
+            if isinstance(message, str):
+                modified_message = modified_hook_msg["content"]
+            else:
+                modified_message = msg_dict
+                modified_message["content"] = modified_hook_msg["content"]
+
+            # Log message
+            mas_ref._message_history.append({
+                "from": agent_name,
+                "to": hook_msg["to"],
+                "content": modified_hook_msg["content"],
+                "timestamp": time.time()
+            })
+
+            # Call original send with modified message
+            return original_send(modified_message, recipient, request_reply, silent)
+
+        agent.send = send_wrapper
+
+    def register_message_hook(self, hook: Callable[[Dict], Dict]):
+        """Register a hook to intercept/modify messages.
+
+        Args:
+            hook: Function that takes a message dict and returns modified message dict
+        """
+        if not self._hooks_installed:
+            self._setup_message_interception()
+            self._hooks_installed = True
+        self._message_hooks.append(hook)
 
     def get_agents(self) -> List[AgentInfo]:
         """Return list of all agents in the system."""
@@ -79,9 +108,9 @@ class AG2MAS(BaseMAS):
         for name, agent in self._agents.items():
             agent_infos.append(AgentInfo(
                 name=name,
-                role=getattr(agent, 'role', 'agent'),
+                role=getattr(agent, 'system_message', 'agent')[:50] if hasattr(agent, 'system_message') else 'agent',
                 system_prompt=agent.system_message if hasattr(agent, 'system_message') else None,
-                tools=[]  # AG2 tools would need to be extracted from agent config
+                tools=[]
             ))
         return agent_infos
 
@@ -98,10 +127,8 @@ class AG2MAS(BaseMAS):
 
         try:
             if self._manager and self._group_chat:
-                # Use group chat mode
                 result = self._run_group_chat(task, **kwargs)
             else:
-                # Use direct agent-to-agent mode
                 result = self._run_direct(task, **kwargs)
 
             self.logger.log_workflow_end(success=True, duration=0.0)
@@ -120,20 +147,28 @@ class AG2MAS(BaseMAS):
         """Run workflow using GroupChat."""
         max_rounds = kwargs.get('max_rounds', 10)
 
+        # Find user_proxy or use first agent as initiator
+        initiator = None
+        for agent in self._agents.values():
+            if 'proxy' in agent.name.lower() or 'user' in agent.name.lower():
+                initiator = agent
+                break
+        if initiator is None:
+            initiator = list(self._agents.values())[0]
+
         # Initiate group chat
-        user_proxy = list(self._agents.values())[0]  # Use first agent as initiator
-        user_proxy.initiate_chat(
+        chat_result = initiator.initiate_chat(
             self._manager,
             message=task,
             max_turns=max_rounds
         )
 
-        # Extract result from chat history
-        chat_result = self._manager.chat_messages if hasattr(self._manager, 'chat_messages') else []
+        # Extract output from chat history
+        output = self._extract_final_output_from_chat(chat_result)
 
         return WorkflowResult(
             success=True,
-            output=self._extract_final_output(chat_result),
+            output=output,
             messages=self._message_history,
             metadata={
                 "mode": "group_chat",
@@ -150,16 +185,17 @@ class AG2MAS(BaseMAS):
         initiator = agents_list[0]
         receiver = agents_list[1]
 
-        # Initiate conversation
-        initiator.initiate_chat(
+        chat_result = initiator.initiate_chat(
             receiver,
             message=task,
             max_turns=kwargs.get('max_rounds', 10)
         )
 
+        output = self._extract_final_output_from_chat(chat_result)
+
         return WorkflowResult(
             success=True,
-            output=self._extract_final_output(self._message_history),
+            output=output,
             messages=self._message_history,
             metadata={
                 "mode": "direct",
@@ -167,22 +203,25 @@ class AG2MAS(BaseMAS):
             }
         )
 
-    def _extract_final_output(self, messages: List[Dict]) -> str:
-        """Extract final output from message history."""
-        if not messages:
-            return ""
-        # Return last message content
-        last_msg = messages[-1]
-        return last_msg.get("content", "")
+    def _extract_final_output_from_chat(self, chat_result) -> str:
+        """Extract final output from AG2 chat result."""
+        # Try to get from chat_result
+        if hasattr(chat_result, 'chat_history') and chat_result.chat_history:
+            last_msg = chat_result.chat_history[-1]
+            return last_msg.get("content", "") if isinstance(last_msg, dict) else str(last_msg)
+
+        # Fallback to message history
+        if self._message_history:
+            return self._message_history[-1].get("content", "")
+
+        return ""
 
     def get_topology(self) -> Dict:
         """Return the communication topology."""
         if self._group_chat:
-            # In group chat, all agents can talk to all agents
             agent_names = list(self._agents.keys())
             return {name: [n for n in agent_names if n != name] for name in agent_names}
         else:
-            # In direct mode, topology is sequential
             agent_names = list(self._agents.keys())
             topology = {}
             for i, name in enumerate(agent_names):
