@@ -25,6 +25,12 @@ from .llm_client import (
     AnthropicClient,
     get_llm_client,
 )
+from .llm_config import (
+    LLMConfig as LLMConfigNew,
+    load_llm_config,
+    get_llm_config,
+    reset_llm_config,
+)
 from .logging_config import (
     StructuredLogger,
     get_logger,
@@ -48,6 +54,10 @@ __all__ = [
     "get_config",
     "set_config",
     "load_config",
+    # LLM Config (new)
+    "load_llm_config",
+    "get_llm_config",
+    "reset_llm_config",
     # LLM
     "BaseLLMClient",
     "OpenAIClient",
