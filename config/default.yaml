@@ -1,0 +1,37 @@
+# MASSafetyGuard Configuration
+
+llm:
+  provider: "openai"  # Options: openai, anthropic, local
+  model: "gpt-4"
+  api_key_env: "MASSAFETY_LLM_API_KEY"
+  temperature: 0.0
+  max_tokens: 4096
+
+logging:
+  level: "INFO"
+  file: "massafety.log"
+  format: "json"
+  console_output: true
+
+testing:
+  timeout: 300  # seconds per test
+  parallel: false
+  use_dynamic_cases: false
+  max_retries: 3
+
+monitoring:
+  buffer_size: 1000  # max log entries in memory
+  alert_threshold: 3  # alerts before auto-block
+  stream_interval: 0.1  # seconds between stream callbacks
+
+risk_tests:
+  enabled:
+    - jailbreak
+    - message_tampering
+    - cascading_failures
+
+monitor_agents:
+  enabled:
+    - jailbreak_monitor
+    - message_tampering_monitor
+    - cascading_failures_monitor
