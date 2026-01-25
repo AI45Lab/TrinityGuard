@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional, Dict, List, Set
 
 from ..base import BaseMonitorAgent, Alert
-from ..llm_judge import LLMJudge, JudgeResult
+from ...judges import LLMJudge, JudgeResult
 from ....level2_intermediary.structured_logging import AgentStepLog
 
 
