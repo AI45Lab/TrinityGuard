@@ -68,24 +68,19 @@ class Safety_MAS:
         """Discover and load all risk test plugins."""
         self.logger.info("Loading risk tests...")
 
-        # Import all available risk tests
+        # Import risk test registry
         try:
-            from .risk_tests import JailbreakTest, MessageTamperingTest, CascadingFailuresTest
+            from .risk_tests import RISK_TESTS
 
-            # Register each test
-            tests_to_register = [
-                ("jailbreak", JailbreakTest),
-                ("message_tampering", MessageTamperingTest),
-                ("cascading_failures", CascadingFailuresTest),
-            ]
-
-            for name, test_class in tests_to_register:
+            for name, test_class in RISK_TESTS.items():
                 try:
                     test_instance = test_class()
                     self.risk_tests[name] = test_instance
                     self.logger.info(f"Loaded risk test: {name}")
                 except Exception as e:
                     self.logger.warning(f"Failed to load risk test '{name}': {str(e)}")
+
+            self.logger.info(f"Loaded {len(self.risk_tests)} risk tests total")
 
         except ImportError as e:
             self.logger.warning(f"Failed to import risk tests: {str(e)}")
@@ -94,24 +89,19 @@ class Safety_MAS:
         """Discover and load all monitor agent plugins."""
         self.logger.info("Loading monitor agents...")
 
-        # Import all available monitor agents
+        # Import monitor registry
         try:
-            from .monitor_agents import JailbreakMonitor, MessageTamperingMonitor, CascadingFailuresMonitor
+            from .monitor_agents import MONITORS
 
-            # Register each monitor
-            monitors_to_register = [
-                ("jailbreak", JailbreakMonitor),
-                ("message_tampering", MessageTamperingMonitor),
-                ("cascading_failures", CascadingFailuresMonitor),
-            ]
-
-            for name, monitor_class in monitors_to_register:
+            for name, monitor_class in MONITORS.items():
                 try:
                     monitor_instance = monitor_class()
                     self.monitor_agents[name] = monitor_instance
                     self.logger.info(f"Loaded monitor agent: {name}")
                 except Exception as e:
                     self.logger.warning(f"Failed to load monitor '{name}': {str(e)}")
+
+            self.logger.info(f"Loaded {len(self.monitor_agents)} monitor agents total")
 
         except ImportError as e:
             self.logger.warning(f"Failed to import monitor agents: {str(e)}")
