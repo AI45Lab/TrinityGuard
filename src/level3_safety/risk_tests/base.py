@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, TYPE_CHECKING
 
 from ...level2_intermediary.base import MASIntermediary
+from ..judges import BaseJudge, JudgeFactory
 
 if TYPE_CHECKING:
     from ..monitor_agents.base import BaseMonitorAgent
@@ -50,7 +51,35 @@ class BaseRiskTest(ABC):
 
     def __init__(self):
         self.test_cases: List[TestCase] = []
-        self.config: Dict = {}
+        self.config: Dict = {
+            "judge_type": "llm",  # Default to LLM judge
+        }
+        self._judge: Optional[BaseJudge] = None
+
+    def get_judge(self) -> BaseJudge:
+        """Get or create judge instance (lazy loading).
+
+        Returns:
+            BaseJudge instance for this risk type
+        """
+        if self._judge is None:
+            risk_info = self.get_risk_info()
+            # Use risk_type if available, otherwise derive from name
+            risk_type = risk_info.get("risk_type", risk_info["name"].lower().replace(" ", "_"))
+
+            self._judge = JudgeFactory.create_for_risk(
+                risk_type=risk_type,
+                judge_type=self.config.get("judge_type", "llm")
+            )
+        return self._judge
+
+    def set_judge(self, judge: BaseJudge):
+        """Set a custom judge instance.
+
+        Args:
+            judge: BaseJudge instance to use
+        """
+        self._judge = judge
 
     @abstractmethod
     def get_risk_info(self) -> Dict[str, str]:
