@@ -7,19 +7,20 @@
 
 ## Overview
 
-MASSafetyGuard provides comprehensive safety testing and monitoring for multi-agent systems (MAS). It helps identify and mitigate 20 types of security risks across three levels:
+MASSafetyGuard provides comprehensive safety testing and monitoring for multi-agent systems (MAS). It helps identify and mitigate **20 types of security risks** across three levels:
 
-- **L1: Single-Agent Risks** (8 types) - Jailbreak, Prompt Injection, Sensitive Data Disclosure, etc.
-- **L2: Inter-Agent Communication Risks** (6 types) - Message Tampering, Malicious Propagation, etc.
-- **L3: System-Level Risks** (6 types) - Cascading Failures, Group Hallucination, etc.
+- **L1: Single-Agent Risks** (8 types) - Jailbreak, Prompt Injection, Sensitive Data Disclosure, Excessive Agency, Code Execution, Hallucination, Memory Poisoning, Tool Misuse
+- **L2: Inter-Agent Communication Risks** (6 types) - Message Tampering, Malicious Propagation, Misinformation Amplification, Insecure Output, Goal Drift, Identity Spoofing
+- **L3: System-Level Risks** (6 types) - Cascading Failures, Sandbox Escape, Insufficient Monitoring, Group Hallucination, Malicious Emergence, Rogue Agent
 
 ### Key Features
 
-✅ **Framework-Agnostic Design** - Currently supports AG2/AutoGen, extensible to LangGraph and others
+✅ **All 20 Risks Implemented** - Complete test and monitor coverage for all risk types
+✅ **LLM-Powered Intelligent Analysis** - Unified Judge system with pattern fallback
+✅ **Framework-Agnostic Design** - Supports AG2/AutoGen (fixed workflow & group chat)
 ✅ **Pre-Deployment Testing** - Identify vulnerabilities before deployment
 ✅ **Runtime Monitoring** - Real-time risk detection during execution
-✅ **Extensible Plugin System** - Easy to add new risk tests and monitors
-✅ **LLM-Powered Analysis** - Intelligent test generation and risk detection
+✅ **Extensible Plugin System** - Easy to add new risk tests, monitors, and judge types
 
 ## Installation
 
@@ -96,7 +97,7 @@ python examples/basic_usage.py
 
 ## Architecture
 
-MASSafetyGuard uses a 3-layer architecture:
+MASSafetyGuard uses a 3-layer architecture with a unified Judge system:
 
 ```
 ┌─────────────────────────────────────────┐
@@ -104,6 +105,15 @@ MASSafetyGuard uses a 3-layer architecture:
 │   - Risk Test Library (20 types)        │
 │   - Monitor Agent Repository            │
 │   - Safety_MAS orchestration            │
+│   - Unified Judge Factory               │
+└─────────────────────────────────────────┘
+                  ↓
+┌─────────────────────────────────────────┐
+│   Judges Module                         │
+│   - BaseJudge abstract interface        │
+│   - LLMJudge (intelligent analysis)     │
+│   - JudgeFactory (extensible)           │
+│   - Shared system prompts               │
 └─────────────────────────────────────────┘
                   ↓
 ┌─────────────────────────────────────────┐
@@ -116,27 +126,76 @@ MASSafetyGuard uses a 3-layer architecture:
 ┌─────────────────────────────────────────┐
 │   Level 1: MAS Framework Layer          │
 │   - AG2/AutoGen wrapper                 │
+│   - Fixed workflow support              │
 │   - Message hook system                 │
-│   - Agent access                        │
 └─────────────────────────────────────────┘
+```
+
+### Judge Factory
+
+The Judge Factory provides unified risk analysis for both tests and monitors:
+
+```python
+from src.level3_safety.judges import JudgeFactory
+
+# Create a judge for a specific risk type (auto-loads system_prompt from monitor)
+judge = JudgeFactory.create_for_risk("jailbreak")
+
+# Analyze content
+result = judge.analyze(content="...", context={"test_case": "..."})
+if result and result.has_risk:
+    print(f"Risk detected: {result.reason}")
+```
+
+**Extensibility**: Register custom judge types for specialized APIs:
+```python
+from src.level3_safety.judges import JudgeFactory, BaseJudge
+
+class SpecializedAPIJudge(BaseJudge):
+    # ... implementation ...
+
+JudgeFactory.register("specialized", SpecializedAPIJudge)
+judge = JudgeFactory.create_for_risk("jailbreak", judge_type="specialized")
 ```
 
 ## Implemented Risks
 
-### Currently Available
+All 20 risks are fully implemented with LLM-powered intelligent analysis and pattern-based fallback:
 
-| Risk | Level | Test | Monitor | Status |
-|------|-------|------|---------|--------|
-| **Jailbreak** | L1 | ✅ | ✅ | Complete |
-| **Message Tampering** | L2 | ✅ | ✅ | Complete |
+### L1: Single-Agent Risks (8 types)
 
-### Coming Soon
+| Risk | Test | Monitor | Description |
+|------|------|---------|-------------|
+| Jailbreak | ✅ | ✅ | Bypass safety guidelines |
+| Prompt Injection | ✅ | ✅ | Inject malicious instructions |
+| Sensitive Disclosure | ✅ | ✅ | Leak sensitive information |
+| Excessive Agency | ✅ | ✅ | Unauthorized actions |
+| Code Execution | ✅ | ✅ | Dangerous code execution |
+| Hallucination | ✅ | ✅ | Generate false information |
+| Memory Poisoning | ✅ | ✅ | Corrupt agent memory |
+| Tool Misuse | ✅ | ✅ | Misuse available tools |
 
-- Cascading Failures (L3)
-- Prompt Injection (L1)
-- Malicious Propagation (L2)
-- Group Hallucination (L3)
-- And 15 more...
+### L2: Inter-Agent Communication Risks (6 types)
+
+| Risk | Test | Monitor | Description |
+|------|------|---------|-------------|
+| Message Tampering | ✅ | ✅ | Modify messages in transit |
+| Malicious Propagation | ✅ | ✅ | Spread harmful content |
+| Misinformation Amplify | ✅ | ✅ | Amplify false information |
+| Insecure Output | ✅ | ✅ | Unsafe output handling |
+| Goal Drift | ✅ | ✅ | Deviate from original goals |
+| Identity Spoofing | ✅ | ✅ | Impersonate other agents |
+
+### L3: System-Level Risks (6 types)
+
+| Risk | Test | Monitor | Description |
+|------|------|---------|-------------|
+| Cascading Failures | ✅ | ✅ | Failure propagation |
+| Sandbox Escape | ✅ | ✅ | Break isolation boundaries |
+| Insufficient Monitoring | ✅ | ✅ | Inadequate oversight |
+| Group Hallucination | ✅ | ✅ | Collective false beliefs |
+| Malicious Emergence | ✅ | ✅ | Harmful emergent behavior |
+| Rogue Agent | ✅ | ✅ | Uncontrolled agent behavior |
 
 ## Configuration
 
@@ -244,6 +303,7 @@ safety_mas.register_monitor_agent("my_custom_monitor", MyCustomMonitor())
 
 - **Design Document**: `docs/plans/2026-01-23-mas-safety-framework-design.md`
 - **Implementation Plan**: `docs/plans/2026-01-23-implementation-plan.md`
+- **Judge Factory Design**: `docs/plans/2026-01-25-judge-factory-design.md`
 - **Risk Definitions**: `MAS风险层级说明.md`
 
 ## Project Structure
@@ -251,14 +311,20 @@ safety_mas.register_monitor_agent("my_custom_monitor", MyCustomMonitor())
 ```
 MASSafetyGuard/
 ├── src/
-│   ├── level1_framework/      # MAS framework wrappers
+│   ├── level1_framework/      # MAS framework wrappers (AG2)
 │   ├── level2_intermediary/   # Framework-agnostic interface
-│   ├── level3_safety/         # Safety tests and monitors
+│   ├── level3_safety/
+│   │   ├── judges/            # Unified Judge system
+│   │   │   ├── base.py        # BaseJudge, JudgeResult
+│   │   │   ├── llm_judge.py   # LLM-based judge
+│   │   │   └── factory.py     # JudgeFactory
+│   │   ├── risk_tests/        # 20 risk test implementations
+│   │   └── monitor_agents/    # 20 monitor implementations
 │   └── utils/                 # Configuration, logging, LLM client
-├── tests/                     # Unit and integration tests
 ├── examples/                  # Usage examples
-├── docs/                      # Documentation
-└── config/                    # Configuration files
+│   └── basic_usage.py
+├── docs/plans/                # Design and implementation docs
+└── test_functionality.py      # Integration tests
 ```
 
 ## Development
@@ -266,7 +332,14 @@ MASSafetyGuard/
 ### Running Tests
 
 ```bash
-pytest tests/
+# Run integration tests
+PYTHONPATH=. python -m pytest test_functionality.py -v
+
+# Run examples
+python examples/basic_usage.py
+
+# Test AG2 fixed workflow support
+python test_serial_ag2_mas.py
 ```
 
 ### Adding a New Risk
@@ -318,6 +391,6 @@ If you use MASSafetyGuard in your research, please cite:
 
 ---
 
-**Status**: Alpha - Active Development
-**Version**: 0.1.0
-**Last Updated**: 2026-01-23
+**Status**: Beta - All 20 Risks Implemented
+**Version**: 0.2.0
+**Last Updated**: 2026-01-25
