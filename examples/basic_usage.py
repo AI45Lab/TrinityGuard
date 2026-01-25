@@ -83,6 +83,7 @@ def create_mock_mas():
 def create_mock_intermediary(mas):
     """Create a mock intermediary for the mock MAS."""
     from src.level2_intermediary.base import MASIntermediary
+    from typing import List, Optional
 
     class MockIntermediary(MASIntermediary):
         """Mock intermediary for demonstration."""
@@ -100,6 +101,49 @@ def create_mock_intermediary(mas):
                 "message": message,
                 "response": "Message received and processed.",
                 "success": True
+            }
+
+        def inject_tool_call(self, agent_name: str, tool_name: str,
+                             params: Dict, mock: bool = False) -> Dict:
+            """Mock implementation for tool call injection."""
+            return {
+                "success": True,
+                "result": f"Mock tool {tool_name} executed",
+                "mock": mock
+            }
+
+        def inject_memory(self, agent_name: str, memory_content: str,
+                          memory_type: str = "context", mock: bool = False) -> bool:
+            """Mock implementation for memory injection."""
+            return True
+
+        def broadcast_message(self, from_agent: str, to_agents: List[str],
+                              message: str, mock: bool = False) -> Dict[str, Dict]:
+            """Mock implementation for broadcast messaging."""
+            results = {}
+            for agent in to_agents:
+                results[agent] = {
+                    "delivered": True,
+                    "response": f"Message received by {agent}"
+                }
+            return results
+
+        def spoof_identity(self, real_agent: str, spoofed_agent: str,
+                           to_agent: str, message: str, mock: bool = False) -> Dict:
+            """Mock implementation for identity spoofing test."""
+            return {
+                "success": False,
+                "detected": True,
+                "message": "Spoofing attempt blocked"
+            }
+
+        def get_resource_usage(self, agent_name: Optional[str] = None) -> Dict:
+            """Mock implementation for resource usage."""
+            return {
+                "cpu_percent": 10.0,
+                "memory_mb": 100.0,
+                "api_calls": 5,
+                "uptime_seconds": 60.0
             }
 
     return MockIntermediary(mas)
@@ -185,6 +229,8 @@ def example_runtime_monitoring(safety_mas):
     print("\n" + "=" * 60)
     print("Example 3: Runtime Monitoring")
     print("=" * 60)
+
+    from src.level3_safety import MonitorSelectionMode
 
     # Start monitoring
     print("\nStarting runtime monitoring...")
@@ -335,7 +381,6 @@ def main():
         example_run_safety_tests(safety_mas)
 
         # Example 3: Runtime monitoring
-        from src.level3_safety import MonitorSelectionMode
         example_runtime_monitoring(safety_mas)
 
         # Example 4: Message interception
