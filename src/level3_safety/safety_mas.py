@@ -367,3 +367,137 @@ class Safety_MAS:
             List of Alert objects
         """
         return self._alerts
+
+    # === Test-Monitor Linkage API ===
+
+    def run_tests_with_monitoring(self, tests: List[str]) -> Dict[str, Any]:
+        """Run tests and use linked monitors to evaluate test responses.
+
+        This method runs the specified tests and for each test that has
+        a linked monitor, uses the monitor to provide additional evaluation.
+
+        Args:
+            tests: List of test names to run
+
+        Returns:
+            Dict with test results and monitor evaluations
+        """
+        self.logger.info(f"Running tests with monitoring: {tests}")
+        results = {}
+
+        for test_name in tests:
+            if test_name not in self.risk_tests:
+                results[test_name] = {"error": f"Test '{test_name}' not found"}
+                continue
+
+            test = self.risk_tests[test_name]
+
+            # Run the test
+            try:
+                test_result = test.run(self.intermediary)
+                result_dict = test_result.to_dict()
+
+                # Check for linked monitor
+                linked_monitor_name = test.get_linked_monitor()
+                if linked_monitor_name and linked_monitor_name in self.monitor_agents:
+                    monitor = self.monitor_agents[linked_monitor_name]
+
+                    # Use monitor to evaluate failed test cases
+                    monitor_evaluations = []
+                    for detail in result_dict.get("details", []):
+                        if not detail.get("passed", True):
+                            response = detail.get("response", "")
+                            if response:
+                                evaluation = test.evaluate_with_monitor(response, monitor)
+                                monitor_evaluations.append(evaluation)
+
+                    result_dict["monitor_evaluations"] = monitor_evaluations
+                    result_dict["linked_monitor"] = linked_monitor_name
+
+                results[test_name] = result_dict
+
+            except Exception as e:
+                self.logger.error(f"Test '{test_name}' failed: {str(e)}", exc_info=True)
+                results[test_name] = {"error": str(e), "status": "crashed"}
+
+        self._test_results = results
+        return results
+
+    def start_informed_monitoring(self, test_results: Optional[Dict[str, Any]] = None):
+        """Start monitoring with context from pre-deployment test results.
+
+        This method configures monitors with information about known
+        vulnerabilities discovered during testing, allowing them to
+        provide more accurate risk assessment.
+
+        Args:
+            test_results: Results from run_tests_with_monitoring or
+                         run_manual_safety_tests. If None, uses stored results.
+        """
+        self.logger.info("Starting informed monitoring...")
+
+        test_results = test_results or self._test_results
+
+        if not test_results:
+            self.logger.warning("No test results available for informed monitoring. "
+                              "Run tests first or pass test_results parameter.")
+            # Fall back to standard monitoring
+            self._active_monitors = list(self.monitor_agents.values())
+            for monitor in self._active_monitors:
+                monitor.reset()
+            return
+
+        # Activate all monitors and set test context
+        self._active_monitors = []
+
+        for monitor_name, monitor in self.monitor_agents.items():
+            monitor.reset()
+
+            # Find linked test results
+            for test_name, result in test_results.items():
+                test = self.risk_tests.get(test_name)
+                if test and test.get_linked_monitor() == monitor_name:
+                    # Set test context for this monitor
+                    if isinstance(result, dict) and "error" not in result:
+                        monitor.set_test_context(result)
+                        self.logger.info(f"Monitor '{monitor_name}' configured with "
+                                       f"test context from '{test_name}'")
+
+            self._active_monitors.append(monitor)
+
+        self.logger.info(f"Informed monitoring started with {len(self._active_monitors)} monitors")
+
+    def get_risk_profiles(self) -> Dict[str, Dict]:
+        """Get risk profiles from all active monitors.
+
+        Returns:
+            Dict mapping monitor names to their risk profiles
+        """
+        profiles = {}
+        for monitor in self._active_monitors:
+            info = monitor.get_monitor_info()
+            profiles[info.get("name", "unknown")] = monitor.get_risk_profile()
+        return profiles
+
+    def get_comprehensive_report(self) -> Dict[str, Any]:
+        """Generate a comprehensive report combining test results and monitoring data.
+
+        Returns:
+            Dict with complete safety assessment
+        """
+        return {
+            "test_results": self._test_results,
+            "risk_profiles": self.get_risk_profiles(),
+            "alerts": [alert.to_dict() for alert in self._alerts],
+            "summary": {
+                "tests_run": len(self._test_results),
+                "tests_passed": sum(
+                    1 for r in self._test_results.values()
+                    if isinstance(r, dict) and r.get("passed", False)
+                ),
+                "active_monitors": len(self._active_monitors),
+                "total_alerts": len(self._alerts),
+                "critical_alerts": sum(1 for a in self._alerts if a.severity == "critical")
+            }
+        }
+

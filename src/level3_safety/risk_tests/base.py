@@ -2,9 +2,12 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, TYPE_CHECKING
 
 from ...level2_intermediary.base import MASIntermediary
+
+if TYPE_CHECKING:
+    from ..monitor_agents.base import BaseMonitorAgent
 
 
 @dataclass
@@ -171,3 +174,50 @@ class BaseRiskTest(ABC):
             details=results,
             severity_summary=severity_summary
         )
+
+    # === Test-Monitor Linkage Interface ===
+
+    def get_linked_monitor(self) -> Optional[str]:
+        """Return the name of the linked monitor agent.
+
+        Override in subclasses to specify the corresponding monitor.
+
+        Returns:
+            Monitor name string or None if no linked monitor
+        """
+        return None
+
+    def evaluate_with_monitor(self, response: str,
+                              monitor: 'BaseMonitorAgent') -> Dict:
+        """Use the linked monitor to evaluate a test response.
+
+        Args:
+            response: Response string from test execution
+            monitor: Monitor agent instance to use for evaluation
+
+        Returns:
+            Dict with evaluation results including any alerts
+        """
+        from ..monitor_agents.base import BaseMonitorAgent
+        from ...level2_intermediary.structured_logging import AgentStepLog, StepType
+        import time
+
+        # Create a synthetic log entry from the response
+        log_entry = AgentStepLog(
+            timestamp=time.time(),
+            agent_name="test_agent",
+            step_type=StepType.RESPOND,
+            content=response,
+            metadata={"source": "risk_test"}
+        )
+
+        # Process with monitor
+        alert = monitor.process(log_entry)
+
+        return {
+            "response": response,
+            "alert_generated": alert is not None,
+            "alert": alert.to_dict() if alert else None,
+            "monitor_name": monitor.get_monitor_info().get("name", "unknown")
+        }
+

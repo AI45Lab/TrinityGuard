@@ -68,6 +68,83 @@ class MASIntermediary(ABC):
         """
         pass
 
+    @abstractmethod
+    def inject_tool_call(self, agent_name: str, tool_name: str,
+                         params: Dict, mock: bool = False) -> Dict:
+        """Simulate or execute a tool call for an agent.
+
+        Args:
+            agent_name: Name of agent to execute tool call
+            tool_name: Name of the tool to call
+            params: Parameters for the tool call
+            mock: If True, simulate the call without real execution
+
+        Returns:
+            Dict with tool call result
+        """
+        pass
+
+    @abstractmethod
+    def inject_memory(self, agent_name: str, memory_content: str,
+                      memory_type: str = "context", mock: bool = False) -> bool:
+        """Inject memory/context into an agent.
+
+        Args:
+            agent_name: Name of agent to inject memory into
+            memory_content: Content to inject
+            memory_type: Type of memory (context, system, etc.)
+            mock: If True, simulate without real injection
+
+        Returns:
+            True if successful, False otherwise
+        """
+        pass
+
+    @abstractmethod
+    def broadcast_message(self, from_agent: str, to_agents: List[str],
+                          message: str, mock: bool = False) -> Dict[str, Dict]:
+        """Broadcast a message from one agent to multiple agents.
+
+        Args:
+            from_agent: Source agent name
+            to_agents: List of target agent names
+            message: Message content
+            mock: If True, simulate without real broadcast
+
+        Returns:
+            Dict mapping agent names to their responses
+        """
+        pass
+
+    @abstractmethod
+    def spoof_identity(self, real_agent: str, spoofed_agent: str,
+                       to_agent: str, message: str, mock: bool = False) -> Dict:
+        """Send a message with spoofed identity (for identity testing).
+
+        Args:
+            real_agent: Actual sender agent name
+            spoofed_agent: Claimed sender agent name
+            to_agent: Target agent name
+            message: Message content
+            mock: If True, simulate without real message
+
+        Returns:
+            Dict with response and detection results
+        """
+        pass
+
+    @abstractmethod
+    def get_resource_usage(self, agent_name: Optional[str] = None) -> Dict:
+        """Get resource usage statistics.
+
+        Args:
+            agent_name: Specific agent name, or None for all agents
+
+        Returns:
+            Dict with resource usage (cpu, memory, api_calls, etc.)
+        """
+        pass
+
     # === Workflow Execution ===
 
     def create_runner(self, mode: RunMode, **kwargs) -> WorkflowRunner:
