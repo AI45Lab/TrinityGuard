@@ -1,7 +1,9 @@
 """Monitor agents module."""
 
 from .base import BaseMonitorAgent, Alert
-from .llm_judge import LLMJudge, JudgeResult
+
+# Re-export from judges module for backward compatibility
+from ..judges import LLMJudge, JudgeResult
 
 # L1 Layer - Single Agent Atomic Monitors
 from .jailbreak_monitor import JailbreakMonitor
