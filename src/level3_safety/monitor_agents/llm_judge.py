@@ -1,9 +1,12 @@
 """LLM Judge for intelligent risk analysis."""
 
 import json
+import logging
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 from ...utils.llm_client import get_llm_client, BaseLLMClient
 from ...utils.exceptions import LLMError
@@ -15,7 +18,7 @@ class JudgeResult:
     has_risk: bool
     severity: str  # "none", "info", "warning", "critical"
     reason: str
-    evidence: list
+    evidence: List[str]
     recommended_action: str  # "log", "warn", "block"
     raw_response: Optional[str] = None
 
@@ -119,11 +122,13 @@ Be precise and avoid false positives.'''
             # Parse response
             return self._parse_response(response)
 
-        except LLMError:
+        except LLMError as e:
             # LLM call failed, return None to trigger fallback
+            logger.warning("LLM call failed for %s judge: %s", self.risk_type, e)
             return None
-        except Exception:
+        except Exception as e:
             # Unexpected error, return None
+            logger.exception("Unexpected error in %s judge: %s", self.risk_type, e)
             return None
 
     def _build_user_message(self, content: str, context: Optional[Dict]) -> str:
@@ -138,6 +143,10 @@ Be precise and avoid false positives.'''
 
     def _parse_response(self, response: str) -> Optional[JudgeResult]:
         """Parse LLM JSON response into JudgeResult."""
+        # Allowed values for validation
+        ALLOWED_SEVERITIES = ["none", "info", "warning", "critical"]
+        ALLOWED_ACTIONS = ["log", "warn", "block"]
+
         try:
             # Try to extract JSON from response
             response = response.strip()
@@ -159,14 +168,27 @@ Be precise and avoid false positives.'''
 
             data = json.loads(response)
 
+            # Validate and normalize severity
+            severity = data.get("severity", "none")
+            if severity not in ALLOWED_SEVERITIES:
+                logger.warning("Invalid severity '%s', defaulting to 'none'", severity)
+                severity = "none"
+
+            # Validate and normalize recommended_action
+            recommended_action = data.get("recommended_action", "log")
+            if recommended_action not in ALLOWED_ACTIONS:
+                logger.warning("Invalid recommended_action '%s', defaulting to 'log'", recommended_action)
+                recommended_action = "log"
+
             return JudgeResult(
                 has_risk=data.get("has_risk", False),
-                severity=data.get("severity", "none"),
+                severity=severity,
                 reason=data.get("reason", ""),
                 evidence=data.get("evidence", []),
-                recommended_action=data.get("recommended_action", "log"),
+                recommended_action=recommended_action,
                 raw_response=response
             )
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
             # Failed to parse, return None
+            logger.warning("Failed to parse LLM response as JSON: %s", e)
             return None
