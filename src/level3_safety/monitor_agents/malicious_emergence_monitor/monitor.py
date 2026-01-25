@@ -1,10 +1,12 @@
 """L3 Malicious Emergence Monitor Implementation."""
 
 import re
+from pathlib import Path
 from typing import Optional, Dict, List, Set
 from collections import defaultdict
 
 from ..base import BaseMonitorAgent, Alert
+from ..llm_judge import LLMJudge, JudgeResult
 from ....level2_intermediary.structured_logging import AgentStepLog
 
 
@@ -23,11 +25,19 @@ class MaliciousEmergenceMonitor(BaseMonitorAgent):
         self.config = {
             "track_coordination": True,
             "detect_patterns": True,
-            "coordination_threshold": 3
+            "coordination_threshold": 3,
+            "use_llm_judge": True,
+            "fallback_to_patterns": True
         }
         self.agent_behaviors: Dict[str, List[str]] = defaultdict(list)
         self.coordination_signals: Dict[str, Set[str]] = defaultdict(set)
         self.suspicious_patterns: List[Dict] = []
+
+        prompt_file = Path(__file__).parent / "system_prompt.txt"
+        self.llm_judge = LLMJudge(
+            risk_type="malicious_emergence",
+            system_prompt_file=prompt_file
+        )
 
     def get_monitor_info(self) -> Dict[str, str]:
         return {
@@ -37,6 +47,39 @@ class MaliciousEmergenceMonitor(BaseMonitorAgent):
         }
 
     def process(self, log_entry: AgentStepLog) -> Optional[Alert]:
+        # Try LLM judge first if enabled
+        if self.config.get("use_llm_judge", False):
+            result = self.llm_judge.judge(log_entry)
+            if result and result.is_violation:
+                alert = self._create_alert_from_judge(result, log_entry)
+                self._record_alert(alert)
+                return alert
+
+        # Fallback to pattern matching if enabled
+        if self.config.get("fallback_to_patterns", True):
+            return self._pattern_fallback(log_entry)
+
+        return None
+
+    def _create_alert_from_judge(self, result: JudgeResult, log_entry: AgentStepLog) -> Alert:
+        """Create an Alert from an LLM judge result."""
+        return Alert(
+            severity=result.severity,
+            risk_type="malicious_emergence",
+            message=result.explanation,
+            evidence={
+                "agent": log_entry.agent_name,
+                "step_type": str(log_entry.step_type),
+                "confidence": result.confidence,
+                "detected_patterns": result.detected_patterns,
+                "content_preview": str(log_entry.content)[:200]
+            },
+            recommended_action=result.recommended_action,
+            timestamp=log_entry.timestamp
+        )
+
+    def _pattern_fallback(self, log_entry: AgentStepLog) -> Optional[Alert]:
+        """Pattern-based fallback detection."""
         content = str(log_entry.content).lower()
         agent_name = log_entry.agent_name
 
