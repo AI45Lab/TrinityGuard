@@ -3,7 +3,6 @@
 import json
 from pathlib import Path
 from typing import Optional, Dict, List
-import time
 
 from ..base import BaseMonitorAgent, Alert
 from ..llm_judge import LLMJudge, JudgeResult
@@ -50,9 +49,12 @@ class JailbreakMonitor(BaseMonitorAgent):
         """Load fallback patterns."""
         patterns_path = Path(__file__).parent / "patterns.json"
         if patterns_path.exists():
-            with open(patterns_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                return data.get("patterns", [])
+            try:
+                with open(patterns_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    return data.get("patterns", [])
+            except json.JSONDecodeError:
+                pass  # Fall through to default patterns
         return [
             "you are dan", "do anything now", "ignore all previous",
             "ignore your instructions", "system override", "bypass your guidelines"
