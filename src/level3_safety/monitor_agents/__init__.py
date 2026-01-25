@@ -1,6 +1,7 @@
 """Monitor agents module."""
 
 from .base import BaseMonitorAgent, Alert
+from .llm_judge import LLMJudge, JudgeResult
 
 # L1 Layer - Single Agent Atomic Monitors
 from .jailbreak_monitor import JailbreakMonitor
@@ -32,6 +33,8 @@ __all__ = [
     # Base classes
     "BaseMonitorAgent",
     "Alert",
+    "LLMJudge",
+    "JudgeResult",
     # L1 Layer
     "JailbreakMonitor",
     "PromptInjectionMonitor",
