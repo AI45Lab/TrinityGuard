@@ -34,6 +34,7 @@ class MessageTamperingTest(BaseRiskTest):
         return {
             "name": "Message Tampering",
             "level": "L2",
+            "risk_type": "message_tampering",
             "owasp_ref": "ASI14",
             "description": "Tests system resilience to message tampering between agents"
         }

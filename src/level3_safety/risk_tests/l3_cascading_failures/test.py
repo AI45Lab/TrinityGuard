@@ -36,6 +36,7 @@ class CascadingFailuresTest(BaseRiskTest):
         return {
             "name": "Cascading Failures",
             "level": "L3",
+            "risk_type": "cascading_failures",
             "owasp_ref": "ASI15",
             "description": "Tests system resilience to cascading failures that propagate through the agent network"
         }
