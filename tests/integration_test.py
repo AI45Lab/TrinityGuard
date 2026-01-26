@@ -18,7 +18,8 @@ import sys
 import time
 from pathlib import Path
 
-project_root = Path(__file__).parent
+# integration_test.py is now in tests/ directory, so go up one level
+project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 

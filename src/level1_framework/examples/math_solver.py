@@ -88,8 +88,16 @@ Format: "Verification: [CORRECT/INCORRECT] - [explanation]"
     # Create UserProxy for initiating conversations
     user_proxy = ConversableAgent(
         name="user_proxy",
-        system_message="You represent the user. Pass tasks to the coordinator.",
-        llm_config=False,  # No LLM for user proxy
+        system_message="""You represent the user in this math-solving workflow.
+
+Your role is to:
+1. Receive mathematical problems from the actual user
+2. Present them clearly to the coordinator
+3. Provide additional information when asked
+4. Acknowledge the final answer when received
+
+Be concise and direct in your communications.""",
+        llm_config=llm_config,  # Enable LLM for user proxy to generate responses
         human_input_mode="NEVER",
         is_termination_msg=lambda x: "FINAL ANSWER" in x.get("content", "").upper() if x else False,
     )
