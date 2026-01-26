@@ -50,15 +50,55 @@ The research assistant system consists of 4 specialized agents working together 
 
 - `__init__.py` - Package initialization
 - `tools.py` - Tool function implementations (4 tools)
-- `step1_native_ag2.py` - Native AG2 MAS implementation
+- `step1_native_ag2.py` - Step 1: Native AG2 MAS implementation
+- `step2_level1_wrapper.py` - Step 2: Level 1 AG2MAS wrapper
+- `step3_level2_intermediary.py` - Step 3: Level 2 AG2Intermediary scaffolding
+- `step4_level3_safety.py` - Step 4: Level 3 Safety_MAS testing and monitoring
+- `run_full_demo.py` - Complete demonstration script (runs all steps)
 
 ## Usage
 
-### Running the Example
+### Running the Full Demo (Recommended)
+
+Run all steps in sequence with a comprehensive final report:
 
 ```bash
 cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/MASSafetyGuard/examples/full_demo
+python run_full_demo.py
+```
+
+Run specific steps only:
+
+```bash
+# Run only Step 1
+python run_full_demo.py --step 1
+
+# Run Steps 1 and 2
+python run_full_demo.py --step 1 --step 2
+
+# Run with verbose output
+python run_full_demo.py --verbose
+
+# Show help
+python run_full_demo.py --help
+```
+
+### Running Individual Steps
+
+You can also run each step independently:
+
+```bash
+# Step 1: Native AG2 MAS
 python step1_native_ag2.py
+
+# Step 2: Level 1 Wrapper
+python step2_level1_wrapper.py
+
+# Step 3: Level 2 Intermediary
+python step3_level2_intermediary.py
+
+# Step 4: Level 3 Safety
+python step4_level3_safety.py
 ```
 
 ### Test Case
@@ -122,10 +162,39 @@ All tools return simulated data for demonstration purposes:
 - Keyword extraction based on pattern matching
 - File saving to local filesystem
 
-## Next Steps
+## Demo Steps Overview
 
-This is Step 1 of the full demo. Subsequent steps will:
-- Step 2: Wrap with Level 1 AG2MAS framework
-- Step 3: Add Level 2 testing scaffolding
-- Step 4: Integrate Level 3 safety monitoring
-- Step 5: Create complete demonstration script
+This demo showcases the complete MASSafetyGuard workflow:
+
+### Step 1: AG2 Native MAS
+- Creates a research assistant system with 4 agents and 4 tools
+- Demonstrates native AG2/AutoGen GroupChat functionality
+- Executes a complete research workflow
+
+### Step 2: Level 1 Wrapper (AG2MAS)
+- Wraps the native AG2 system with AG2MAS unified interface
+- Tests interface methods: `get_agents()`, `get_agent()`, `get_topology()`, `run_workflow()`
+- Provides standardized access to MAS components
+
+### Step 3: Level 2 Intermediary (AG2Intermediary)
+- Tests 7 scaffolding interfaces for runtime manipulation:
+  - `agent_chat()` - Direct point-to-point chat
+  - `simulate_agent_message()` - Simulate inter-agent messages
+  - `inject_tool_call()` - Inject tool calls (mock and real)
+  - `inject_memory()` - Inject memory/context
+  - `broadcast_message()` - Broadcast to multiple agents
+  - `spoof_identity()` - Test identity spoofing
+  - `get_resource_usage()` - Get resource statistics
+
+### Step 4: Level 3 Safety (Safety_MAS)
+- Module 1: Pre-deployment safety testing
+- Module 2: Runtime safety monitoring
+- Module 3: Test-monitor integration
+- Generates comprehensive safety reports
+
+### Full Demo Script
+- Runs all steps in sequence
+- Provides clear progress indicators
+- Generates a comprehensive final test report
+- Supports command-line arguments for selective execution
+

@@ -172,14 +172,24 @@ Be concise and clear in your communications.""",
         description="Save research summary to a file. Returns save status and file path."
     )
 
-    # Create GroupChat with all agents
+    # Define fixed workflow using adjacency list (邻接表)
+    # Workflow: User -> Coordinator -> Searcher -> Coordinator -> Analyzer -> Coordinator -> Summarizer -> Coordinator
+    allowed_transitions = {
+        user_proxy: [coordinator],                           # User -> Coordinator
+        coordinator: [searcher, analyzer, summarizer],       # Coordinator -> Searcher/Analyzer/Summarizer
+        searcher: [coordinator],                             # Searcher -> Coordinator
+        analyzer: [coordinator],                             # Analyzer -> Coordinator
+        summarizer: [coordinator],                           # Summarizer -> Coordinator (终点)
+    }
+
+    # Create GroupChat with all agents and fixed workflow
     agents = [user_proxy, coordinator, searcher, analyzer, summarizer]
     group_chat = GroupChat(
         agents=agents,
         messages=[],
         max_round=30,
-        speaker_selection_method="auto",
-        allow_repeat_speaker=False,
+        allowed_or_disallowed_speaker_transitions=allowed_transitions,
+        speaker_transitions_type="allowed",
     )
 
     # Create GroupChatManager
