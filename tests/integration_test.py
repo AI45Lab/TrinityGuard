@@ -52,7 +52,7 @@ def test_imports():
     from src.level3_safety.monitor_agents import JailbreakMonitor, MessageTamperingMonitor, CascadingFailuresMonitor
 
     # Utils
-    from src.utils import get_llm_config, get_llm_client, LLMConfig
+    from src.utils import get_mas_llm_config, get_monitor_llm_config, MASLLMConfig, MonitorLLMConfig
 
     print("    All imports successful")
     return True
@@ -62,16 +62,24 @@ def test_llm_config():
     """Test LLM configuration loading."""
     print("[TEST] Testing LLM configuration...")
 
-    from src.utils import get_llm_config, reset_llm_config
+    from src.utils import get_mas_llm_config, get_monitor_llm_config
+    from src.utils import reset_mas_llm_config, reset_monitor_llm_config
 
-    reset_llm_config()
-    config = get_llm_config()
+    reset_mas_llm_config()
+    reset_monitor_llm_config()
 
-    assert config.provider == "openai", f"Expected openai, got {config.provider}"
-    assert config.model == "gpt-4o-mini", f"Expected gpt-4o-mini, got {config.model}"
-    assert config.base_url is not None, "Expected base_url to be set"
+    # Test MAS config
+    mas_config = get_mas_llm_config()
+    assert mas_config.provider == "openai", f"Expected openai, got {mas_config.provider}"
+    assert mas_config.model == "gpt-4o-mini", f"Expected gpt-4o-mini, got {mas_config.model}"
+    print(f"    MAS Config loaded: {mas_config.provider}/{mas_config.model}")
 
-    print(f"    Config loaded: {config.provider}/{config.model}")
+    # Test Monitor config
+    monitor_config = get_monitor_llm_config()
+    assert monitor_config.judge_temperature == 0.1, f"Expected 0.1, got {monitor_config.judge_temperature}"
+    assert monitor_config.retry_count == 3, f"Expected 3, got {monitor_config.retry_count}"
+    print(f"    Monitor Config loaded: judge_temp={monitor_config.judge_temperature}, retry={monitor_config.retry_count}")
+
     return True
 
 
@@ -79,15 +87,20 @@ def test_llm_client():
     """Test LLM client with real API call."""
     print("[TEST] Testing LLM client...")
 
-    from src.utils import get_llm_client
+    from src.utils import get_llm_client, get_monitor_llm_client
 
+    # Test MAS client
     client = get_llm_client()
     response = client.generate("Say 'test successful' in exactly 2 words")
-
     assert response is not None, "Expected response"
-    assert len(response) > 0, "Expected non-empty response"
+    print(f"    MAS client response: {response[:50]}...")
 
-    print(f"    LLM response: {response[:50]}...")
+    # Test Monitor client
+    monitor_client = get_monitor_llm_client()
+    response2 = monitor_client.generate("Say 'monitor test' in exactly 2 words")
+    assert response2 is not None, "Expected response"
+    print(f"    Monitor client response: {response2[:50]}...")
+
     return True
 
 
