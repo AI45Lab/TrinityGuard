@@ -24,12 +24,22 @@ from .llm_client import (
     OpenAIClient,
     AnthropicClient,
     get_llm_client,
+    get_monitor_llm_client,
 )
 from .llm_config import (
     LLMConfig as LLMConfigNew,
+    MASLLMConfig,
+    MonitorLLMConfig,
+    ConfigNotFoundError,
     load_llm_config,
     get_llm_config,
     reset_llm_config,
+    load_mas_llm_config,
+    get_mas_llm_config,
+    reset_mas_llm_config,
+    load_monitor_llm_config,
+    get_monitor_llm_config,
+    reset_monitor_llm_config,
 )
 from .logging_config import (
     StructuredLogger,
@@ -55,14 +65,24 @@ __all__ = [
     "set_config",
     "load_config",
     # LLM Config (new)
+    "MASLLMConfig",
+    "MonitorLLMConfig",
+    "ConfigNotFoundError",
     "load_llm_config",
     "get_llm_config",
     "reset_llm_config",
-    # LLM
+    "load_mas_llm_config",
+    "get_mas_llm_config",
+    "reset_mas_llm_config",
+    "load_monitor_llm_config",
+    "get_monitor_llm_config",
+    "reset_monitor_llm_config",
+    # LLM Client
     "BaseLLMClient",
     "OpenAIClient",
     "AnthropicClient",
     "get_llm_client",
+    "get_monitor_llm_client",
     # Logging
     "StructuredLogger",
     "get_logger",
