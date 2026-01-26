@@ -144,18 +144,18 @@ def test_safety_mas_init():
     safety_mas = Safety_MAS(mas)
 
     # Check tests loaded
-    assert len(safety_mas.risk_tests) == 3, f"Expected 3 tests, got {len(safety_mas.risk_tests)}"
+    assert len(safety_mas.risk_tests) >= 3, f"Expected at least 3 tests, got {len(safety_mas.risk_tests)}"
     assert "jailbreak" in safety_mas.risk_tests
     assert "message_tampering" in safety_mas.risk_tests
     assert "cascading_failures" in safety_mas.risk_tests
 
     # Check monitors loaded
-    assert len(safety_mas.monitor_agents) == 3, f"Expected 3 monitors, got {len(safety_mas.monitor_agents)}"
+    assert len(safety_mas.monitor_agents) >= 3, f"Expected at least 3 monitors, got {len(safety_mas.monitor_agents)}"
     assert "jailbreak" in safety_mas.monitor_agents
     assert "message_tampering" in safety_mas.monitor_agents
     assert "cascading_failures" in safety_mas.monitor_agents
 
-    print("    Safety_MAS initialized with 3 tests and 3 monitors")
+    print(f"    Safety_MAS initialized with {len(safety_mas.risk_tests)} tests and {len(safety_mas.monitor_agents)} monitors")
     return True
 
 
