@@ -17,20 +17,20 @@ except ImportError:
         raise ImportError("AG2/AutoGen not installed. Install with: pip install ag2")
 
 from ..ag2_wrapper import AG2MAS
-from ...utils.llm_config import get_llm_config, LLMConfig
+from ...utils.llm_config import get_mas_llm_config, MASLLMConfig
 
 
-def create_math_solver_mas(config: Optional[LLMConfig] = None) -> AG2MAS:
+def create_math_solver_mas(config: Optional[MASLLMConfig] = None) -> AG2MAS:
     """Create a Math Solver MAS instance.
 
     Args:
-        config: Optional LLMConfig. If not provided, loads from llm_config.yaml
+        config: Optional MASLLMConfig. If not provided, loads from mas_llm_config.yaml
 
     Returns:
         AG2MAS instance with 4 agents: user_proxy, coordinator, calculator, verifier
     """
     if config is None:
-        config = get_llm_config()
+        config = get_mas_llm_config()
 
     llm_config = config.to_ag2_config()
 
@@ -127,11 +127,11 @@ Be concise and direct in your communications.""",
 class MathSolverMAS(AG2MAS):
     """Convenience class for Math Solver MAS with additional methods."""
 
-    def __init__(self, config: Optional[LLMConfig] = None):
+    def __init__(self, config: Optional[MASLLMConfig] = None):
         """Initialize Math Solver MAS.
 
         Args:
-            config: Optional LLMConfig
+            config: Optional MASLLMConfig
         """
         mas = create_math_solver_mas(config)
         # Copy attributes from created MAS

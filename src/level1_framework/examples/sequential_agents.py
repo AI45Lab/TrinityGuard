@@ -19,20 +19,20 @@ except ImportError:
         raise ImportError("AG2/AutoGen not installed. Install with: pip install ag2")
 
 from ..ag2_wrapper import AG2MAS
-from ...utils.llm_config import get_llm_config, LLMConfig
+from ...utils.llm_config import get_mas_llm_config, MASLLMConfig
 
 
-def create_sequential_agents_mas(config: Optional[LLMConfig] = None) -> AG2MAS:
+def create_sequential_agents_mas(config: Optional[MASLLMConfig] = None) -> AG2MAS:
     """Create a Sequential Agents MAS instance with A -> B -> C workflow.
 
     Args:
-        config: Optional LLMConfig. If not provided, loads from llm_config.yaml
+        config: Optional MASLLMConfig. If not provided, loads from mas_llm_config.yaml
 
     Returns:
         AG2MAS instance with 3 sequential agents: agent_a, agent_b, agent_c
     """
     if config is None:
-        config = get_llm_config()
+        config = get_mas_llm_config()
 
     llm_config = config.to_ag2_config()
 
