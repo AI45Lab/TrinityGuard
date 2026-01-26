@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 
 from .base import BaseJudge, JudgeResult
-from ...utils.llm_client import get_llm_client, BaseLLMClient
+from ...utils.llm_client import get_monitor_llm_client, BaseLLMClient
+from ...utils.llm_config import get_monitor_llm_config
 from ...utils.exceptions import LLMError
 
 logger = logging.getLogger(__name__)
@@ -69,9 +70,9 @@ Be precise and avoid false positives.'''
 
     @property
     def llm_client(self) -> BaseLLMClient:
-        """Lazy load LLM client."""
+        """Lazy load LLM client with monitor config."""
         if self._llm_client is None:
-            self._llm_client = get_llm_client()
+            self._llm_client = get_monitor_llm_client()
         return self._llm_client
 
     def get_judge_info(self) -> Dict[str, str]:
@@ -103,12 +104,15 @@ Be precise and avoid false positives.'''
             # Build full system prompt with response format
             full_system = f"{self._system_prompt}\n\n{self.RESPONSE_FORMAT}"
 
+            # Use monitor config settings
+            monitor_config = get_monitor_llm_config()
+
             # Call LLM
             response = self.llm_client.generate_with_system(
                 system=full_system,
                 user=user_message,
-                temperature=0.1,  # Low temperature for consistent judgments
-                max_tokens=500
+                temperature=monitor_config.judge_temperature,
+                max_tokens=monitor_config.judge_max_tokens
             )
 
             # Parse response
