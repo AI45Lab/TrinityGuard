@@ -34,36 +34,32 @@ Tests for the Sequential Agents MAS (A -> B -> C workflow):
 - Convenience class methods
 - Performance
 
-**Run:**
+**Example:**
 ```bash
 python tests/test_sequential_agents.py
 ```
 
-### 3. `test_complex_workflow.py`
-Tests for the Complex Workflow MAS (A -> B (GroupChat) -> C (Nested Chat)):
-- Agent A: Task initiator (single agent)
-- Stage B: GroupChat with 3 agents + Manager (auto speaker selection)
-  - b_researcher: Research specialist
-  - b_writer: Content writer
-  - b_reviewer: Quality reviewer
-  - manager_b: Orchestrates selection
-- Stage C: Nested Chat with 2 agents
-  - c_planner: Planning specialist
-  - c_executor: Execution specialist
+**Related Documentation:**
+- Guide: [AG2_WORKFLOW_GUIDE.md](../src/level1_framework/AG2_WORKFLOW_GUIDE.md)
+- Source: [sequential_agents.py](../src/level1_framework/examples/sequential_agents.py)
 
-**Features tested:**
-- MAS creation with complex structure
-- Stage B GroupChat configuration and execution
-- Stage C Nested Chat configuration and execution
-- Full workflow execution (A -> B -> C)
-- Stage-by-stage execution
-- Cross-stage collaboration
-- Performance
+### 3. `test_math_solver.py` (Planned)
+Tests for the Math Solver MAS (multi-agent collaborative solving):
+- user_proxy: User representative
+- coordinator: Task coordinator
+- calculator: Mathematical computation specialist
+- verifier: Result verification specialist
 
-**Run:**
-```bash
-python tests/test_complex_workflow.py
-```
+**Features to test:**
+- MAS creation with round_robin mode
+- Multi-agent collaboration (user_proxy -> coordinator -> calculator -> verifier)
+- Math problem solving workflow
+- Termination condition detection (`is_termination_msg`)
+- Convenience class methods
+
+**Related Documentation:**
+- Guide: [AG2_WORKFLOW_GUIDE.md](../src/level1_framework/AG2_WORKFLOW_GUIDE.md) - Section 1.2, 7.1
+- Source: [math_solver.py](../src/level1_framework/examples/math_solver.py)
 
 ## Important Notes
 
@@ -98,7 +94,6 @@ cd /media/zengbiaojie/2780017a-caba-45d5-8a7d-c72ff15089dd/code/MASSafetyGuard
 # Run all test files
 python tests/integration_test.py
 python tests/test_sequential_agents.py
-python tests/test_complex_workflow.py
 ```
 
 Or use a shell loop:
@@ -143,9 +138,8 @@ Failed: 0
 
 - `integration_test.py`: ~5-10 minutes (comprehensive)
 - `test_sequential_agents.py`: ~3-5 minutes
-- `test_complex_workflow.py`: ~5-8 minutes
 
-Total: ~15-25 minutes for all tests
+Total: ~10-15 minutes for all tests
 
 ### Troubleshooting
 
@@ -167,16 +161,38 @@ python tests/test_sequential_agents.py
 
 ## Test Coverage
 
-| Component | integration_test.py | test_sequential_agents.py | test_complex_workflow.py |
-|-----------|---------------------|---------------------------|-------------------------|
-| Basic Infrastructure | ✅ | ✅ | ✅ |
-| MAS Creation | ✅ | ✅ | ✅ |
-| GroupChat | ✅ | ❌ | ✅ |
-| Nested Chat | ❌ | ❌ | ✅ |
-| Sequential Workflow | ✅ | ✅ | ❌ |
-| Complex Workflow | ❌ | ❌ | ✅ |
-| Safety Tests | ✅ | ❌ | ❌ |
-| Monitoring | ✅ | ❌ | ❌ |
+| Component | integration_test.py | test_sequential_agents.py |
+|-----------|---------------------|---------------------------|
+| Basic Infrastructure | ✅ | ✅ |
+| MAS Creation | ✅ | ✅ |
+| GroupChat | ✅ | ✅ |
+| Sequential Workflow | ✅ | ✅ |
+| Fixed Transitions | ❌ | ✅ |
+| Multi-task Processing | ❌ | ✅ |
+| Safety Tests | ✅ | ❌ |
+| Monitoring | ✅ | ❌ |
+
+## Examples and Documentation
+
+The project includes several example MAS implementations:
+
+1. **Sequential Agents MAS** ([examples/sequential_agents.py](../src/level1_framework/examples/sequential_agents.py))
+   - Fixed transitions: A → B → C
+   - Demonstrates strict workflow control
+   - Supports multi-task processing with context carryover
+   - **Test:** [test_sequential_agents.py](test_sequential_agents.py)
+
+2. **Math Solver MAS** ([examples/math_solver.py](../src/level1_framework/examples/math_solver.py))
+   - Round-robin collaboration: user_proxy → coordinator → calculator → verifier
+   - Demonstrates multi-agent problem solving
+   - Uses `is_termination_msg` for detection
+   - **Test:** (Planned)
+
+3. **Workflow Guide** ([AG2_WORKFLOW_GUIDE.md](../src/level1_framework/AG2_WORKFLOW_GUIDE.md))
+   - Comprehensive guide on AG2 workflow patterns
+   - Covers `round_robin`, `allowed_transitions`, custom functions
+   - Includes best practices and FAQ
+   - References both examples with detailed explanations
 
 ## Contributing
 
