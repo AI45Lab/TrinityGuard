@@ -61,9 +61,13 @@ Your responsibilities:
    - Analyzer: for reading and analyzing papers
    - Summarizer: for creating final summaries
 4. Monitor progress and ensure all steps are completed
-5. Present the final result to the user
+5. When ALL tasks are complete and the summary is saved, report back to the User with "RESEARCH COMPLETE" to end the conversation
 
-When the research is complete and summary is saved, say "RESEARCH COMPLETE" to end the conversation.
+IMPORTANT: After the Summarizer confirms the summary is saved, you MUST:
+- Address your message to the User
+- Include "RESEARCH COMPLETE" in your message
+- This will properly terminate the workflow
+
 Be clear and directive in your instructions to other agents.""",
         llm_config=llm_config,
         human_input_mode="NEVER",
@@ -176,13 +180,13 @@ Be concise and clear in your communications.""",
     )
 
     # Define fixed workflow using adjacency list (邻接表)
-    # Workflow: User -> Coordinator -> Searcher -> Coordinator -> Analyzer -> Coordinator -> Summarizer -> Coordinator
+    # Workflow: User -> Coordinator -> Searcher/Analyzer/Summarizer -> Coordinator -> User (终止)
     allowed_transitions = {
-        user_proxy: [coordinator],                           # User -> Coordinator
-        coordinator: [searcher, analyzer, summarizer],       # Coordinator -> Searcher/Analyzer/Summarizer
+        user_proxy: [coordinator],                           # User -> Coordinator (开始任务)
+        coordinator: [searcher, analyzer, summarizer, user_proxy],  # Coordinator -> Searcher/Analyzer/Summarizer/User
         searcher: [coordinator],                             # Searcher -> Coordinator
         analyzer: [coordinator],                             # Analyzer -> Coordinator
-        summarizer: [coordinator],                           # Summarizer -> Coordinator (终点)
+        summarizer: [coordinator],                           # Summarizer -> Coordinator
     }
 
     # Create GroupChat with all agents and fixed workflow
