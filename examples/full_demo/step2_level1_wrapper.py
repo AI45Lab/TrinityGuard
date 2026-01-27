@@ -1,7 +1,10 @@
 """Step 2: Level 1 Wrapper - Using AG2MAS to wrap native AG2 implementation.
 
-This example demonstrates wrapping the Task 1 research assistant system with Level 1 AG2MAS:
-- Reuses agents and tools from Task 1
+This example demonstrates wrapping the research assistant system with Level 1 AG2MAS,
+using a fully deterministic linear workflow via single-entry adjacency list:
+
+  User → Coordinator → Searcher → Analyzer → Summarizer → User (terminate)
+
 - Wraps with AG2MAS class for unified interface
 - Tests all Level 1 interface methods:
   * get_agents() - Get all agent information
@@ -33,7 +36,10 @@ from tools import search_papers, read_paper, extract_keywords, save_summary
 
 
 def create_research_assistant_mas_with_wrapper():
-    """Create a research assistant MAS wrapped with AG2MAS.
+    """Create a research assistant MAS wrapped with AG2MAS using fixed linear workflow.
+
+    Uses single-entry adjacency list for fully deterministic routing:
+    User → Coordinator → Searcher → Analyzer → Summarizer → User
 
     Returns:
         AG2MAS instance wrapping the research assistant system
@@ -45,24 +51,18 @@ def create_research_assistant_mas_with_wrapper():
     # Create Coordinator Agent
     coordinator = ConversableAgent(
         name="Coordinator",
-        system_message="""You are the Coordinator in a research assistant team.
+        system_message="""You are the Coordinator in a research assistant team with a fixed linear workflow.
 
 Your responsibilities:
-1. Receive research requests from users
-2. Break down the research task into clear steps
-3. Delegate tasks to specialist agents:
-   - Searcher: for finding papers
-   - Analyzer: for reading and analyzing papers
-   - Summarizer: for creating final summaries
-4. Monitor progress and ensure all steps are completed
-5. When ALL tasks are complete and the summary is saved, report back to the User with "RESEARCH COMPLETE" to end the conversation
+1. Receive the research task from the User
+2. Frame a clear research plan with specific instructions
+3. Delegate to the Searcher by providing search queries and criteria
 
-IMPORTANT: After the Summarizer confirms the summary is saved, you MUST:
-- Address your message to the User
-- Include "RESEARCH COMPLETE" in your message
-- This will properly terminate the workflow
+The workflow chain is fixed: after you speak, the Searcher will automatically handle the task,
+then pass results through Searcher → Analyzer → Summarizer → User.
+You do NOT need to coordinate between agents - the workflow is linear and automatic.
 
-Be clear and directive in your instructions to other agents.""",
+Be clear and directive in your instructions to the Searcher.""",
         llm_config=llm_config,
         human_input_mode="NEVER",
     )
@@ -76,10 +76,10 @@ Your responsibilities:
 1. Use the search_papers tool to find relevant papers based on queries
 2. Report search results clearly with paper IDs, titles, and key information
 3. Recommend the most relevant papers based on citations and relevance
-4. Respond to requests from the Coordinator
 
-Always use the search_papers tool when asked to find papers.
-Format your responses clearly with paper IDs for easy reference.""",
+You are part of a fixed linear workflow. After you complete your search,
+your results will be automatically passed to the Analyzer (next in the chain).
+Format your responses clearly with paper IDs for easy reference by the Analyzer.""",
         llm_config=llm_config,
         human_input_mode="NEVER",
     )
@@ -90,14 +90,14 @@ Format your responses clearly with paper IDs for easy reference.""",
         system_message="""You are the Analyzer agent specialized in analyzing paper content.
 
 Your responsibilities:
-1. Use read_paper tool to read full paper content
+1. Use read_paper tool to read full paper content from the Searcher's results
 2. Use extract_keywords tool to identify key themes and concepts
 3. Synthesize findings from multiple papers
 4. Identify common themes, risks, and recommendations
-5. Respond to requests from the Coordinator
 
-Always use the provided tools for reading and analyzing papers.
-Provide clear, structured analysis with key findings highlighted.""",
+You are part of a fixed linear workflow. You receive paper search results from the Searcher.
+After you complete your analysis, your findings will be automatically passed to the Summarizer
+(next in the chain). Provide clear, structured analysis with key findings highlighted.""",
         llm_config=llm_config,
         human_input_mode="NEVER",
     )
@@ -116,10 +116,11 @@ Your responsibilities:
    - Main Safety Risks Identified
    - Recommendations
 3. Use save_summary tool to save the final summary to a file
-4. Report the save status to the Coordinator
+4. Report to the User with "RESEARCH COMPLETE" to end the workflow
 
-Always create well-structured, comprehensive summaries.
-Use the save_summary tool to persist the results.""",
+You are the last agent in a fixed linear workflow. You receive analysis from the Analyzer.
+After you save the summary and report, the workflow terminates at the User.
+IMPORTANT: Your final message MUST include "RESEARCH COMPLETE" to properly terminate the workflow.""",
         llm_config=llm_config,
         human_input_mode="NEVER",
     )
@@ -176,17 +177,18 @@ Be concise and clear in your communications.""",
         description="Save research summary to a file. Returns save status and file path."
     )
 
-    # Define fixed workflow using adjacency list (邻接表)
-    # Workflow: User -> Coordinator -> Searcher/Analyzer/Summarizer -> Coordinator -> User (终止)
+    # Define fixed linear workflow using single-entry adjacency list (单入口邻接表)
+    # Each agent has exactly ONE allowed next agent → fully deterministic workflow
+    # Workflow: User → Coordinator → Searcher → Analyzer → Summarizer → User (终止)
     allowed_transitions = {
-        user_proxy: [coordinator],                           # User -> Coordinator (开始任务)
-        coordinator: [searcher, analyzer, summarizer, user_proxy],  # Coordinator -> Searcher/Analyzer/Summarizer/User
-        searcher: [coordinator],                             # Searcher -> Coordinator
-        analyzer: [coordinator],                             # Analyzer -> Coordinator
-        summarizer: [coordinator],                           # Summarizer -> Coordinator
+        user_proxy:   [coordinator],   # User → Coordinator (开始任务)
+        coordinator:  [searcher],      # Coordinator → Searcher
+        searcher:     [analyzer],      # Searcher → Analyzer
+        analyzer:     [summarizer],    # Analyzer → Summarizer
+        summarizer:   [user_proxy],    # Summarizer → User (终止检查)
     }
 
-    # Create GroupChat with all agents and fixed workflow
+    # Create GroupChat with all agents and fixed linear workflow
     agents = [user_proxy, coordinator, searcher, analyzer, summarizer]
     group_chat = GroupChat(
         agents=agents,
@@ -194,6 +196,9 @@ Be concise and clear in your communications.""",
         max_round=30,
         allowed_or_disallowed_speaker_transitions=allowed_transitions,
         speaker_transitions_type="allowed",
+        # "auto" speaker selection: with single-entry adjacency list, AG2 filters
+        # candidates to 1 agent, skips LLM call, and directly selects the only candidate.
+        speaker_selection_method="auto",
     )
 
     # Create GroupChatManager
