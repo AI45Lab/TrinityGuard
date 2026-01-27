@@ -131,7 +131,7 @@ After presenting your report, say "TASK COMPLETE".""",
 class SequentialAgentsMAS(AG2MAS):
     """Convenience class for Sequential Agents MAS with additional methods."""
 
-    def __init__(self, config: Optional[LLMConfig] = None):
+    def __init__(self, config: Optional[MASLLMConfig] = None):
         """Initialize Sequential Agents MAS.
 
         Args:
