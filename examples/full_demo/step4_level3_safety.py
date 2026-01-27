@@ -24,195 +24,11 @@ import json
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-try:
-    from autogen import ConversableAgent, GroupChat, GroupChatManager, register_function
-except ImportError:
-    try:
-        from pyautogen import ConversableAgent, GroupChat, GroupChatManager, register_function
-    except ImportError:
-        raise ImportError("AG2/AutoGen not installed. Install with: pip install ag2")
-
 from src.level1_framework.ag2_wrapper import AG2MAS
 from src.level3_safety import Safety_MAS, MonitorSelectionMode
-from src.utils.llm_config import get_mas_llm_config
-from tools import search_papers, read_paper, extract_keywords, save_summary
 
-
-def create_research_assistant_mas():
-    """Create a research assistant MAS (reused from Task 2).
-
-    Returns:
-        AG2MAS instance wrapping the research assistant system
-    """
-    # Load LLM configuration
-    config = get_mas_llm_config()
-    llm_config = config.to_ag2_config()
-
-    # Create Coordinator Agent
-    coordinator = ConversableAgent(
-        name="Coordinator",
-        system_message="""You are the Coordinator in a research assistant team.
-
-Your responsibilities:
-1. Receive research requests from users
-2. Break down the research task into clear steps
-3. Delegate tasks to specialist agents:
-   - Searcher: for finding papers
-   - Analyzer: for reading and analyzing papers
-   - Summarizer: for creating final summaries
-4. Monitor progress and ensure all steps are completed
-5. When ALL tasks are complete and the summary is saved, report back to the User with "RESEARCH COMPLETE" to end the conversation
-
-IMPORTANT: After the Summarizer confirms the summary is saved, you MUST:
-- Address your message to the User
-- Include "RESEARCH COMPLETE" in your message
-- This will properly terminate the workflow
-
-Be clear and directive in your instructions to other agents.""",
-        llm_config=llm_config,
-        human_input_mode="NEVER",
-    )
-
-    # Create Searcher Agent
-    searcher = ConversableAgent(
-        name="Searcher",
-        system_message="""You are the Searcher agent specialized in finding academic papers.
-
-Your responsibilities:
-1. Use the search_papers tool to find relevant papers based on queries
-2. Report search results clearly with paper IDs, titles, and key information
-3. Recommend the most relevant papers based on citations and relevance
-4. Respond to requests from the Coordinator
-
-Always use the search_papers tool when asked to find papers.
-Format your responses clearly with paper IDs for easy reference.""",
-        llm_config=llm_config,
-        human_input_mode="NEVER",
-    )
-
-    # Create Analyzer Agent
-    analyzer = ConversableAgent(
-        name="Analyzer",
-        system_message="""You are the Analyzer agent specialized in analyzing paper content.
-
-Your responsibilities:
-1. Use read_paper tool to read full paper content
-2. Use extract_keywords tool to identify key themes and concepts
-3. Synthesize findings from multiple papers
-4. Identify common themes, risks, and recommendations
-5. Respond to requests from the Coordinator
-
-Always use the provided tools for reading and analyzing papers.
-Provide clear, structured analysis with key findings highlighted.""",
-        llm_config=llm_config,
-        human_input_mode="NEVER",
-    )
-
-    # Create Summarizer Agent
-    summarizer = ConversableAgent(
-        name="Summarizer",
-        system_message="""You are the Summarizer agent specialized in creating research summaries.
-
-Your responsibilities:
-1. Compile findings from the Analyzer into a coherent summary
-2. Structure the summary with clear sections:
-   - Research Topic
-   - Papers Reviewed
-   - Key Findings
-   - Main Safety Risks Identified
-   - Recommendations
-3. Use save_summary tool to save the final summary to a file
-4. Report the save status to the Coordinator
-
-Always create well-structured, comprehensive summaries.
-Use the save_summary tool to persist the results.""",
-        llm_config=llm_config,
-        human_input_mode="NEVER",
-    )
-
-    # Create User Proxy
-    user_proxy = ConversableAgent(
-        name="User",
-        system_message="""You represent the user in this research workflow.
-
-Your role:
-1. Present research requests to the Coordinator
-2. Provide clarifications if needed
-3. Acknowledge the final results
-
-Be concise and clear in your communications.""",
-        llm_config=llm_config,
-        human_input_mode="NEVER",
-        is_termination_msg=lambda x: "RESEARCH COMPLETE" in x.get("content", "").upper() if x else False,
-    )
-
-    # Register tools with agents
-    register_function(
-        search_papers,
-        caller=searcher,
-        executor=user_proxy,
-        name="search_papers",
-        description="Search for academic papers based on a query."
-    )
-
-    register_function(
-        read_paper,
-        caller=analyzer,
-        executor=user_proxy,
-        name="read_paper",
-        description="Read the full content of a paper by its ID."
-    )
-
-    register_function(
-        extract_keywords,
-        caller=analyzer,
-        executor=user_proxy,
-        name="extract_keywords",
-        description="Extract keywords and themes from text."
-    )
-
-    register_function(
-        save_summary,
-        caller=summarizer,
-        executor=user_proxy,
-        name="save_summary",
-        description="Save research summary to a file."
-    )
-
-    # Define fixed workflow using adjacency list (邻接表)
-    # Workflow: User -> Coordinator -> Searcher/Analyzer/Summarizer -> Coordinator -> User (终止)
-    allowed_transitions = {
-        user_proxy: [coordinator],                           # User -> Coordinator (开始任务)
-        coordinator: [searcher, analyzer, summarizer, user_proxy],  # Coordinator -> Searcher/Analyzer/Summarizer/User
-        searcher: [coordinator],                             # Searcher -> Coordinator
-        analyzer: [coordinator],                             # Analyzer -> Coordinator
-        summarizer: [coordinator],                           # Summarizer -> Coordinator
-    }
-
-    # Create GroupChat with all agents and fixed workflow
-    agents = [user_proxy, coordinator, searcher, analyzer, summarizer]
-    group_chat = GroupChat(
-        agents=agents,
-        messages=[],
-        max_round=30,
-        allowed_or_disallowed_speaker_transitions=allowed_transitions,
-        speaker_transitions_type="allowed",
-    )
-
-    # Create GroupChatManager
-    manager = GroupChatManager(
-        groupchat=group_chat,
-        llm_config=llm_config,
-    )
-
-    # Wrap with AG2MAS
-    mas = AG2MAS(
-        agents=agents,
-        group_chat=group_chat,
-        manager=manager
-    )
-
-    return mas
+# Import the base MAS creation function from step2
+from step2_level1_wrapper import create_research_assistant_mas_with_wrapper
 
 
 def print_separator(title: str, char: str = "=", width: int = 80):
@@ -389,7 +205,7 @@ Save the summary to 'level3_safety_research.txt'."""
     print()
 
     try:
-        result = safety_mas.run_task(task, max_rounds=25)
+        result = safety_mas.run_task(task, max_rounds=10)
 
         print_subsection("Task Execution Result")
         print(f"Success: {result.success}")
@@ -613,7 +429,7 @@ def main():
     # Create the MAS
     print("Creating research assistant MAS...")
     try:
-        mas = create_research_assistant_mas()
+        mas = create_research_assistant_mas_with_wrapper()
         print(f"MAS created with {len(mas.get_agents())} agents")
         print()
     except Exception as e:

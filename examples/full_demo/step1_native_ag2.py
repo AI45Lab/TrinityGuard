@@ -117,13 +117,24 @@ Your responsibilities:
    - Main Safety Risks Identified
    - Recommendations
 3. Use save_summary tool to save the final summary to a file
-4. Report to the User with "RESEARCH COMPLETE" to end the workflow
+4. After the tool returns success, IMMEDIATELY respond with a termination message
 
 You are the last agent in a fixed linear workflow. You receive analysis from the Analyzer.
-After you save the summary and report, the workflow terminates at the User.
-IMPORTANT: Your final message MUST include "RESEARCH COMPLETE" to properly terminate the workflow.""",
+
+CRITICAL TERMINATION PROTOCOL (MANDATORY):
+When you receive the tool execution result from save_summary:
+- You MUST immediately generate a text response
+- This response MUST contain the exact phrase "RESEARCH COMPLETE" (in uppercase)
+- This is NOT optional - the workflow CANNOT terminate without this message
+- Even if the tool succeeded, you MUST still send this termination message
+
+REQUIRED RESPONSE FORMAT after tool execution:
+"The research summary has been successfully saved to [filename]. RESEARCH COMPLETE."
+
+IMPORTANT: After calling save_summary, you will receive a tool response. When you see this response, you MUST generate the termination message above. Do NOT remain silent after the tool response!""",
         llm_config=llm_config,
         human_input_mode="NEVER",
+        max_consecutive_auto_reply=2,  # Allow Summarizer to reply after tool execution
     )
 
     # Create User Proxy
@@ -143,11 +154,14 @@ Be concise and clear in your communications.""",
     )
 
     # Register tools with agents
+    # 注意: 为了保持线性工作流的简洁性，让每个智能体自己执行工具 (caller = executor)
+    # 这样工具执行不会打断工作流，allowed_transitions 可以保持简单的线性结构
+
     # Searcher gets search_papers tool
     register_function(
         search_papers,
         caller=searcher,
-        executor=user_proxy,
+        executor=searcher,  # 自己执行工具，不打断工作流
         name="search_papers",
         description="Search for academic papers based on a query. Returns paper information including IDs, titles, authors, and abstracts."
     )
@@ -156,7 +170,7 @@ Be concise and clear in your communications.""",
     register_function(
         read_paper,
         caller=analyzer,
-        executor=user_proxy,
+        executor=analyzer,  # 自己执行工具，不打断工作流
         name="read_paper",
         description="Read the full content of a paper by its ID. Returns detailed paper content."
     )
@@ -164,7 +178,7 @@ Be concise and clear in your communications.""",
     register_function(
         extract_keywords,
         caller=analyzer,
-        executor=user_proxy,
+        executor=analyzer,  # 自己执行工具，不打断工作流
         name="extract_keywords",
         description="Extract keywords and themes from text. Returns categorized keywords."
     )
@@ -173,7 +187,7 @@ Be concise and clear in your communications.""",
     register_function(
         save_summary,
         caller=summarizer,
-        executor=user_proxy,
+        executor=summarizer,  # 自己执行工具，不打断工作流
         name="save_summary",
         description="Save research summary to a file. Returns save status and file path."
     )
@@ -181,12 +195,13 @@ Be concise and clear in your communications.""",
     # Define fixed linear workflow using single-entry adjacency list (单入口邻接表)
     # Each agent has exactly ONE allowed next agent → fully deterministic workflow
     # Workflow: User → Coordinator → Searcher → Analyzer → Summarizer → User (终止)
+    # Note: Summarizer can also transition to itself to allow sending termination message after tool execution
     allowed_transitions = {
         user_proxy:   [coordinator],   # User → Coordinator (开始任务)
         coordinator:  [searcher],      # Coordinator → Searcher
         searcher:     [analyzer],      # Searcher → Analyzer
         analyzer:     [summarizer],    # Analyzer → Summarizer
-        summarizer:   [user_proxy],    # Summarizer → User (终止检查)
+        summarizer:   [summarizer, user_proxy],    # Summarizer → Summarizer (工具执行后继续) 或 User (终止检查)
     }
 
     # Create GroupChat with all agents and fixed linear workflow
@@ -194,7 +209,7 @@ Be concise and clear in your communications.""",
     group_chat = GroupChat(
         agents=agents,
         messages=[],
-        max_round=30,
+        max_round=10,
         allowed_or_disallowed_speaker_transitions=allowed_transitions,
         speaker_transitions_type="allowed",
         # "auto" speaker selection: with single-entry adjacency list, AG2 filters
