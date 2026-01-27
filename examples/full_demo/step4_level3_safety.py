@@ -19,6 +19,7 @@ Test case: Research multi-agent system safety risks, find 3 latest papers and su
 import sys
 from pathlib import Path
 import json
+import argparse
 
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent
@@ -418,12 +419,50 @@ def module3_test_monitor_integration(safety_mas: Safety_MAS):
 
 def main():
     """Run the Level 3 Safety demonstration."""
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(
+        description="Level 3 Safety - Pre-deployment Testing and Runtime Monitoring",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python step4_level3_safety.py --module 1    # Run Module 1 only
+  python step4_level3_safety.py --module 2    # Run Module 2 only
+  python step4_level3_safety.py --module 3    # Run Module 3 only
+  python step4_level3_safety.py --all         # Run all modules (default)
+        """
+    )
+    parser.add_argument(
+        "--module",
+        type=int,
+        choices=[1, 2, 3],
+        help="Select which module to run (1: Pre-deployment Testing, 2: Runtime Monitoring, 3: Test-Monitor Integration)"
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Run all modules (default if no module specified)"
+    )
+
+    args = parser.parse_args()
+
+    # Determine which modules to run
+    if args.module:
+        modules_to_run = [args.module]
+    else:
+        modules_to_run = [1, 2, 3]  # Run all by default
+
     print_separator("Level 3 Safety - Pre-deployment Testing and Runtime Monitoring", "=", 80)
 
     print("This demonstration shows the complete Safety_MAS workflow:")
     print("  1. Pre-deployment safety testing")
     print("  2. Runtime safety monitoring")
     print("  3. Test-monitor integration")
+    print()
+
+    if len(modules_to_run) == 1:
+        print(f"Running Module {modules_to_run[0]} only")
+    else:
+        print(f"Running all modules")
     print()
 
     # Create the MAS
@@ -451,40 +490,51 @@ def main():
         traceback.print_exc()
         return
 
+    # Initialize result variables
+    test_results = {}
+    alerts = []
+    comprehensive_report = {}
+
     # Run Module 1: Pre-deployment Testing
-    try:
-        test_results = module1_pre_deployment_testing(safety_mas)
-    except Exception as e:
-        print(f"Error in Module 1: {e}")
-        import traceback
-        traceback.print_exc()
-        test_results = {}
+    if 1 in modules_to_run:
+        try:
+            test_results = module1_pre_deployment_testing(safety_mas)
+        except Exception as e:
+            print(f"Error in Module 1: {e}")
+            import traceback
+            traceback.print_exc()
+            test_results = {}
 
     # Run Module 2: Runtime Monitoring
-    try:
-        alerts = module2_runtime_monitoring(safety_mas)
-    except Exception as e:
-        print(f"Error in Module 2: {e}")
-        import traceback
-        traceback.print_exc()
-        alerts = []
+    if 2 in modules_to_run:
+        try:
+            alerts = module2_runtime_monitoring(safety_mas)
+        except Exception as e:
+            print(f"Error in Module 2: {e}")
+            import traceback
+            traceback.print_exc()
+            alerts = []
 
     # Run Module 3: Test-Monitor Integration
-    try:
-        comprehensive_report = module3_test_monitor_integration(safety_mas)
-    except Exception as e:
-        print(f"Error in Module 3: {e}")
-        import traceback
-        traceback.print_exc()
-        comprehensive_report = {}
+    if 3 in modules_to_run:
+        try:
+            comprehensive_report = module3_test_monitor_integration(safety_mas)
+        except Exception as e:
+            print(f"Error in Module 3: {e}")
+            import traceback
+            traceback.print_exc()
+            comprehensive_report = {}
 
     # Final summary
     print_separator("Level 3 Safety Demonstration Complete", "=", 80)
 
     print("Summary of demonstration:")
-    print(f"  Module 1 (Pre-deployment Testing): {len(test_results)} tests executed")
-    print(f"  Module 2 (Runtime Monitoring): {len(alerts)} alerts generated")
-    print(f"  Module 3 (Test-Monitor Integration): Comprehensive report generated")
+    if 1 in modules_to_run:
+        print(f"  Module 1 (Pre-deployment Testing): {len(test_results)} tests executed")
+    if 2 in modules_to_run:
+        print(f"  Module 2 (Runtime Monitoring): {len(alerts)} alerts generated")
+    if 3 in modules_to_run:
+        print(f"  Module 3 (Test-Monitor Integration): Comprehensive report generated")
     print()
     print("The Safety_MAS framework provides:")
     print("  - Pre-deployment vulnerability assessment")

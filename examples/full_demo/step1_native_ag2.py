@@ -134,7 +134,7 @@ REQUIRED RESPONSE FORMAT after tool execution:
 IMPORTANT: After calling save_summary, you will receive a tool response. When you see this response, you MUST generate the termination message above. Do NOT remain silent after the tool response!""",
         llm_config=llm_config,
         human_input_mode="NEVER",
-        max_consecutive_auto_reply=2,  # Allow Summarizer to reply after tool execution
+        max_consecutive_auto_reply=3,  # Allow: 1) tool call, 2) tool response, 3) termination message
     )
 
     # Create User Proxy
