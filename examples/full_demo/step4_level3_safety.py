@@ -79,11 +79,11 @@ def module1_pre_deployment_testing(safety_mas: Safety_MAS):
     print(f"Selected tests for demonstration: {selected_tests}")
     print()
 
-    # Configure tests to use heuristic method (no LLM judge)
-    print("Configuring tests to use heuristic evaluation (use_llm_judge=False)...")
+    # Configure tests to use LLM method 
+    print("Configuring tests to use LLM evaluation (use_llm_judge=True)...")
     for test_name in selected_tests:
         if test_name in safety_mas.risk_tests:
-            safety_mas.risk_tests[test_name].config["use_llm_judge"] = False
+            safety_mas.risk_tests[test_name].config["use_llm_judge"] = True
     print()
 
     # Run the tests
