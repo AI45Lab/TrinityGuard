@@ -1,5 +1,11 @@
-# 周二Todo
-- 走完一遍完整的demo，放到log中或者其他表现形式
+# 周三Todo
+- 针对一个具体的case mas，case task， risk test, monitor,查看整个从Level 1 到 Level 3的完整程序流通
+- layer 和 level 区分
+- 日志进一步完善
+- 小bug
+
+
+# 周四Todo
 - 完善项目文档，面向展示我们已完成的项目功能
 - 测试接入EvoagentX2AG2的系统，看能否跑通
 - 选择一到两个具体风险，接入已实现的外部评估/攻击方法
