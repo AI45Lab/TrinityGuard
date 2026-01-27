@@ -568,6 +568,139 @@ def test_safety_mas_full_scan():
 
 
 # =============================================================================
+# COMPREHENSIVE SECURITY SCAN
+# ============================================================================
+
+def test_comprehensive_security_scan():
+    """Run ALL registered security tests against the MAS.
+
+    This is the main security testing function that:
+    1. Creates Safety_MAS wrapper
+    2. Runs all 20 registered risk tests (L1, L2, L3)
+    3. Prints comprehensive security report
+    4. Validates test results
+
+    Tests include:
+    - L1 (8 tests): jailbreak, prompt_injection, sensitive_disclosure,
+                   excessive_agency, code_execution, hallucination,
+                   memory_poisoning, tool_misuse
+    - L2 (6 tests): message_tampering, malicious_propagation,
+                   misinformation_amplify, insecure_output,
+                   goal_drift, identity_spoofing
+    - L3 (6 tests): cascading_failures, sandbox_escape,
+                   insufficient_monitoring, group_hallucination,
+                   malicious_emergence, rogue_agent
+    """
+    print("[TEST] Running comprehensive security scan...")
+    print("    This will test ALL 20 risk categories")
+
+    from src.level1_framework import create_math_solver_mas
+    from src.level3_safety import Safety_MAS
+
+    # Create MAS and Safety_MAS wrapper
+    mas = create_math_solver_mas()
+    safety_mas = Safety_MAS(mas)
+
+    # Get all registered tests
+    all_tests = list(safety_mas.risk_tests.keys())
+    print(f"\n    Available risk tests ({len(all_tests)}):")
+    for i, test_name in enumerate(all_tests, 1):
+        print(f"      {i:2d}. {test_name}")
+
+    # Run all tests
+    print(f"\n    Running all {len(all_tests)} security tests...")
+    print("    WARNING: This may take several minutes...")
+
+    results = safety_mas.run_manual_safety_tests(all_tests)
+
+    # Analyze results
+    print(f"\n    Security Test Results:")
+    print(f"    {'='*60}")
+
+    total_passed = 0
+    total_failed = 0
+    total_errors = 0
+
+    for test_name, result in results.items():
+        if "error" in result:
+            total_errors += 1
+            status = "ERROR"
+            detail = result.get("error", "Unknown error")[:50]
+        elif result.get("passed", False):
+            total_passed += 1
+            status = "✓ PASSED"
+            detail = f"{result.get('total_cases', 0)} cases"
+        else:
+            total_failed += 1
+            status = "✗ FAILED"
+            detail = f"{result.get('failed_cases', 0)}/{result.get('total_cases', 0)} cases failed"
+
+        print(f"    [{status:12s}] {test_name:30s} - {detail}")
+
+    print(f"    {'='*60}")
+    print(f"    Summary: {total_passed} passed, {total_failed} failed, {total_errors} errors")
+
+    # Generate full report
+    report = safety_mas.get_test_report()
+    print(f"\n    Full Security Report:")
+    for line in report.split('\n'):
+        print(f"    {line}")
+
+    # Safety score
+    if total_failed == 0 and total_errors == 0:
+        print(f"\n    ✓ SECURITY SCAN PASSED - All tests passed!")
+    elif total_failed == 0:
+        print(f"\n    ⚠ SECURITY SCAN COMPLETE - Some tests had errors")
+    else:
+        print(f"\n    ✗ SECURITY ISSUES FOUND - {total_failed} test(s) failed")
+
+    return True
+
+
+def test_quick_security_scan():
+    """Run a quick security scan with only critical tests.
+
+    Tests only the most critical risks:
+    - jailbreak (L1)
+    - prompt_injection (L1)
+    - message_tampering (L2)
+    - cascading_failures (L3)
+    """
+    print("[TEST] Running quick security scan (critical tests only)...")
+
+    from src.level1_framework import create_math_solver_mas
+    from src.level3_safety import Safety_MAS
+
+    mas = create_math_solver_mas()
+    safety_mas = Safety_MAS(mas)
+
+    # Select critical tests
+    critical_tests = [
+        "jailbreak",
+        "prompt_injection",
+        "message_tampering",
+        "cascading_failures"
+    ]
+
+    print(f"    Testing {len(critical_tests)} critical risks: {critical_tests}")
+
+    results = safety_mas.run_manual_safety_tests(critical_tests)
+
+    print(f"\n    Quick Scan Results:")
+    for test_name, result in results.items():
+        if "error" not in result:
+            passed = result.get("passed", False)
+            total = result.get("total_cases", 0)
+            failed = result.get("failed_cases", 0)
+            status = "✓ PASS" if passed else "✗ FAIL"
+            print(f"    [{status}] {test_name}: {total} cases, {failed} failed")
+        else:
+            print(f"    [ERROR] {test_name}: {result.get('error', 'Unknown')[:50]}")
+
+    return True
+
+
+# =============================================================================
 # MAIN TEST RUNNER
 # =============================================================================
 
@@ -602,7 +735,11 @@ def main():
         # Detection tests
         ("Jailbreak Detection", test_jailbreak_detection_real),
 
-        # Full safety scan
+        # Comprehensive security scans
+        ("Quick Security Scan", test_quick_security_scan),
+        ("Comprehensive Security Scan", test_comprehensive_security_scan),
+
+        # Legacy tests (kept for compatibility)
         ("Full Safety Scan", test_safety_mas_full_scan),
     ]
 
