@@ -295,6 +295,129 @@ def test_workflow_performance():
 
 
 # =============================================================================
+# COMPREHENSIVE SECURITY SCAN
+# ============================================================================
+
+def test_comprehensive_security_scan():
+    """Run ALL registered security tests against Sequential Agents MAS.
+
+    This tests the sequential A->B->C workflow against all 20 risk categories.
+
+    Tests include:
+    - L1 (8 tests): jailbreak, prompt_injection, sensitive_disclosure,
+                   excessive_agency, code_execution, hallucination,
+                   memory_poisoning, tool_misuse
+    - L2 (6 tests): message_tampering, malicious_propagation,
+                   misinformation_amplify, insecure_output,
+                   goal_drift, identity_spoofing
+    - L3 (6 tests): cascading_failures, sandbox_escape,
+                   insufficient_monitoring, group_hallucination,
+                   malicious_emergence, rogue_agent
+    """
+    print("[TEST] Running comprehensive security scan on Sequential Agents...")
+
+    from src.level1_framework.examples.sequential_agents import SequentialAgentsMAS
+    from src.level3_safety import Safety_MAS
+
+    # Create Sequential Agents MAS and Safety_MAS wrapper
+    mas = SequentialAgentsMAS()
+    safety_mas = Safety_MAS(mas)
+
+    # Get all registered tests
+    all_tests = list(safety_mas.risk_tests.keys())
+    print(f"    Available risk tests ({len(all_tests)})")
+
+    # Run all tests
+    print(f"    Running all {len(all_tests)} security tests...")
+    print("    WARNING: This may take several minutes...")
+
+    results = safety_mas.run_manual_safety_tests(all_tests)
+
+    # Analyze results
+    print(f"\n    Security Test Results:")
+    print(f"    {'='*60}")
+
+    total_passed = 0
+    total_failed = 0
+    total_errors = 0
+
+    for test_name, result in results.items():
+        if "error" in result:
+            total_errors += 1
+            status = "ERROR"
+            detail = result.get("error", "Unknown error")[:50]
+        elif result.get("passed", False):
+            total_passed += 1
+            status = "✓ PASSED"
+            detail = f"{result.get('total_cases', 0)} cases"
+        else:
+            total_failed += 1
+            status = "✗ FAILED"
+            detail = f"{result.get('failed_cases', 0)}/{result.get('total_cases', 0)} cases failed"
+
+        print(f"    [{status:12s}] {test_name:30s} - {detail}")
+
+    print(f"    {'='*60}")
+    print(f"    Summary: {total_passed} passed, {total_failed} failed, {total_errors} errors")
+
+    # Generate full report
+    report = safety_mas.get_test_report()
+    print(f"\n    Full Security Report:")
+    for line in report.split('\n'):
+        print(f"    {line}")
+
+    if total_failed == 0 and total_errors == 0:
+        print(f"\n    ✓ SECURITY SCAN PASSED")
+    else:
+        print(f"\n    ✗ SECURITY ISSUES FOUND")
+
+    return True
+
+
+def test_quick_security_scan():
+    """Run quick security scan on Sequential Agents MAS.
+
+    Tests only critical risks:
+    - jailbreak (L1)
+    - prompt_injection (L1)
+    - message_tampering (L2)
+    - cascading_failures (L3)
+    """
+    print("[TEST] Running quick security scan on Sequential Agents...")
+
+    from src.level1_framework.examples.sequential_agents import SequentialAgentsMAS
+    from src.level3_safety import Safety_MAS
+
+    mas = SequentialAgentsMAS()
+    safety_mas = Safety_MAS(mas)
+
+    # Select critical tests
+    critical_tests = [
+        "jailbreak",
+        "prompt_injection",
+        "message_tampering",
+        "cascading_failures"
+    ]
+
+    print(f"    Testing {len(critical_tests)} critical risks")
+
+    results = safety_mas.run_manual_safety_tests(critical_tests)
+
+    print(f"\n    Quick Scan Results:")
+    for test_name, result in results.items():
+        if "error" not in result:
+            passed = result.get("passed", False)
+            total = result.get("total_cases", 0)
+            failed = result.get("failed_cases", 0)
+            status = "✓ PASS" if passed else "✗ FAIL"
+            print(f"    [{status}] {test_name}: {total} cases, {failed} failed")
+        else:
+            print(f"    [ERROR] {test_name}: {result.get('error', 'Unknown')[:50]}")
+
+    return True
+
+
+# =============================================================================
 # MAIN TEST RUNNER
 # =============================================================================
 
@@ -323,6 +446,10 @@ def main():
 
         # Performance
         ("Workflow Performance", test_workflow_performance),
+
+        # Comprehensive security scans
+        ("Quick Security Scan", test_quick_security_scan),
+        ("Comprehensive Security Scan", test_comprehensive_security_scan),
     ]
 
     passed = 0
