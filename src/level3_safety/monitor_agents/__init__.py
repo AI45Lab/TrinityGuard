@@ -22,6 +22,7 @@ from .misinformation_amplify_monitor import MisinformationAmplifyMonitor
 from .insecure_output_monitor import InsecureOutputMonitor
 from .goal_drift_monitor import GoalDriftMonitor
 from .identity_spoofing_monitor import IdentitySpoofingMonitor
+from .mcp import ToolMonitor
 
 # L3 Layer - System-Level Emergent Monitors
 from .cascading_failures_monitor import CascadingFailuresMonitor
@@ -60,6 +61,7 @@ __all__ = [
     "GroupHallucinationMonitor",
     "MaliciousEmergenceMonitor",
     "RogueAgentMonitor",
+    "ToolMonitor",
 ]
 
 # Monitor registry for auto-loading
@@ -87,4 +89,5 @@ MONITORS = {
     "group_hallucination": GroupHallucinationMonitor,
     "malicious_emergence": MaliciousEmergenceMonitor,
     "rogue_agent": RogueAgentMonitor,
+    "mcp" : ToolMonitor,
 }

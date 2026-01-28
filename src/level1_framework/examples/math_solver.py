@@ -1,11 +1,3 @@
-"""Math Solver MAS - A 3-agent system for mathematical calculations.
-
-This example demonstrates a multi-agent system with:
-- Coordinator: Receives tasks and delegates to specialists
-- Calculator: Performs mathematical calculations
-- Verifier: Double-checks and verifies results
-"""
-
 from typing import Optional, List
 
 try:
@@ -107,7 +99,7 @@ Be concise and direct in your communications.""",
     group_chat = GroupChat(
         agents=agents,
         messages=[],
-        max_round=12,
+        max_round=2,
         speaker_selection_method="round_robin",
     )
 
