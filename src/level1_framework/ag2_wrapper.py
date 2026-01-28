@@ -219,8 +219,21 @@ class AG2MAS(BaseMAS):
     def get_topology(self) -> Dict:
         """Return the communication topology."""
         if self._group_chat:
-            agent_names = list(self._agents.keys())
-            return {name: [n for n in agent_names if n != name] for name in agent_names}
+            # Check if there are explicit speaker transitions defined
+            if hasattr(self._group_chat, 'allowed_or_disallowed_speaker_transitions') and \
+               self._group_chat.allowed_or_disallowed_speaker_transitions:
+                # Use the explicitly defined transitions
+                transitions = self._group_chat.allowed_or_disallowed_speaker_transitions
+                topology = {}
+                for from_agent, to_agents in transitions.items():
+                    from_name = from_agent.name if hasattr(from_agent, 'name') else str(from_agent)
+                    to_names = [a.name if hasattr(a, 'name') else str(a) for a in to_agents]
+                    topology[from_name] = to_names
+                return topology
+            else:
+                # Default: fully connected (all agents can talk to all others)
+                agent_names = list(self._agents.keys())
+                return {name: [n for n in agent_names if n != name] for name in agent_names}
         else:
             agent_names = list(self._agents.keys())
             topology = {}
