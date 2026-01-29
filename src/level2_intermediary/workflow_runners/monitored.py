@@ -28,7 +28,9 @@ class MonitoredWorkflowRunner(WorkflowRunner):
 
         Args:
             task: Task description
-            **kwargs: Additional parameters
+            **kwargs: Additional parameters including:
+                - max_rounds: Maximum conversation rounds
+                - silent: If True, suppress native framework output
 
         Returns:
             WorkflowResult with logs attached
@@ -43,7 +45,7 @@ class MonitoredWorkflowRunner(WorkflowRunner):
             # Apply pre-run hook
             task = self.pre_run_hook(task)
 
-            # Execute workflow
+            # Execute workflow (pass through kwargs including silent)
             result = self.mas.run_workflow(task, **kwargs)
 
             # End trace

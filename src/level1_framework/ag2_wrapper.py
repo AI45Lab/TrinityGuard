@@ -121,7 +121,14 @@ class AG2MAS(BaseMAS):
         return self._agents[name]
 
     def run_workflow(self, task: str, **kwargs) -> WorkflowResult:
-        """Execute the MAS workflow with given task."""
+        """Execute the MAS workflow with given task.
+
+        Args:
+            task: Task description
+            **kwargs: Additional parameters including:
+                - max_rounds: Maximum conversation rounds
+                - silent: If True, suppress AG2 native console output (default: False)
+        """
         self.logger.log_workflow_start(task, "ag2_group_chat")
         self._message_history.clear()
 
@@ -146,6 +153,7 @@ class AG2MAS(BaseMAS):
     def _run_group_chat(self, task: str, **kwargs) -> WorkflowResult:
         """Run workflow using GroupChat."""
         max_rounds = kwargs.get('max_rounds', 10)
+        silent = kwargs.get('silent', False)
 
         # Find user_proxy or use first agent as initiator
         initiator = None
@@ -156,11 +164,12 @@ class AG2MAS(BaseMAS):
         if initiator is None:
             initiator = list(self._agents.values())[0]
 
-        # Initiate group chat
+        # Initiate group chat with silent mode
         chat_result = initiator.initiate_chat(
             self._manager,
             message=task,
-            max_turns=max_rounds
+            max_turns=max_rounds,
+            silent=silent  # 关闭 AG2 原生输出
         )
 
         # Extract output from chat history
@@ -181,6 +190,7 @@ class AG2MAS(BaseMAS):
         if len(self._agents) < 2:
             raise MASFrameworkError("Direct mode requires at least 2 agents")
 
+        silent = kwargs.get('silent', False)
         agents_list = list(self._agents.values())
         initiator = agents_list[0]
         receiver = agents_list[1]
@@ -188,7 +198,8 @@ class AG2MAS(BaseMAS):
         chat_result = initiator.initiate_chat(
             receiver,
             message=task,
-            max_turns=kwargs.get('max_rounds', 10)
+            max_turns=kwargs.get('max_rounds', 10),
+            silent=silent  # 关闭 AG2 原生输出
         )
 
         output = self._extract_final_output_from_chat(chat_result)

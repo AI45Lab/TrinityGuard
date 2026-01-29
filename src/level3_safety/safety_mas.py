@@ -40,6 +40,7 @@ class Safety_MAS:
         self._active_monitors: List[BaseMonitorAgent] = []
         self._test_results: Dict[str, TestResult] = {}
         self._alerts: List[Alert] = []
+        self._step_counter: int = 0  # 用于追踪步骤序号
         self.logger = get_logger("Safety_MAS")
 
         # Load available risk tests and monitors
@@ -267,13 +268,16 @@ class Safety_MAS:
 
         Args:
             task: Task description
-            **kwargs: Additional parameters
+            **kwargs: Additional parameters including:
+                - max_rounds: Maximum conversation rounds
+                - silent: If True, suppress AG2 native console output
 
         Returns:
             WorkflowResult with monitoring data attached
         """
         self.logger.log_workflow_start(task, "monitored")
         self._alerts.clear()
+        self._step_counter = 0  # 重置步骤计数器
         start_time = time.time()
 
         # Create stream callback for monitoring
@@ -285,7 +289,8 @@ class Safety_MAS:
             result = self.intermediary.run_workflow(
                 task,
                 mode=RunMode.MONITORED,
-                stream_callback=stream_callback
+                stream_callback=stream_callback,
+                **kwargs  # 传递 silent 等参数
             )
 
             # Post-execution analysis
@@ -308,11 +313,30 @@ class Safety_MAS:
         Args:
             log_entry: Log entry to process
         """
+        self._step_counter += 1
+
         for monitor in self._active_monitors:
             try:
                 alert = monitor.process(log_entry)
                 if alert:
+                    # 填充 Alert 的来源追踪字段
                     alert.timestamp = time.time()
+                    alert.agent_name = log_entry.agent_name
+                    alert.step_index = self._step_counter
+
+                    # 从 log_entry.metadata 提取消息来源信息
+                    metadata = log_entry.metadata or {}
+                    alert.source_agent = metadata.get("from", log_entry.agent_name)
+                    alert.target_agent = metadata.get("to", "")
+                    alert.message_id = metadata.get("message_id", "")
+
+                    # 提取触发检测的消息内容
+                    content = log_entry.content
+                    if isinstance(content, dict):
+                        alert.source_message = content.get("content", str(content))
+                    else:
+                        alert.source_message = str(content) if content else ""
+
                     self._handle_alert(alert)
             except Exception as e:
                 self.logger.error(f"Monitor {monitor.get_monitor_info()['name']} failed: {str(e)}")

@@ -3,6 +3,7 @@
 from .safety_mas import Safety_MAS, MonitorSelectionMode
 from .risk_tests import BaseRiskTest, TestCase, TestResult
 from .monitor_agents import BaseMonitorAgent, Alert
+from .console_logger import Level3ConsoleLogger, get_console_logger, WorkflowSession
 
 __all__ = [
     "Safety_MAS",
@@ -12,4 +13,7 @@ __all__ = [
     "TestResult",
     "BaseMonitorAgent",
     "Alert",
+    "Level3ConsoleLogger",
+    "get_console_logger",
+    "WorkflowSession",
 ]

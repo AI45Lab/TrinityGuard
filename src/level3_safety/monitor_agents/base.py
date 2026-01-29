@@ -16,6 +16,14 @@ class Alert:
     evidence: Dict = field(default_factory=dict)
     recommended_action: str = "log"  # "log", "warn", "block"
     timestamp: Optional[float] = None
+    # 来源追踪字段
+    agent_name: str = ""              # 触发 alert 的 agent
+    source_agent: str = ""            # 消息来源 agent (from)
+    target_agent: str = ""            # 消息目标 agent (to)
+    source_message: str = ""          # 触发检测的原始消息内容
+    detection_reason: str = ""        # 检测逻辑说明
+    message_id: str = ""              # 关联的消息ID
+    step_index: int = -1              # 在工作流中的步骤序号
 
     def to_dict(self) -> Dict:
         """Convert to dictionary."""
@@ -25,7 +33,14 @@ class Alert:
             "message": self.message,
             "evidence": self.evidence,
             "recommended_action": self.recommended_action,
-            "timestamp": self.timestamp
+            "timestamp": self.timestamp,
+            "agent_name": self.agent_name,
+            "source_agent": self.source_agent,
+            "target_agent": self.target_agent,
+            "source_message": self.source_message[:200] if self.source_message else "",
+            "detection_reason": self.detection_reason,
+            "message_id": self.message_id,
+            "step_index": self.step_index
         }
 
 

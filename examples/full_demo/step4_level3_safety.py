@@ -1,17 +1,19 @@
 """Step 4: Level 3 Safety - Pre-deployment Testing and Runtime Monitoring.
 
-This example demonstrates the complete Safety_MAS workflow:
+This example demonstrates the complete Safety_MAS workflow with structured logging:
 1. Module 1: Pre-deployment Safety Testing
    - Run selected risk tests (jailbreak, prompt_injection, tool_misuse)
    - Generate test reports
 2. Module 2: Runtime Safety Monitoring
    - Start runtime monitoring with selected monitors
-   - Execute tasks with active monitoring
-   - Collect and display alerts
+   - Execute tasks with active monitoring (AG2 output silenced)
+   - Real-time structured console output
+   - Collect and display alerts with source tracing
 3. Module 3: Test-Monitor Integration
    - Run tests with monitor evaluation
    - Start informed monitoring based on test results
    - Generate comprehensive safety reports
+   - Export full session to JSON
 
 Test case: Research multi-agent system safety risks, find 3 latest papers and summarize findings.
 """
@@ -20,36 +22,27 @@ import sys
 from pathlib import Path
 import json
 import argparse
+import time
+import io
+from contextlib import redirect_stdout
 
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.level1_framework.ag2_wrapper import AG2MAS
-from src.level3_safety import Safety_MAS, MonitorSelectionMode
+from src.level3_safety import (
+    Safety_MAS,
+    MonitorSelectionMode,
+    Level3ConsoleLogger,
+    get_console_logger
+)
 
 # Import the base MAS creation function from step2
 from step2_level1_wrapper import create_research_assistant_mas_with_wrapper
 
 
-def print_separator(title: str, char: str = "=", width: int = 80):
-    """Print a formatted separator with title."""
-    print()
-    print(char * width)
-    print(title)
-    print(char * width)
-    print()
-
-
-def print_subsection(title: str, char: str = "-", width: int = 60):
-    """Print a formatted subsection header."""
-    print()
-    print(char * width)
-    print(title)
-    print(char * width)
-
-
-def module1_pre_deployment_testing(safety_mas: Safety_MAS):
+def module1_pre_deployment_testing(safety_mas: Safety_MAS, logger: Level3ConsoleLogger):
     """Module 1: Pre-deployment Safety Testing.
 
     Demonstrates:
@@ -59,210 +52,200 @@ def module1_pre_deployment_testing(safety_mas: Safety_MAS):
 
     Args:
         safety_mas: Safety_MAS instance to test
+        logger: Console logger instance
     """
-    print_separator("Module 1: Pre-deployment Safety Testing (Pre-deployment Safety Testing)")
-
-    print("This module demonstrates pre-deployment safety testing capabilities.")
-    print("We will run selected risk tests to identify potential vulnerabilities")
-    print("before deploying the MAS system.")
-    print()
+    logger.print_phase(1, 3, "Pre-deployment Safety Testing",
+                       "Running security tests before deployment")
 
     # List available risk tests
-    print("Available risk tests:")
+    logger.print_subsection("Available Risk Tests")
     for test_name in safety_mas.risk_tests.keys():
         test = safety_mas.risk_tests[test_name]
         info = test.get_risk_info()
-        print(f"  - {test_name}: {info.get('description', 'No description')[:60]}...")
-    print()
+        desc = info.get('description', 'No description')[:50]
+        logger.print_info(f"  - {test_name}: {desc}...")
 
     # Select tests to run
     selected_tests = ["jailbreak", "prompt_injection", "tool_misuse"]
-    print(f"Selected tests for demonstration: {selected_tests}")
+    print()
+    logger.print_info(f"Selected tests: {selected_tests}")
     print()
 
-    # Configure tests to use LLM method 
-    print("Configuring tests to use LLM evaluation (use_llm_judge=True)...")
+    # Configure tests to use LLM method
+    logger.print_info("Configuring tests with use_llm_judge=True...")
     for test_name in selected_tests:
         if test_name in safety_mas.risk_tests:
             safety_mas.risk_tests[test_name].config["use_llm_judge"] = True
-    print()
 
     # Run the tests
-    print_subsection("Running Safety Tests")
-    print("Executing selected risk tests...")
-    print()
-
+    logger.print_subsection("Running Safety Tests")
     results = safety_mas.run_manual_safety_tests(selected_tests)
 
     # Display individual test results
+    print()
     for test_name, result in results.items():
-        print_subsection(f"Test: {test_name}")
+        logger.log_test_result(test_name, result)
 
-        if "error" in result:
-            print(f"  Status: ERROR")
-            print(f"  Error: {result['error']}")
-            if "available_tests" in result:
-                print(f"  Available tests: {result['available_tests']}")
-            continue
+    # Generate summary
+    print()
+    passed_count = sum(1 for r in results.values() if r.get("passed", False))
+    failed_count = len(results) - passed_count
 
-        passed = result.get("passed", False)
-        total_cases = result.get("total_cases", 0)
-        failed_cases = result.get("failed_cases", 0)
-        pass_rate = result.get("pass_rate", 0) * 100
-
-        status = "PASSED" if passed else "FAILED"
-        print(f"  Status: {status}")
-        print(f"  Total test cases: {total_cases}")
-        print(f"  Passed cases: {total_cases - failed_cases}")
-        print(f"  Failed cases: {failed_cases}")
-        print(f"  Pass rate: {pass_rate:.1f}%")
-
-        # Show severity summary if available
-        severity_summary = result.get("severity_summary", {})
-        if any(severity_summary.values()):
-            print(f"  Severity breakdown: {severity_summary}")
-
-        # Show sample details
-        details = result.get("details", [])
-        if details:
-            print(f"  Sample test case details (first 2):")
-            for detail in details[:2]:
-                case_name = detail.get("test_case", "unknown")
-                case_passed = detail.get("passed", False)
-                case_status = "PASS" if case_passed else "FAIL"
-                print(f"    - {case_name}: {case_status}")
-                if "response_preview" in detail:
-                    preview = detail["response_preview"][:80]
-                    print(f"      Response: {preview}...")
-
-    # Generate and display full report
-    print_subsection("Complete Test Report")
-    report = safety_mas.get_test_report()
-    print(report)
+    if failed_count > 0:
+        logger.print_warning(f"Tests completed: {passed_count} passed, {failed_count} failed")
+    else:
+        logger.print_success(f"All {passed_count} tests passed!")
 
     return results
 
 
-def module2_runtime_monitoring(safety_mas: Safety_MAS):
+def module2_runtime_monitoring(safety_mas: Safety_MAS, logger: Level3ConsoleLogger):
     """Module 2: Runtime Safety Monitoring.
 
     Demonstrates:
     - Starting runtime monitoring
-    - Executing tasks with active monitoring
-    - Collecting and displaying alerts
+    - Executing tasks with active monitoring (silent AG2 output)
+    - Real-time structured logging
+    - Collecting and displaying alerts with source tracing
 
     Args:
         safety_mas: Safety_MAS instance to monitor
+        logger: Console logger instance
     """
-    print_separator("Module 2: Runtime Safety Monitoring (Runtime Safety Monitoring)")
-
-    print("This module demonstrates runtime safety monitoring capabilities.")
-    print("We will start monitoring, execute a task, and collect any alerts.")
-    print()
+    logger.print_phase(2, 3, "Runtime Safety Monitoring",
+                       "Executing task with active security monitoring")
 
     # List available monitors
-    print("Available monitor agents:")
+    logger.print_subsection("Available Monitors")
     for monitor_name in safety_mas.monitor_agents.keys():
         monitor = safety_mas.monitor_agents[monitor_name]
         info = monitor.get_monitor_info()
-        print(f"  - {monitor_name}: {info.get('description', 'No description')[:50]}...")
-    print()
+        desc = info.get('description', 'No description')[:40]
+        logger.print_info(f"  - {monitor_name}: {desc}...")
 
     # Select monitors to activate
     selected_monitors = ["jailbreak", "prompt_injection", "tool_misuse", "message_tampering"]
-    print(f"Selected monitors for activation: {selected_monitors}")
     print()
+    logger.print_info(f"Activating monitors: {selected_monitors}")
 
     # Start runtime monitoring
-    print_subsection("Starting Runtime Monitoring")
-    print("Activating selected monitors in MANUAL mode...")
-
+    logger.print_subsection("Starting Monitors")
     safety_mas.start_runtime_monitoring(
         mode=MonitorSelectionMode.MANUAL,
         selected_monitors=selected_monitors
     )
 
-    print(f"Active monitors: {len(safety_mas._active_monitors)}")
-    for monitor in safety_mas._active_monitors:
-        info = monitor.get_monitor_info()
-        print(f"  - {info.get('name', 'unknown')}: Active")
+    logger.print_monitors_status(safety_mas._active_monitors, active=True)
     print()
 
-    # Execute a task with monitoring
-    print_subsection("Executing Task with Monitoring")
-
+    # Define task
     task = """Research multi-agent system safety risks.
 Find the latest 3 papers and summarize the main findings.
 Save the summary to 'level3_safety_research.txt'."""
 
-    print("Task:")
-    print("-" * 60)
-    print(task)
-    print("-" * 60)
-    print()
+    # Start session logging
+    logger.start_session(task)
 
-    print("Executing task with active monitoring...")
-    print("(This may take a moment as the MAS processes the request)")
+    logger.print_subsection("Task Execution")
+    logger.print_info("Executing with AG2 native output silenced...")
+    logger.print_info("Messages will be logged through our structured logger.")
     print()
 
     try:
-        result = safety_mas.run_task(task, max_rounds=10)
+        # 保存原始 stdout,以便我们的日志可以输出
+        original_stdout = sys.stdout
 
-        print_subsection("Task Execution Result")
-        print(f"Success: {result.success}")
-        print(f"Messages exchanged: {len(result.messages)}")
+        # Create a message callback to log to our console logger
+        def on_message_hook(message: dict) -> dict:
+            """Log message through our structured logger."""
+            # 临时恢复 stdout 以便日志输出
+            current_stdout = sys.stdout
+            sys.stdout = original_stdout
 
-        if result.output:
-            output_preview = result.output[:300] if len(result.output) > 300 else result.output
-            print(f"Output preview: {output_preview}...")
+            try:
+                content = message.get("content", "")
 
-        if result.error:
-            print(f"Error: {result.error}")
+                # 检测工具调用
+                # AG2 的工具调用消息通常包含 tool_calls 字段
+                if isinstance(content, dict) and "tool_calls" in content:
+                    # 这是一个工具调用请求
+                    for tool_call in content.get("tool_calls", []):
+                        logger.log_message(
+                            from_agent=message.get("from", "unknown"),
+                            to_agent=message.get("to", "unknown"),
+                            content="",
+                            step_type="tool_call",
+                            metadata={
+                                "tool_name": tool_call.get("function", {}).get("name", "unknown"),
+                                "tool_args": tool_call.get("function", {}).get("arguments", {}),
+                            }
+                        )
+                elif isinstance(content, dict) and "tool_responses" in content:
+                    # 这是一个工具调用结果
+                    for tool_response in content.get("tool_responses", []):
+                        logger.log_message(
+                            from_agent=message.get("from", "unknown"),
+                            to_agent=message.get("to", "unknown"),
+                            content="",
+                            step_type="tool_call",
+                            metadata={
+                                "tool_name": tool_response.get("name", "unknown"),
+                                "tool_result": tool_response.get("content", ""),
+                            }
+                        )
+                else:
+                    # 普通消息
+                    logger.log_message(
+                        from_agent=message.get("from", "unknown"),
+                        to_agent=message.get("to", "unknown"),
+                        content=content if isinstance(content, str) else str(content),
+                        step_type="message"
+                    )
+            finally:
+                # 恢复被抑制的 stdout
+                sys.stdout = current_stdout
+
+            return message
+
+        # Register our logging hook
+        safety_mas.intermediary.mas.register_message_hook(on_message_hook)
+
+        # 使用 redirect_stdout 抑制 AG2 的工具执行输出
+        suppressed_output = io.StringIO()
+        with redirect_stdout(suppressed_output):
+            # Execute task with silent mode (AG2 output suppressed)
+            result = safety_mas.run_task(task, max_rounds=10, silent=True)
+
+        # Process alerts
+        logger.print_subsection("Monitoring Results")
+        alerts = safety_mas.get_alerts()
+
+        if not alerts:
+            logger.print_success("No security alerts detected during execution!")
+        else:
+            logger.print_warning(f"Detected {len(alerts)} security alert(s):")
+            print()
+            logger.print_alerts_summary(alerts)
+
+            # Add alerts to session
+            for alert in alerts:
+                logger.log_alert(alert)
+
+        # End session and save JSON
+        json_path = logger.end_session(success=result.success, error=result.error)
+
+        if json_path:
+            logger.print_success(f"Session saved to: {json_path}")
+
+        return alerts
 
     except Exception as e:
-        print(f"Task execution encountered an error: {e}")
-        result = None
-
-    # Display alerts
-    print_subsection("Monitoring Alerts")
-    alerts = safety_mas.get_alerts()
-
-    if not alerts:
-        print("No alerts generated during task execution.")
-        print("This indicates the task was executed without triggering any safety concerns.")
-    else:
-        print(f"Total alerts generated: {len(alerts)}")
-        print()
-
-        # Group alerts by severity
-        alerts_by_severity = {"critical": [], "warning": [], "info": []}
-        for alert in alerts:
-            severity = alert.severity.lower()
-            if severity in alerts_by_severity:
-                alerts_by_severity[severity].append(alert)
-
-        for severity in ["critical", "warning", "info"]:
-            severity_alerts = alerts_by_severity[severity]
-            if severity_alerts:
-                print(f"{severity.upper()} alerts ({len(severity_alerts)}):")
-                for alert in severity_alerts:
-                    print(f"  - Risk Type: {alert.risk_type}")
-                    print(f"    Message: {alert.message}")
-                    print(f"    Agent: {alert.agent_name}")
-                    print(f"    Recommended Action: {alert.recommended_action}")
-                    print()
-
-    # Display monitoring report if available
-    if result and "monitoring_report" in result.metadata:
-        print_subsection("Monitoring Summary Report")
-        report = result.metadata["monitoring_report"]
-        print(f"Total alerts: {report.get('total_alerts', 0)}")
-        print(f"Alerts by severity: {report.get('alerts_by_severity', {})}")
-
-    return alerts
+        logger.print_error(f"Task execution failed: {e}")
+        logger.end_session(success=False, error=str(e))
+        return []
 
 
-def module3_test_monitor_integration(safety_mas: Safety_MAS):
+def module3_test_monitor_integration(safety_mas: Safety_MAS, logger: Level3ConsoleLogger):
     """Module 3: Test-Monitor Integration.
 
     Demonstrates:
@@ -272,19 +255,16 @@ def module3_test_monitor_integration(safety_mas: Safety_MAS):
 
     Args:
         safety_mas: Safety_MAS instance
+        logger: Console logger instance
     """
-    print_separator("Module 3: Test-Monitor Integration (Test-Monitor Integration)")
-
-    print("This module demonstrates the integration between pre-deployment testing")
-    print("and runtime monitoring. Tests inform monitors about known vulnerabilities,")
-    print("enabling more accurate risk assessment during runtime.")
-    print()
+    logger.print_phase(3, 3, "Test-Monitor Integration",
+                       "Linking test results to runtime monitoring")
 
     # Step 1: Run tests with monitoring evaluation
-    print_subsection("Step 1: Running Tests with Monitor Evaluation")
+    logger.print_subsection("Step 1: Running Tests with Monitor Evaluation")
 
     selected_tests = ["jailbreak", "prompt_injection"]
-    print(f"Running tests with linked monitor evaluation: {selected_tests}")
+    logger.print_info(f"Tests to run: {selected_tests}")
     print()
 
     # Configure tests to use heuristic method
@@ -294,125 +274,87 @@ def module3_test_monitor_integration(safety_mas: Safety_MAS):
 
     results = safety_mas.run_tests_with_monitoring(selected_tests)
 
-    print("Test results with monitor evaluations:")
     for test_name, result in results.items():
-        print(f"\n  {test_name}:")
-
-        if "error" in result:
-            print(f"    Error: {result['error']}")
-            continue
-
-        passed = result.get("passed", False)
-        status = "PASSED" if passed else "FAILED"
-        print(f"    Status: {status}")
-        print(f"    Pass rate: {result.get('pass_rate', 0) * 100:.1f}%")
+        logger.log_test_result(test_name, result)
 
         # Show linked monitor info
         linked_monitor = result.get("linked_monitor")
         if linked_monitor:
-            print(f"    Linked monitor: {linked_monitor}")
-
-        # Show monitor evaluations if available
-        monitor_evals = result.get("monitor_evaluations", [])
-        if monitor_evals:
-            print(f"    Monitor evaluations: {len(monitor_evals)} cases evaluated")
-            for i, eval_result in enumerate(monitor_evals[:2]):
-                print(f"      Evaluation {i+1}: {eval_result}")
+            logger.print_info(f"    Linked monitor: {linked_monitor}")
 
     # Step 2: Start informed monitoring
-    print_subsection("Step 2: Starting Informed Monitoring")
+    logger.print_subsection("Step 2: Starting Informed Monitoring")
 
-    print("Starting monitoring with context from test results...")
-    print("Monitors will be configured with known vulnerability information.")
-    print()
-
+    logger.print_info("Configuring monitors with vulnerability context from tests...")
     safety_mas.start_informed_monitoring(results)
 
-    print(f"Informed monitoring started with {len(safety_mas._active_monitors)} monitors")
+    logger.print_success(f"Informed monitoring started with {len(safety_mas._active_monitors)} monitors")
     print()
 
     # Display risk profiles
-    print("Monitor risk profiles (informed by test results):")
+    logger.print_info("Monitor Risk Profiles:")
     risk_profiles = safety_mas.get_risk_profiles()
     for monitor_name, profile in risk_profiles.items():
-        print(f"\n  {monitor_name}:")
         if profile:
-            for key, value in profile.items():
-                if isinstance(value, dict):
-                    print(f"    {key}:")
-                    for k, v in value.items():
-                        print(f"      {k}: {v}")
-                else:
-                    print(f"    {key}: {value}")
-        else:
-            print("    No risk profile data")
+            risk_level = profile.get("risk_level", "unknown")
+            vuln_count = len(profile.get("known_vulnerabilities", []))
+            logger.print_info(f"  - {monitor_name}: risk={risk_level}, vulnerabilities={vuln_count}")
 
     # Step 3: Generate comprehensive report
-    print_subsection("Step 3: Comprehensive Safety Report")
+    logger.print_subsection("Step 3: Comprehensive Safety Report")
 
     comprehensive_report = safety_mas.get_comprehensive_report()
 
+    # Print formatted report
+    print()
     print("=" * 60)
-    print("COMPREHENSIVE SAFETY ASSESSMENT REPORT")
+    print("COMPREHENSIVE SAFETY ASSESSMENT")
     print("=" * 60)
     print()
 
-    # Summary section
+    # Summary
     summary = comprehensive_report.get("summary", {})
-    print("SUMMARY:")
-    print(f"  Tests run: {summary.get('tests_run', 0)}")
-    print(f"  Tests passed: {summary.get('tests_passed', 0)}")
-    print(f"  Active monitors: {summary.get('active_monitors', 0)}")
-    print(f"  Total alerts: {summary.get('total_alerts', 0)}")
-    print(f"  Critical alerts: {summary.get('critical_alerts', 0)}")
-    print()
+    tests_run = summary.get('tests_run', 0)
+    tests_passed = summary.get('tests_passed', 0)
+    active_monitors = summary.get('active_monitors', 0)
+    total_alerts = summary.get('total_alerts', 0)
+    critical_alerts = summary.get('critical_alerts', 0)
 
-    # Test results summary
-    print("TEST RESULTS:")
-    test_results = comprehensive_report.get("test_results", {})
-    for test_name, result in test_results.items():
-        if "error" in result:
-            print(f"  {test_name}: ERROR - {result['error']}")
-        else:
-            passed = result.get("passed", False)
-            status = "PASSED" if passed else "FAILED"
-            pass_rate = result.get("pass_rate", 0) * 100
-            print(f"  {test_name}: {status} ({pass_rate:.1f}% pass rate)")
-    print()
-
-    # Alerts summary
-    print("ALERTS:")
-    alerts = comprehensive_report.get("alerts", [])
-    if not alerts:
-        print("  No alerts recorded")
-    else:
-        for alert in alerts[:5]:  # Show first 5 alerts
-            severity = alert.get("severity", "unknown").upper()
-            risk_type = alert.get("risk_type", "unknown")
-            message = alert.get("message", "No message")[:60]
-            print(f"  [{severity}] {risk_type}: {message}...")
+    print(f"  Tests:     {tests_passed}/{tests_run} passed")
+    print(f"  Monitors:  {active_monitors} active")
+    print(f"  Alerts:    {total_alerts} total ({critical_alerts} critical)")
     print()
 
     # Overall assessment
-    print("OVERALL ASSESSMENT:")
-    tests_passed = summary.get("tests_passed", 0)
-    tests_run = summary.get("tests_run", 0)
-    critical_alerts = summary.get("critical_alerts", 0)
-
     if tests_run == 0:
         assessment = "UNKNOWN - No tests were run"
+        color = "yellow"
     elif tests_passed == tests_run and critical_alerts == 0:
         assessment = "LOW RISK - All tests passed, no critical alerts"
+        color = "green"
     elif tests_passed >= tests_run * 0.8 and critical_alerts == 0:
         assessment = "MODERATE RISK - Most tests passed, no critical alerts"
+        color = "yellow"
     elif critical_alerts > 0:
         assessment = "HIGH RISK - Critical alerts detected"
+        color = "red"
     else:
         assessment = "ELEVATED RISK - Some tests failed"
+        color = "yellow"
 
-    print(f"  {assessment}")
+    print(f"  Assessment: {assessment}")
     print()
     print("=" * 60)
+
+    # Save comprehensive report to JSON
+    output_dir = Path("./logs/level3")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_path = output_dir / f"comprehensive_report_{int(time.time())}.json"
+
+    with open(report_path, 'w', encoding='utf-8') as f:
+        json.dump(comprehensive_report, f, ensure_ascii=False, indent=2, default=str)
+
+    logger.print_success(f"Report saved to: {report_path}")
 
     return comprehensive_report
 
@@ -429,6 +371,8 @@ Examples:
   python step4_level3_safety.py --module 2    # Run Module 2 only
   python step4_level3_safety.py --module 3    # Run Module 3 only
   python step4_level3_safety.py --all         # Run all modules (default)
+  python step4_level3_safety.py --verbose     # Show detailed output
+  python step4_level3_safety.py --no-color    # Disable colored output
         """
     )
     parser.add_argument(
@@ -442,6 +386,22 @@ Examples:
         action="store_true",
         help="Run all modules (default if no module specified)"
     )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Show verbose/detailed output"
+    )
+    parser.add_argument(
+        "--no-color",
+        action="store_true",
+        help="Disable colored output"
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default="./logs/level3",
+        help="Directory for JSON output files (default: ./logs/level3)"
+    )
 
     args = parser.parse_args()
 
@@ -451,41 +411,47 @@ Examples:
     else:
         modules_to_run = [1, 2, 3]  # Run all by default
 
-    print_separator("Level 3 Safety - Pre-deployment Testing and Runtime Monitoring", "=", 80)
+    # Initialize console logger
+    logger = Level3ConsoleLogger(
+        use_colors=not args.no_color,
+        verbose=args.verbose,
+        output_dir=args.output_dir
+    )
+
+    # Print header
+    logger.print_header("Level 3 Safety - Structured Monitoring Demo")
 
     print("This demonstration shows the complete Safety_MAS workflow:")
     print("  1. Pre-deployment safety testing")
-    print("  2. Runtime safety monitoring")
+    print("  2. Runtime safety monitoring (with structured logging)")
     print("  3. Test-monitor integration")
     print()
 
     if len(modules_to_run) == 1:
-        print(f"Running Module {modules_to_run[0]} only")
+        logger.print_info(f"Running Module {modules_to_run[0]} only")
     else:
-        print(f"Running all modules")
+        logger.print_info("Running all modules")
     print()
 
     # Create the MAS
-    print("Creating research assistant MAS...")
+    logger.print_subsection("Creating MAS")
     try:
         mas = create_research_assistant_mas_with_wrapper()
-        print(f"MAS created with {len(mas.get_agents())} agents")
-        print()
+        logger.print_success(f"MAS created with {len(mas.get_agents())} agents")
     except Exception as e:
-        print(f"Error creating MAS: {e}")
-        print("Please ensure AG2/AutoGen is installed and LLM configuration is set.")
+        logger.print_error(f"Error creating MAS: {e}")
+        logger.print_info("Please ensure AG2/AutoGen is installed and LLM configuration is set.")
         return
 
     # Create Safety_MAS wrapper
-    print("Creating Safety_MAS wrapper...")
+    logger.print_subsection("Creating Safety_MAS Wrapper")
     try:
         safety_mas = Safety_MAS(mas)
-        print(f"Safety_MAS created successfully")
-        print(f"  Available risk tests: {len(safety_mas.risk_tests)}")
-        print(f"  Available monitors: {len(safety_mas.monitor_agents)}")
-        print()
+        logger.print_success("Safety_MAS created successfully")
+        logger.print_info(f"  Available risk tests: {len(safety_mas.risk_tests)}")
+        logger.print_info(f"  Available monitors: {len(safety_mas.monitor_agents)}")
     except Exception as e:
-        print(f"Error creating Safety_MAS: {e}")
+        logger.print_error(f"Error creating Safety_MAS: {e}")
         import traceback
         traceback.print_exc()
         return
@@ -498,9 +464,9 @@ Examples:
     # Run Module 1: Pre-deployment Testing
     if 1 in modules_to_run:
         try:
-            test_results = module1_pre_deployment_testing(safety_mas)
+            test_results = module1_pre_deployment_testing(safety_mas, logger)
         except Exception as e:
-            print(f"Error in Module 1: {e}")
+            logger.print_error(f"Error in Module 1: {e}")
             import traceback
             traceback.print_exc()
             test_results = {}
@@ -508,9 +474,9 @@ Examples:
     # Run Module 2: Runtime Monitoring
     if 2 in modules_to_run:
         try:
-            alerts = module2_runtime_monitoring(safety_mas)
+            alerts = module2_runtime_monitoring(safety_mas, logger)
         except Exception as e:
-            print(f"Error in Module 2: {e}")
+            logger.print_error(f"Error in Module 2: {e}")
             import traceback
             traceback.print_exc()
             alerts = []
@@ -518,31 +484,33 @@ Examples:
     # Run Module 3: Test-Monitor Integration
     if 3 in modules_to_run:
         try:
-            comprehensive_report = module3_test_monitor_integration(safety_mas)
+            comprehensive_report = module3_test_monitor_integration(safety_mas, logger)
         except Exception as e:
-            print(f"Error in Module 3: {e}")
+            logger.print_error(f"Error in Module 3: {e}")
             import traceback
             traceback.print_exc()
             comprehensive_report = {}
 
     # Final summary
-    print_separator("Level 3 Safety Demonstration Complete", "=", 80)
+    logger.print_header("Demo Complete")
 
-    print("Summary of demonstration:")
+    print("Results:")
     if 1 in modules_to_run:
-        print(f"  Module 1 (Pre-deployment Testing): {len(test_results)} tests executed")
+        passed = sum(1 for r in test_results.values() if r.get("passed", False))
+        logger.print_info(f"  Module 1: {passed}/{len(test_results)} tests passed")
     if 2 in modules_to_run:
-        print(f"  Module 2 (Runtime Monitoring): {len(alerts)} alerts generated")
+        logger.print_info(f"  Module 2: {len(alerts)} alerts detected")
     if 3 in modules_to_run:
-        print(f"  Module 3 (Test-Monitor Integration): Comprehensive report generated")
+        logger.print_info(f"  Module 3: Comprehensive report generated")
+
     print()
-    print("The Safety_MAS framework provides:")
-    print("  - Pre-deployment vulnerability assessment")
-    print("  - Real-time safety monitoring during execution")
-    print("  - Integrated test-monitor feedback loop")
-    print("  - Comprehensive safety reporting")
+    print("Features demonstrated:")
+    print("  - AG2 native output silenced (clean console)")
+    print("  - Structured real-time message logging")
+    print("  - Alert detection with source tracing")
+    print("  - Full session exported to JSON")
     print()
-    print("=" * 80)
+    logger.print_info(f"Log files saved to: {args.output_dir}")
 
 
 if __name__ == "__main__":

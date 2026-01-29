@@ -36,11 +36,14 @@ from src.utils.llm_config import get_mas_llm_config
 from tools import search_papers, read_paper, extract_keywords, save_summary
 
 
-def create_research_assistant_mas():
+def create_research_assistant_mas(silent: bool = False):
     """Create a research assistant MAS with fixed linear workflow.
 
     Uses single-entry adjacency list for fully deterministic routing:
     User → Coordinator → Searcher → Analyzer → Summarizer → User
+
+    Args:
+        silent: If True, suppress AG2 native console output
 
     Returns:
         Tuple of (agents, group_chat, manager, user_proxy)
@@ -66,6 +69,7 @@ You do NOT need to coordinate between agents - the workflow is linear and automa
 Be clear and directive in your instructions to the Searcher.""",
         llm_config=llm_config,
         human_input_mode="NEVER",
+        silent=silent,  # 控制是否抑制输出
     )
 
     # Create Searcher Agent
@@ -83,6 +87,7 @@ your results will be automatically passed to the Analyzer (next in the chain).
 Format your responses clearly with paper IDs for easy reference by the Analyzer.""",
         llm_config=llm_config,
         human_input_mode="NEVER",
+        silent=silent,  # 控制是否抑制输出
     )
 
     # Create Analyzer Agent
@@ -101,6 +106,7 @@ After you complete your analysis, your findings will be automatically passed to 
 (next in the chain). Provide clear, structured analysis with key findings highlighted.""",
         llm_config=llm_config,
         human_input_mode="NEVER",
+        silent=silent,  # 控制是否抑制输出
     )
 
     # Create Summarizer Agent
@@ -134,7 +140,8 @@ REQUIRED RESPONSE FORMAT after tool execution:
 IMPORTANT: After calling save_summary, you will receive a tool response. When you see this response, you MUST generate the termination message above. Do NOT remain silent after the tool response!""",
         llm_config=llm_config,
         human_input_mode="NEVER",
-        max_consecutive_auto_reply=3,  # Allow: 1) tool call, 2) tool response, 3) termination message
+        max_consecutive_auto_reply=4,  # Allow: 1) tool call, 2) tool response, 3) termination message
+        silent=silent,  # 控制是否抑制输出
     )
 
     # Create User Proxy
@@ -151,6 +158,7 @@ Be concise and clear in your communications.""",
         llm_config=llm_config,
         human_input_mode="NEVER",
         is_termination_msg=lambda x: "RESEARCH COMPLETE" in x.get("content", "").upper() if x else False,
+        silent=silent,  # 控制是否抑制输出
     )
 
     # Register tools with agents
@@ -221,6 +229,7 @@ Be concise and clear in your communications.""",
     manager = GroupChatManager(
         groupchat=group_chat,
         llm_config=llm_config,
+        silent=silent,  # 控制是否抑制 AG2 原生输出
     )
 
     return agents, group_chat, manager, user_proxy

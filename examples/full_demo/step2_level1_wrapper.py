@@ -37,8 +37,8 @@ def create_research_assistant_mas_with_wrapper():
     Returns:
         AG2MAS instance wrapping the research assistant system
     """
-    # Reuse the base MAS creation from step1
-    agents, group_chat, manager, user_proxy = create_research_assistant_mas()
+    # Reuse the base MAS creation from step1 with silent mode enabled
+    agents, group_chat, manager, user_proxy = create_research_assistant_mas(silent=True)
 
     # Wrap with AG2MAS - This is the Level 1 wrapper!
     mas = AG2MAS(
