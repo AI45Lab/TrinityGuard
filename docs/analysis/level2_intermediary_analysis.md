@@ -109,27 +109,27 @@ src/level2_intermediary/
 
 ### 2.2 代码统计
 
-| 类别 | 文件数 | 代码行数 | 占比 |
-|------|--------|----------|------|
-| **核心抽象** | 1 | 209 | 20.3% |
-| **AG2 实现** | 1 | 362 | 35.2% |
-| **工作流执行器** | 5 | 408 | 39.7% |
-| **结构化日志** | 2 | 213 | 20.7% |
-| **总计** | 9 | 1,028 | 100% |
+| 类别                   | 文件数 | 代码行数 | 占比  |
+| ---------------------- | ------ | -------- | ----- |
+| **核心抽象**     | 1      | 209      | 20.3% |
+| **AG2 实现**     | 1      | 362      | 35.2% |
+| **工作流执行器** | 5      | 408      | 39.7% |
+| **结构化日志**   | 2      | 213      | 20.7% |
+| **总计**         | 9      | 1,028    | 100%  |
 
 ### 2.3 文件职责矩阵
 
-| 文件 | 核心职责 | 关键类/函数 | 对外接口 |
-|------|---------|------------|---------|
-| **base.py** | 定义中间层抽象接口 | MASIntermediary, RunMode | 7 个预部署 API + 工作流管理 |
-| **ag2_intermediary.py** | AG2 框架适配实现 | AG2Intermediary | 实现所有抽象方法 |
-| **workflow_runners/base.py** | 执行器抽象 | WorkflowRunner | run(), 3 个钩子方法 |
-| **workflow_runners/basic.py** | 标准执行器 | BasicWorkflowRunner | 无修改的工作流执行 |
-| **workflow_runners/intercepting.py** | 拦截执行器 | InterceptingWorkflowRunner, MessageInterception | 消息拦截和修改 |
-| **workflow_runners/monitored.py** | 监控执行器 | MonitoredWorkflowRunner | 结构化日志 + 实时回调 |
-| **workflow_runners/combined.py** | 组合执行器 | MonitoredInterceptingRunner | 拦截 + 监控 |
-| **structured_logging/schemas.py** | 日志数据模型 | AgentStepLog, MessageLog, WorkflowTrace | 日志数据结构 |
-| **structured_logging/logger.py** | 日志写入管理 | StructuredLogWriter | 日志记录和持久化 |
+| 文件                                       | 核心职责           | 关键类/函数                                     | 对外接口                    |
+| ------------------------------------------ | ------------------ | ----------------------------------------------- | --------------------------- |
+| **base.py**                          | 定义中间层抽象接口 | MASIntermediary, RunMode                        | 7 个预部署 API + 工作流管理 |
+| **ag2_intermediary.py**              | AG2 框架适配实现   | AG2Intermediary                                 | 实现所有抽象方法            |
+| **workflow_runners/base.py**         | 执行器抽象         | WorkflowRunner                                  | run(), 3 个钩子方法         |
+| **workflow_runners/basic.py**        | 标准执行器         | BasicWorkflowRunner                             | 无修改的工作流执行          |
+| **workflow_runners/intercepting.py** | 拦截执行器         | InterceptingWorkflowRunner, MessageInterception | 消息拦截和修改              |
+| **workflow_runners/monitored.py**    | 监控执行器         | MonitoredWorkflowRunner                         | 结构化日志 + 实时回调       |
+| **workflow_runners/combined.py**     | 组合执行器         | MonitoredInterceptingRunner                     | 拦截 + 监控                 |
+| **structured_logging/schemas.py**    | 日志数据模型       | AgentStepLog, MessageLog, WorkflowTrace         | 日志数据结构                |
+| **structured_logging/logger.py**     | 日志写入管理       | StructuredLogWriter                             | 日志记录和持久化            |
 
 ---
 
@@ -194,6 +194,7 @@ def agent_chat(self, agent_name: str, message: str,
 ```
 
 **关键点**:
+
 - 绕过多 agent 协作，直接与单个 agent 交互
 - 适合测试 agent 的基础安全属性
 - 无副作用（不修改 agent 状态）
@@ -290,6 +291,7 @@ def inject_tool_call(self, agent_name: str, tool_name: str,
 ```
 
 **关键点**:
+
 - `mock=False` 时**真实调用**工具函数
 - 访问 AG2 agent 的内部 `_function_map`
 - 支持测试工具的真实影响
@@ -340,6 +342,7 @@ def inject_memory(self, agent_name: str, memory_content: str,
 ```
 
 **实现机制**:
+
 - `memory_type="system"`: 修改 agent 的 `system_message`
 - `memory_type="context"`: 注入到 agent 的 `_oai_messages`
 - 注入后，agent 会"记住"这些内容并影响后续对话
@@ -431,6 +434,7 @@ def spoof_identity(self, real_agent: str, spoofed_agent: str,
 ```
 
 **实现机制**:
+
 - 直接操作接收 agent 的 `_oai_messages`
 - 注入包含伪造发送者名称的消息
 - 接收 agent 无法区分真实和伪造
@@ -476,6 +480,7 @@ def get_resource_usage(self, agent_name: Optional[str] = None) -> Dict:
 ```
 
 **实现依赖**:
+
 - 使用 `psutil` 库获取系统资源信息
 - 内部维护 `_api_call_counts` 字典追踪 API 调用
 
@@ -617,6 +622,7 @@ def agent_chat(self, agent_name: str, message: str,
 ```
 
 **技术细节**:
+
 - 使用 AG2 的 `generate_reply()` 方法
 - 不通过 MAS 工作流，直接与 agent 交互
 - 支持提供对话历史
@@ -683,6 +689,7 @@ def inject_tool_call(self, agent_name: str, tool_name: str,
 ```
 
 **关键点**:
+
 - 访问 AG2 agent 的 `_function_map` 内部属性
 - `mock=False` 时**真实调用** Python 函数
 - 如果工具有副作用（文件操作、网络请求），会真实发生
@@ -729,6 +736,7 @@ def inject_memory(self, agent_name: str, memory_content: str,
 ```
 
 **关键点**:
+
 - 访问 AG2 agent 的 `_oai_messages` 内部属性
 - 注入后，LLM 会将这些内容作为真实上下文处理
 - 影响 agent 的后续所有对话
@@ -791,6 +799,7 @@ def spoof_identity(self, real_agent: str, spoofed_agent: str,
 ```
 
 **关键点**:
+
 - 直接操作接收 agent 的 `_oai_messages`
 - 接收 agent 无法区分真实和伪造的消息
 - 在后续对话中，接收 agent 会基于伪造的"历史"做出反应
@@ -1018,6 +1027,7 @@ result = runner.run("Execute the task")
 ```
 
 **关键设计**:
+
 - 通过 `register_message_hook()` 与 Level1 集成
 - 修改器是高阶函数，支持任意逻辑
 - 条件函数支持复杂的拦截规则
@@ -1120,12 +1130,14 @@ class MonitoredWorkflowRunner(WorkflowRunner):
 ```
 
 **关键特性**:
+
 - `stream_callback`: 每产生一条日志就立即调用
 - 这是运行时监控的基础，Level3 的监控器通过此回调接收日志
 - 自动生成 UUID 作为消息 ID
 - 不修改消息内容，仅记录
 
 **与 Level3 的集成**:
+
 ```python
 # Level3 的监控器
 class JailbreakMonitor(BaseMonitorAgent):
@@ -1196,6 +1208,7 @@ class MonitoredInterceptingRunner(MonitoredWorkflowRunner):
 ```
 
 **设计价值**:
+
 - 继承复用监控逻辑
 - 在 `on_message` 中先拦截，后监控
 - **拦截过程本身也被记录到日志中**
@@ -1251,6 +1264,7 @@ class AgentStepLog:
 ```
 
 **字段说明**:
+
 - `timestamp`: Unix 时间戳，精确到毫秒
 - `agent_name`: 执行步骤的 agent
 - `step_type`: 步骤类型（receive, think, tool_call, respond, error）
@@ -1327,6 +1341,7 @@ class WorkflowTrace:
 ```
 
 **设计亮点**:
+
 - 自动计算 `duration` 字段
 - 所有数据结构都支持 `to_dict()` 序列化
 - 便于存储到 JSON 文件或数据库
@@ -1454,6 +1469,7 @@ class StructuredLogWriter:
 ```
 
 **特点**:
+
 - 支持增量写入到文件（JSONL 格式）
 - 支持实时查询当前日志
 - 自动时间戳记录
@@ -1495,16 +1511,17 @@ class StructuredLogWriter:
 **关键集成点**:
 
 1. **消息钩子机制**:
+
    - Level1 提供 `register_message_hook()`
    - Level2 的 WorkflowRunner 注册钩子
    - AG2 的 `send()` 方法被 monkey-patch，自动应用所有钩子
-
 2. **直接状态访问**:
+
    - `inject_memory()` 访问 `agent._oai_messages`
    - `inject_tool_call()` 访问 `agent._function_map`
    - `spoof_identity()` 直接操作 agent 的聊天历史
-
 3. **工作流执行**:
+
    - WorkflowRunner 包装 `mas.run_workflow()`
    - 通过钩子实现拦截和监控
 
@@ -1631,6 +1648,7 @@ result = runner.run("Execute task")
 ```
 
 **数据流**:
+
 ```
 WorkflowRunner.on_message()
     ↓
@@ -1649,21 +1667,22 @@ monitor.process(log_entry)
 
 ### 5.1 设计模式
 
-| 模式 | 使用位置 | 具体实现 | 作用 |
-|------|---------|---------|------|
-| **Abstract Factory** | `MASIntermediary.create_runner()` | 根据 RunMode 创建不同的 WorkflowRunner | 灵活创建执行器 |
-| **Template Method** | `WorkflowRunner.run()` | 定义执行框架，子类实现具体逻辑 | 统一执行流程 |
-| **Chain of Responsibility** | `_apply_message_hooks()` | 多个钩子依次处理消息 | 灵活的消息处理 |
-| **Strategy** | `MessageInterception.modifier` | 不同的消息修改策略 | 可插拔的修改逻辑 |
-| **Observer** | `stream_callback` | 实时监听日志事件 | 运行时监控 |
-| **Decorator** | Monkey-patching `agent.send()` | 动态增强 agent 功能 | 透明拦截 |
-| **Repository** | `StructuredLogWriter` | 集中管理日志数据 | 统一的数据访问 |
+| 模式                              | 使用位置                            | 具体实现                               | 作用             |
+| --------------------------------- | ----------------------------------- | -------------------------------------- | ---------------- |
+| **Abstract Factory**        | `MASIntermediary.create_runner()` | 根据 RunMode 创建不同的 WorkflowRunner | 灵活创建执行器   |
+| **Template Method**         | `WorkflowRunner.run()`            | 定义执行框架，子类实现具体逻辑         | 统一执行流程     |
+| **Chain of Responsibility** | `_apply_message_hooks()`          | 多个钩子依次处理消息                   | 灵活的消息处理   |
+| **Strategy**                | `MessageInterception.modifier`    | 不同的消息修改策略                     | 可插拔的修改逻辑 |
+| **Observer**                | `stream_callback`                 | 实时监听日志事件                       | 运行时监控       |
+| **Decorator**               | Monkey-patching `agent.send()`    | 动态增强 agent 功能                    | 透明拦截         |
+| **Repository**              | `StructuredLogWriter`             | 集中管理日志数据                       | 统一的数据访问   |
 
 ### 5.2 架构决策
 
 #### 决策 1: 分离预部署 API 和执行器
 
 **背景**: 需要支持两种测试方式：
+
 1. 直接操作单个 agent
 2. 在完整工作流中测试
 
@@ -1683,11 +1702,13 @@ monitor.process(log_entry)
 ```
 
 **优点**:
+
 - ✅ 灵活性：可单独测试 agent，也可测试完整工作流
 - ✅ 正交性：两套 API 互不干扰
 - ✅ 可组合：执行器可以组合使用
 
 **缺点**:
+
 - ❌ API 数量多：需要学习更多接口
 
 ---
@@ -1697,6 +1718,7 @@ monitor.process(log_entry)
 **背景**: 需要拦截和修改消息
 
 **方案 A (不好)**: 修改 Level1
+
 ```python
 class CustomAG2MAS(AG2MAS):
     def run_workflow(self, task):
@@ -1705,6 +1727,7 @@ class CustomAG2MAS(AG2MAS):
 ```
 
 **方案 B (采用)**: 通过钩子
+
 ```python
 class InterceptingWorkflowRunner(WorkflowRunner):
     def run(self, task):
@@ -1714,6 +1737,7 @@ class InterceptingWorkflowRunner(WorkflowRunner):
 ```
 
 **优点**:
+
 - ✅ Level2 不需要修改或继承 Level1
 - ✅ Level1 保持简洁和稳定
 - ✅ 支持多个钩子链式执行
@@ -1725,11 +1749,13 @@ class InterceptingWorkflowRunner(WorkflowRunner):
 **背景**: 需要精确的风险检测
 
 **方案 A (不好)**: 字符串日志
+
 ```python
 log = "Agent A sent message to Agent B: content"
 ```
 
 **方案 B (采用)**: 结构化对象
+
 ```python
 AgentStepLog(
     timestamp=1234567890,
@@ -1741,6 +1767,7 @@ AgentStepLog(
 ```
 
 **优点**:
+
 - ✅ 易于解析和过滤
 - ✅ 支持精确的风险检测
 - ✅ 可直接转换为 JSON 存储
@@ -1768,6 +1795,7 @@ intermediary.inject_tool_call(
 ```
 
 **优点**:
+
 - ✅ 安全性：避免在测试中意外执行危险操作
 - ✅ 灵活性：可根据需要选择真实或模拟
 - ✅ 成本效益：快速验证逻辑，真实执行时再验证影响
@@ -1778,14 +1806,15 @@ intermediary.inject_tool_call(
 
 ### 6.1 错误处理
 
-| 方法 | 返回类型 | 错误处理方式 | 评分 |
-|------|---------|-------------|------|
-| `agent_chat()` | `str` | 抛异常 | 7/10 |
-| `inject_tool_call()` | `Dict` | 返回 {"success": False, "error": "..."} | 8/10 |
-| `inject_memory()` | `bool` | 返回 False | 6/10 |
-| `run_workflow()` | `WorkflowResult` | WorkflowResult(success=False, error="...") | 9/10 |
+| 方法                   | 返回类型           | 错误处理方式                               | 评分 |
+| ---------------------- | ------------------ | ------------------------------------------ | ---- |
+| `agent_chat()`       | `str`            | 抛异常                                     | 7/10 |
+| `inject_tool_call()` | `Dict`           | 返回 {"success": False, "error": "..."}    | 8/10 |
+| `inject_memory()`    | `bool`           | 返回 False                                 | 6/10 |
+| `run_workflow()`     | `WorkflowResult` | WorkflowResult(success=False, error="...") | 9/10 |
 
 **设计特点**:
+
 - 主要 API（如 `agent_chat`）抛异常
 - 工具类方法返回状态码（如 `inject_memory` 返回 bool）
 - 工作流执行返回统一的 `WorkflowResult`
@@ -1807,6 +1836,7 @@ class InterceptingWorkflowRunner(WorkflowRunner):
 ```
 
 **设计特点**:
+
 - 使用 try-finally 确保资源清理
 - 异常安全
 
@@ -1836,17 +1866,19 @@ class AgentStepLog:
 ### 6.4 API 的一致性
 
 **Mock 参数模式**:
-| 方法 | Mock 支持 | 副作用 | 默认值 |
-|------|---------|-------|--------|
-| `inject_tool_call()` | ✅ | 有 | False |
-| `inject_memory()` | ✅ | 有 | False |
-| `broadcast_message()` | ✅ | 有 | False |
-| `spoof_identity()` | ✅ | 有 | False |
-| `agent_chat()` | ❌ | 无 | N/A |
-| `simulate_agent_message()` | ❌ | 无 | N/A |
-| `get_resource_usage()` | ❌ | 无 | N/A |
+
+| 方法                         | Mock 支持 | 副作用 | 默认值 |
+| ---------------------------- | --------- | ------ | ------ |
+| `inject_tool_call()`       | ✅        | 有     | False  |
+| `inject_memory()`          | ✅        | 有     | False  |
+| `broadcast_message()`      | ✅        | 有     | False  |
+| `spoof_identity()`         | ✅        | 有     | False  |
+| `agent_chat()`             | ❌        | 无     | N/A    |
+| `simulate_agent_message()` | ❌        | 无     | N/A    |
+| `get_resource_usage()`     | ❌        | 无     | N/A    |
 
 **设计原则**:
+
 - 有副作用的方法支持 mock
 - 无副作用的方法不需要 mock
 - 所有方法返回 Dict 或基本类型
@@ -1901,6 +1933,7 @@ Safety_MAS.run_task(task)
 ```
 
 **关键点**:
+
 - `stream_callback` 在每条日志产生时**立即调用**
 - Level3 的监控器通过此回调**实时接收**日志
 - 无需等待工作流完成
@@ -2157,16 +2190,16 @@ Level 1: MAS Framework Layer
 
 ### 10.2 核心能力评估
 
-| 能力 | 实现方式 | 评分 | 说明 |
-|------|---------|------|------|
-| **预部署测试** | 7 个 API 直接操作 agent | 9/10 | 功能完善，支持 mock |
-| **消息拦截** | MessageInterception + 钩子 | 8/10 | 灵活但配置复杂 |
-| **工作流监控** | MonitoredWorkflowRunner | 9/10 | 结构化日志完善 |
-| **实时回调** | stream_callback | 9/10 | 关键特性 |
-| **日志持久化** | JSONL 文件写入 | 7/10 | 简单但有效 |
-| **错误处理** | 混合策略 | 7/10 | 不够一致 |
-| **文档** | Docstring 详细 | 8/10 | 较完善 |
-| **测试覆盖** | 缺少单元测试 | 5/10 | 需改进 |
+| 能力                 | 实现方式                   | 评分 | 说明                |
+| -------------------- | -------------------------- | ---- | ------------------- |
+| **预部署测试** | 7 个 API 直接操作 agent    | 9/10 | 功能完善，支持 mock |
+| **消息拦截**   | MessageInterception + 钩子 | 8/10 | 灵活但配置复杂      |
+| **工作流监控** | MonitoredWorkflowRunner    | 9/10 | 结构化日志完善      |
+| **实时回调**   | stream_callback            | 9/10 | 关键特性            |
+| **日志持久化** | JSONL 文件写入             | 7/10 | 简单但有效          |
+| **错误处理**   | 混合策略                   | 7/10 | 不够一致            |
+| **文档**       | Docstring 详细             | 8/10 | 较完善              |
+| **测试覆盖**   | 缺少单元测试               | 5/10 | 需改进              |
 
 **总体评分**: **8.0/10** - 功能强大的中间层
 
@@ -2194,21 +2227,23 @@ Level 1: MAS Framework Layer
 Level2 的最大特点是**真实执行**能力：
 
 1. **inject_tool_call(mock=False)**:
+
    - 访问 `agent._function_map`
    - 真实调用 Python 函数
    - 副作用会真实发生
-
 2. **inject_memory(mock=False)**:
+
    - 访问 `agent._oai_messages`
    - 真实修改 agent 内部状态
    - 影响后续对话
-
 3. **spoof_identity(mock=False)**:
+
    - 直接操作聊天历史
    - 接收 agent 无法识别伪造
    - 真实的身份欺骗
 
 **设计考量**:
+
 - Mock 模式默认 False → 鼓励真实测试
 - 但提供 Mock 选项 → 避免危险操作
 - 这种设计让测试既**真实**又**安全**
@@ -2239,21 +2274,23 @@ Level2 代码统计:
 ### B. 依赖关系
 
 **外部依赖**:
+
 - `psutil`: 资源监控
 - `uuid`: 消息 ID 生成
 - `time`: 时间戳
 - `json`: 日志序列化
 
 **内部依赖**:
+
 - `level1_framework.base`: BaseMAS, WorkflowResult
 - `level1_framework.ag2_wrapper`: AG2MAS
 - `utils.logging_config`: get_logger
 
 ### C. 版本历史
 
-| 版本 | 日期 | 变更 |
-|------|------|------|
-| 1.0 | 2026-01-28 | 初始版本，完整分析 level2_intermediary |
+| 版本 | 日期       | 变更                                   |
+| ---- | ---------- | -------------------------------------- |
+| 1.0  | 2026-01-28 | 初始版本，完整分析 level2_intermediary |
 
 ---
 

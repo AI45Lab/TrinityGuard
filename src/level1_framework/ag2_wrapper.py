@@ -61,11 +61,16 @@ class AG2MAS(BaseMAS):
             else:
                 msg_dict = message.copy() if isinstance(message, dict) else {"content": str(message)}
 
-            # Build hook message format
+            # Build hook message format with full message info
             hook_msg = {
                 "from": agent_name,
                 "to": recipient.name if hasattr(recipient, 'name') else str(recipient),
                 "content": msg_dict.get("content", ""),
+                "tool_calls": msg_dict.get("tool_calls", None),
+                "tool_responses": msg_dict.get("tool_responses", None),
+                "function_call": msg_dict.get("function_call", None),
+                "name": msg_dict.get("name", None),
+                "role": msg_dict.get("role", None),
             }
 
             # Apply message hooks

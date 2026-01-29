@@ -25,7 +25,7 @@ class ConversationMessage:
     to_agent: str                 # 接收者
     content: Optional[str]        # 消息内容（可能为 None）
     message_id: str = ""          # 消息ID
-    step_type: str = "message"    # 步骤类型: message, tool_call, tool_result
+    step_type: str = "message"    # 步骤类型: message, tool_call, tool_result, potential_tool_call
     metadata: Dict = field(default_factory=dict)
 
     def to_dict(self) -> Dict:
@@ -46,6 +46,24 @@ class WorkflowSession:
     metadata: Dict = field(default_factory=dict)        # 元数据
 
     def to_dict(self) -> Dict:
+        # 分离工具调用和普通消息
+        tool_calls = [m for m in self.messages if m.step_type in ("tool_call", "tool_result", "potential_tool_call")]
+        regular_messages = [m for m in self.messages if m.step_type == "message"]
+
+        # 统计工具调用
+        tool_call_summary = {}
+        for msg in tool_calls:
+            if msg.step_type == "tool_call":
+                tool_name = msg.metadata.get("tool_name", "unknown")
+                if tool_name not in tool_call_summary:
+                    tool_call_summary[tool_name] = {"requests": 0, "responses": 0}
+                tool_call_summary[tool_name]["requests"] += 1
+            elif msg.step_type == "tool_result":
+                tool_name = msg.metadata.get("tool_name", "unknown")
+                if tool_name not in tool_call_summary:
+                    tool_call_summary[tool_name] = {"requests": 0, "responses": 0}
+                tool_call_summary[tool_name]["responses"] += 1
+
         return {
             "task": self.task,
             "start_time": self.start_time,
@@ -56,11 +74,18 @@ class WorkflowSession:
             "success": self.success,
             "error": self.error,
             "messages": [m.to_dict() for m in self.messages],
+            "tool_calls": [m.to_dict() for m in tool_calls],  # 单独列出所有工具调用
+            "regular_messages": [m.to_dict() for m in regular_messages],  # 单独列出普通消息
             "alerts": self.alerts,
             "test_results": self.test_results,
             "metadata": self.metadata,
             "summary": {
                 "total_messages": len(self.messages),
+                "regular_messages": len(regular_messages),
+                "tool_calls": len([m for m in tool_calls if m.step_type == "tool_call"]),
+                "tool_results": len([m for m in tool_calls if m.step_type == "tool_result"]),
+                "potential_tool_calls": len([m for m in tool_calls if m.step_type == "potential_tool_call"]),
+                "tool_call_summary": tool_call_summary,
                 "total_alerts": len(self.alerts),
                 "critical_alerts": sum(1 for a in self.alerts if a.get("severity") == "critical"),
                 "warning_alerts": sum(1 for a in self.alerts if a.get("severity") == "warning"),
@@ -272,9 +297,13 @@ class Level3ConsoleLogger:
         from_color = self._agent_color(msg.from_agent)
         to_color = self._agent_color(msg.to_agent)
 
-        # 检查是否是工具调用
-        if msg.step_type == "tool_call":
+        # 检查是否是工具调用或工具结果
+        if msg.step_type in ("tool_call", "tool_result"):
             self._print_tool_call_compact(msg)
+            return
+
+        # 跳过 potential_tool_call 的终端输出（只记录到 JSON）
+        if msg.step_type == "potential_tool_call":
             return
 
         # 格式: [12:34:56] #1 Coordinator → Searcher
@@ -302,25 +331,38 @@ class Level3ConsoleLogger:
         tool_name = msg.metadata.get("tool_name", "unknown")
         tool_args = msg.metadata.get("tool_args", {})
         tool_result = msg.metadata.get("tool_result", None)
+        call_type = msg.metadata.get("call_type", "unknown")
 
-        # 格式: [12:34:56] #1 🔧 Searcher: search_papers
+        # 根据类型选择图标
+        if msg.step_type == "tool_call":
+            icon = "🔧"
+            type_label = "CALL"
+        elif msg.step_type == "tool_result":
+            icon = "✓"
+            type_label = "RESULT"
+        else:
+            icon = "?"
+            type_label = "UNKNOWN"
+
+        # 格式: [12:34:56] #1 🔧 Searcher: search_papers [CALL]
         header = (
             f"{self._color(f'[{time_str}]', 'dim')} "
             f"{self._color(f'#{msg.index}', 'dim')} "
-            f"{self._color('🔧', 'yellow')} "
+            f"{self._color(icon, 'yellow')} "
             f"{self._color(msg.from_agent, from_color)}: "
-            f"{self._color(tool_name, 'yellow')}"
+            f"{self._color(tool_name, 'yellow')} "
+            f"{self._color(f'[{type_label}]', 'dim')}"
         )
         print(header)
 
-        # 工具参数预览
-        if tool_args:
+        # 工具参数预览（仅对 tool_call）
+        if msg.step_type == "tool_call" and tool_args:
             args_str = str(tool_args)
             args_preview = self._truncate(args_str, 60)
             print(f"   {self._color('Args:', 'dim')} {self._color(args_preview, 'dim')}")
 
-        # 工具结果预览(如果有)
-        if tool_result is not None:
+        # 工具结果预览（仅对 tool_result）
+        if msg.step_type == "tool_result" and tool_result is not None:
             result_str = str(tool_result)
             result_preview = self._truncate(result_str, 60)
             print(f"   {self._color('Result:', 'dim')} {self._color(result_preview, 'dim')}")

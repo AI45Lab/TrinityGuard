@@ -75,22 +75,22 @@ src/level1_framework/
 
 ### 2.2 代码统计
 
-| 类别 | 文件数 | 代码行数 | 占比 |
-|------|--------|----------|------|
-| **核心模块** | 3 | 726 | 58% |
-| **示例代码** | 3 | 531 | 42% |
-| **总计** | 6 | 1,257 | 100% |
+| 类别               | 文件数 | 代码行数 | 占比 |
+| ------------------ | ------ | -------- | ---- |
+| **核心模块** | 3      | 726      | 58%  |
+| **示例代码** | 3      | 531      | 42%  |
+| **总计**     | 6      | 1,257    | 100% |
 
 ### 2.3 职责矩阵
 
-| 文件 | 核心职责 | 对外接口 | 地位 |
-|------|---------|----------|------|
-| **base.py** | 定义 MAS 抽象接口 | BaseMAS, AgentInfo, WorkflowResult | 基础架构 |
-| **ag2_wrapper.py** | AG2 框架包装和消息拦截 | AG2MAS, create_ag2_mas_from_config | 核心实现 |
-| **evoagentx_adapter.py** | 外部工作流转换 | create_ag2_mas_from_evoagentx | 适配层 |
-| **math_solver.py** | Round Robin 协作模式 | MathSolverMAS, create_math_solver_mas | 参考实现 |
-| **sequential_agents.py** | 固定转移链模式 | SequentialAgentsMAS | 参考实现 |
-| **evoagentx_workflow.py** | 集成使用示例 | main() 示例函数 | 文档参考 |
+| 文件                            | 核心职责               | 对外接口                              | 地位     |
+| ------------------------------- | ---------------------- | ------------------------------------- | -------- |
+| **base.py**               | 定义 MAS 抽象接口      | BaseMAS, AgentInfo, WorkflowResult    | 基础架构 |
+| **ag2_wrapper.py**        | AG2 框架包装和消息拦截 | AG2MAS, create_ag2_mas_from_config    | 核心实现 |
+| **evoagentx_adapter.py**  | 外部工作流转换         | create_ag2_mas_from_evoagentx         | 适配层   |
+| **math_solver.py**        | Round Robin 协作模式   | MathSolverMAS, create_math_solver_mas | 参考实现 |
+| **sequential_agents.py**  | 固定转移链模式         | SequentialAgentsMAS                   | 参考实现 |
+| **evoagentx_workflow.py** | 集成使用示例           | main() 示例函数                       | 文档参考 |
 
 ---
 
@@ -113,11 +113,13 @@ class AgentInfo:
 ```
 
 **用途**:
+
 - 提供统一的 agent 元数据格式
 - 用于 `get_agents()` 方法返回
 - 便于上层查询和展示 agent 信息
 
 **设计考虑**:
+
 - 使用 `@dataclass` 减少样板代码
 - `role` 字段自动从 `system_prompt` 截取前 50 字符
 - `tools` 字段当前未充分利用（待扩展）
@@ -141,15 +143,16 @@ class WorkflowResult:
 
 **字段说明**:
 
-| 字段 | 类型 | 说明 | 示例 |
-|------|------|------|------|
-| `success` | bool | 是否成功完成 | True/False |
-| `output` | Any | 最终输出（通常是字符串） | "Final answer: 42" |
-| `messages` | List[Dict] | 消息历史记录 | [{"from": "A", "to": "B", "content": "..."}] |
-| `metadata` | Dict | 附加信息 | {"mode": "group_chat", "rounds": 5} |
-| `error` | Optional[str] | 错误描述 | "Agent not found: xyz" |
+| 字段         | 类型          | 说明                     | 示例                                         |
+| ------------ | ------------- | ------------------------ | -------------------------------------------- |
+| `success`  | bool          | 是否成功完成             | True/False                                   |
+| `output`   | Any           | 最终输出（通常是字符串） | "Final answer: 42"                           |
+| `messages` | List[Dict]    | 消息历史记录             | [{"from": "A", "to": "B", "content": "..."}] |
+| `metadata` | Dict          | 附加信息                 | {"mode": "group_chat", "rounds": 5}          |
+| `error`    | Optional[str] | 错误描述                 | "Agent not found: xyz"                       |
 
 **设计优势**:
+
 - 统一的返回格式，便于上层处理
 - 完整的消息历史支持审计和调试
 - 灵活的 metadata 字段支持扩展信息
@@ -197,6 +200,7 @@ class BaseMAS(ABC):
 #### 3.2.2 抽象方法详解
 
 **1. get_agents() -> List[AgentInfo]**
+
 ```python
 # 用途：获取系统中所有 agent 的元数据
 # 返回：AgentInfo 对象列表
@@ -207,6 +211,7 @@ for agent in agents:
 ```
 
 **2. get_agent(name: str) -> Any**
+
 ```python
 # 用途：按名称获取特定 agent 的原生对象
 # 返回：框架原生的 agent 对象（如 ConversableAgent）
@@ -216,6 +221,7 @@ coordinator = mas.get_agent("coordinator")
 ```
 
 **3. run_workflow(task: str, **kwargs) -> WorkflowResult**
+
 ```python
 # 用途：执行 MAS 工作流
 # 参数：
@@ -229,6 +235,7 @@ if result.success:
 ```
 
 **4. get_topology() -> Dict**
+
 ```python
 # 用途：获取 agent 间的通信拓扑
 # 返回：Dict[agent_name, List[可通信的 agent 名称]]
@@ -263,6 +270,7 @@ mas.register_message_hook(security_filter)
 ```
 
 **应用场景**:
+
 - ✅ 安全监控（检测 jailbreak、prompt injection）
 - ✅ 内容审查（敏感信息过滤）
 - ✅ 审计日志（记录所有通信）
@@ -327,6 +335,7 @@ def __init__(self,
 ```
 
 **关键设计**:
+
 - **延迟拦截**: 不在构造时安装消息拦截，而是在首次注册钩子时
 - **字典缓存**: 使用 `{name: agent}` 提高查找效率
 - **可选 GroupChat**: 支持多种执行模式
@@ -354,6 +363,7 @@ def _setup_message_interception(self):
 ```
 
 **时序图**:
+
 ```
 首次调用 register_message_hook()
     ↓
@@ -426,6 +436,7 @@ def _wrap_agent_send(self, agent: ConversableAgent, agent_name: str):
 ```
 
 **执行流程**:
+
 ```
 Agent A 调用 agent.send("Hello", Agent B)
     ↓
@@ -445,6 +456,7 @@ Agent A 调用 agent.send("Hello", Agent B)
 ```
 
 **安全保证**:
+
 - ✅ **不丢失消息**: 即使钩子出错，原始 send 仍会执行
 - ✅ **完整历史**: 所有消息都被记录（包括被修改的）
 - ✅ **透明拦截**: AG2 框架无感知
@@ -485,6 +497,7 @@ def run_workflow(self, task: str, **kwargs) -> WorkflowResult:
 ```
 
 **决策逻辑**:
+
 ```
 if manager AND group_chat 存在:
     → _run_group_chat()     # 多 agent 协作模式
@@ -541,6 +554,7 @@ def _run_group_chat(self, task: str, **kwargs) -> WorkflowResult:
 ```
 
 **流程图**:
+
 ```
 选择初始化者
     ├─ 查找 user_proxy/user agent
@@ -602,7 +616,7 @@ def _run_direct(self, task: str, **kwargs) -> WorkflowResult:
 
 ---
 
-### 4.5 拓扑查询
+### 4.5 拓扑查询 
 
 **位置**: `ag2_wrapper.py:219-245`
 
@@ -964,6 +978,7 @@ def _create_agents_from_nodes(self, nodes: List[WorkflowNode]) -> List[Conversab
 ```
 
 **示例**:
+
 ```python
 # workflow.json 中有 3 个 nodes，每个 node 有 1 个 agent
 nodes = [
@@ -1008,6 +1023,7 @@ def _build_sequential_transitions(
 ```
 
 **可视化**:
+
 ```
 agent_a ──→ agent_b ──→ agent_c ──→ [END]
 ```
@@ -1074,6 +1090,7 @@ group_chat = GroupChat(
 ```
 
 **执行流程**:
+
 ```
 user_proxy → coordinator → calculator → verifier → user_proxy → ...
 (循环直到检测到 "FINAL ANSWER" 或达到 max_round)
@@ -1107,6 +1124,7 @@ class MathSolverMAS(AG2MAS):
 ```
 
 **使用示例**:
+
 ```python
 mas = create_math_solver_mas()
 answer = mas.solve("What is 25 * 4?")
@@ -1137,6 +1155,7 @@ group_chat = GroupChat(
 ```
 
 **拓扑图**:
+
 ```
    ┌─────────────┐
    │   agent_a   │ (协调者)
@@ -1184,6 +1203,7 @@ class SequentialAgentsMAS(AG2MAS):
 ```
 
 **使用示例**:
+
 ```python
 mas = create_sequential_agents_mas()
 tasks = [
@@ -1284,20 +1304,20 @@ level1_framework/
 
 ### 7.2 外部依赖
 
-| 依赖 | 类型 | 版本要求 | 用途 | 必需性 |
-|------|------|----------|------|--------|
-| **autogen** | 外部库 | >= 0.2.0 | AG2 框架主实现 | 必需 |
-| **pyautogen** | 外部库 | >= 0.2.0 | AG2 备选实现 | 备选 |
-| **yaml** | 外部库 | - | 配置文件解析 | 必需 |
+| 依赖                | 类型   | 版本要求 | 用途           | 必需性 |
+| ------------------- | ------ | -------- | -------------- | ------ |
+| **autogen**   | 外部库 | >= 0.2.0 | AG2 框架主实现 | 必需   |
+| **pyautogen** | 外部库 | >= 0.2.0 | AG2 备选实现   | 备选   |
+| **yaml**      | 外部库 | -        | 配置文件解析   | 必需   |
 
 ### 7.3 内部依赖
 
-| 模块 | 提供的功能 | 被依赖次数 |
-|------|-----------|-----------|
-| **base.py** | BaseMAS, AgentInfo, WorkflowResult | 3 |
-| **utils/logging_config.py** | get_logger | 4 |
-| **utils/llm_config.py** | MASLLMConfig, get_mas_llm_config | 4 |
-| **utils/exceptions.py** | MASFrameworkError, ConfigurationError | 2 |
+| 模块                              | 提供的功能                            | 被依赖次数 |
+| --------------------------------- | ------------------------------------- | ---------- |
+| **base.py**                 | BaseMAS, AgentInfo, WorkflowResult    | 3          |
+| **utils/logging_config.py** | get_logger                            | 4          |
+| **utils/llm_config.py**     | MASLLMConfig, get_mas_llm_config      | 4          |
+| **utils/exceptions.py**     | MASFrameworkError, ConfigurationError | 2          |
 
 ### 7.4 容错导入机制
 
@@ -1315,6 +1335,7 @@ except ImportError:
 ```
 
 **优点**:
+
 - ✅ 支持多种 AG2 实现
 - ✅ 清晰的错误提示
 - ✅ 向后兼容性
@@ -1325,17 +1346,17 @@ except ImportError:
 
 ### 8.1 应用的设计模式总览
 
-| 模式 | 位置 | 具体实现 | 作用 |
-|------|------|---------|------|
-| **Template Method** | BaseMAS | 抽象方法定义流程 | 统一 MAS 接口 |
-| **Observer** | BaseMAS | register_message_hook | 消息监控 |
-| **Adapter** | AG2MAS | BaseMAS → AG2 | 框架适配 |
-| **Adapter** | evoagentx_adapter | EvoAgentX → AG2MAS | 工作流适配 |
-| **Factory** | create_ag2_mas_from_config | 从配置创建对象 | 简化创建过程 |
-| **Factory** | Parser + Converter | 两步工厂 | 解析与转换分离 |
-| **Strategy** | get_topology | 多种拓扑策略 | 灵活的拓扑推导 |
-| **Decorator** | _wrap_agent_send | 包装 send 方法 | 透明拦截 |
-| **Chain of Responsibility** | _apply_message_hooks | 钩子链 | 多层过滤 |
+| 模式                              | 位置                       | 具体实现              | 作用           |
+| --------------------------------- | -------------------------- | --------------------- | -------------- |
+| **Template Method**         | BaseMAS                    | 抽象方法定义流程      | 统一 MAS 接口  |
+| **Observer**                | BaseMAS                    | register_message_hook | 消息监控       |
+| **Adapter**                 | AG2MAS                     | BaseMAS → AG2        | 框架适配       |
+| **Adapter**                 | evoagentx_adapter          | EvoAgentX → AG2MAS   | 工作流适配     |
+| **Factory**                 | create_ag2_mas_from_config | 从配置创建对象        | 简化创建过程   |
+| **Factory**                 | Parser + Converter         | 两步工厂              | 解析与转换分离 |
+| **Strategy**                | get_topology               | 多种拓扑策略          | 灵活的拓扑推导 |
+| **Decorator**               | _wrap_agent_send           | 包装 send 方法        | 透明拦截       |
+| **Chain of Responsibility** | _apply_message_hooks       | 钩子链                | 多层过滤       |
 
 ### 8.2 详细分析
 
@@ -1369,6 +1390,7 @@ class BaseMAS(ABC):
 ```
 
 **优点**:
+
 - 统一执行流程
 - 强制子类实现关键方法
 - 便于添加通用功能
@@ -1407,6 +1429,7 @@ mas.register_message_hook(security_monitor)
 ```
 
 **应用场景**:
+
 - 安全监控（检测恶意内容）
 - 审计日志（记录所有消息）
 - 性能分析（统计消息数量和延迟）
@@ -1416,6 +1439,7 @@ mas.register_message_hook(security_monitor)
 #### 8.2.3 Adapter 模式
 
 **AG2 适配器**:
+
 ```python
 # 目标接口 (BaseMAS)
 class BaseMAS(ABC):
@@ -1438,6 +1462,7 @@ class AG2MAS(BaseMAS):
 ```
 
 **EvoAgentX 适配器**:
+
 ```python
 # 目标接口 (AG2MAS)
 AG2MAS(agents, group_chat, manager)
@@ -1462,6 +1487,7 @@ mas = converter.convert(workflow)         # ParsedWorkflow → AG2MAS
 #### 8.2.4 Factory 模式
 
 **简单工厂**:
+
 ```python
 def create_ag2_mas_from_config(config: Dict) -> AG2MAS:
     """根据配置创建 AG2MAS"""
@@ -1473,6 +1499,7 @@ def create_ag2_mas_from_config(config: Dict) -> AG2MAS:
 ```
 
 **两步工厂**:
+
 ```python
 # 步骤 1: 解析
 parser = WorkflowParser()
@@ -1484,6 +1511,7 @@ mas = converter.convert(workflow)
 ```
 
 **优点**:
+
 - 分离关注点（解析 vs 转换）
 - 易于测试
 - 支持不同的输入源
@@ -1516,6 +1544,7 @@ class AG2MAS:
 ```
 
 **与传统装饰器的区别**:
+
 - 运行时动态装饰（非编译时）
 - 使用 Monkey Patching
 - 针对对象实例而非类
@@ -1543,6 +1572,7 @@ message → spam_filter → security_check → logger → 最终消息
 ```
 
 **优点**:
+
 - 动态添加/移除处理器
 - 处理器顺序可控
 - 每个处理器职责单一
@@ -1583,12 +1613,12 @@ message → spam_filter → security_check → logger → 最终消息
 
 ### 9.1 异常处理评估
 
-| 模块 | 异常类型 | 处理方式 | 评分 |
-|------|---------|---------|------|
-| **base.py** | 无显式异常 | 依赖子类 | 5/10 |
-| **ag2_wrapper.py** | ValueError, MASFrameworkError | try-catch + 日志 | 8/10 |
+| 模块                           | 异常类型                                       | 处理方式         | 评分 |
+| ------------------------------ | ---------------------------------------------- | ---------------- | ---- |
+| **base.py**              | 无显式异常                                     | 依赖子类         | 5/10 |
+| **ag2_wrapper.py**       | ValueError, MASFrameworkError                  | try-catch + 日志 | 8/10 |
 | **evoagentx_adapter.py** | FileNotFoundError, JSONDecodeError, ValueError | try-catch + 日志 | 7/10 |
-| **examples** | 示例性异常处理 | 教学性质 | 8/10 |
+| **examples**             | 示例性异常处理                                 | 教学性质         | 8/10 |
 
 #### 9.1.1 ag2_wrapper.py 异常处理
 
@@ -1618,6 +1648,7 @@ def run_workflow(self, task: str, **kwargs) -> WorkflowResult:
 ```
 
 **优点**:
+
 - ✅ 清晰的错误消息
 - ✅ 包含上下文信息（可用的 agent 列表）
 - ✅ 日志记录异常堆栈
@@ -1670,6 +1701,7 @@ def run_workflow(self, task: str, **kwargs) -> WorkflowResult:
 ```
 
 **文档质量**:
+
 - ✅ 所有公共 API 有文档
 - ✅ 参数、返回值、异常说明完整
 - ✅ 包含使用示例
@@ -1696,13 +1728,13 @@ MAX_ROUNDS = 10                  # 常量：大写+下划线（建议改进）
 
 #### 9.3.1 圈复杂度分析
 
-| 方法 | 圈复杂度 | 评级 | 说明 |
-|------|---------|------|------|
-| `BaseMAS.__init__` | 1 | 简单 | 仅初始化 |
-| `AG2MAS.run_workflow` | 3 | 简单 | if-else + try-catch |
-| `AG2MAS._wrap_agent_send` | 4 | 中等 | 多个分支处理 |
-| `AG2MAS.get_topology` | 5 | 中等 | 多层嵌套 if |
-| `WorkflowParser._parse_original_nodes` | 2 | 简单 | 双重循环 |
+| 方法                                     | 圈复杂度 | 评级 | 说明                |
+| ---------------------------------------- | -------- | ---- | ------------------- |
+| `BaseMAS.__init__`                     | 1        | 简单 | 仅初始化            |
+| `AG2MAS.run_workflow`                  | 3        | 简单 | if-else + try-catch |
+| `AG2MAS._wrap_agent_send`              | 4        | 中等 | 多个分支处理        |
+| `AG2MAS.get_topology`                  | 5        | 中等 | 多层嵌套 if         |
+| `WorkflowParser._parse_original_nodes` | 2        | 简单 | 双重循环            |
 
 **总体评估**: 大部分方法复杂度低，易于理解和维护
 
@@ -1725,14 +1757,14 @@ if self._group_chat:                                    # 层级 1
 
 ### 9.4 潜在问题与改进建议
 
-| 问题 | 位置 | 严重性 | 建议 |
-|------|------|--------|------|
-| **魔法数字** | math_solver.py, sequential_agents.py | 低 | 提取为配置常数 |
-| **重复代码** | 多处 ConversableAgent 创建 | 低 | 创建 agent 工厂函数 |
-| **缺少类型验证** | create_ag2_mas_from_config | 中 | 使用 TypedDict 或 Pydantic |
-| **Monkey Patching 风险** | _wrap_agent_send | 中 | 添加恢复机制或文档说明 |
-| **硬编码字符串** | system messages | 低 | 提取到常数或配置文件 |
-| **缺少单元测试** | 所有模块 | 高 | 补充单元测试 |
+| 问题                           | 位置                                 | 严重性 | 建议                       |
+| ------------------------------ | ------------------------------------ | ------ | -------------------------- |
+| **魔法数字**             | math_solver.py, sequential_agents.py | 低     | 提取为配置常数             |
+| **重复代码**             | 多处 ConversableAgent 创建           | 低     | 创建 agent 工厂函数        |
+| **缺少类型验证**         | create_ag2_mas_from_config           | 中     | 使用 TypedDict 或 Pydantic |
+| **Monkey Patching 风险** | _wrap_agent_send                     | 中     | 添加恢复机制或文档说明     |
+| **硬编码字符串**         | system messages                      | 低     | 提取到常数或配置文件       |
+| **缺少单元测试**         | 所有模块                             | 高     | 补充单元测试               |
 
 #### 9.4.1 魔法数字示例
 
@@ -1792,6 +1824,7 @@ agent_a = create_agent("agent_a", "...", llm_config)
 ### 9.5 测试覆盖率
 
 **当前状态**:
+
 - ✅ 有集成测试: `test_evoagentx_adapter.py` (3/3 通过)
 - ✅ 有使用示例: `examples/` 目录
 - ❌ 缺少单元测试
@@ -1799,6 +1832,7 @@ agent_a = create_agent("agent_a", "...", llm_config)
 - ❌ 缺少异常路径测试
 
 **建议补充的测试**:
+
 ```python
 # tests/level1_framework/test_base.py
 def test_basemas_hook_registration():
@@ -2024,14 +2058,14 @@ final_message = msg  # {"content": "My *** is abc123"}
 
 #### 11.1.2 应用场景
 
-| 场景 | 钩子实现 | 作用 |
-|------|---------|------|
+| 场景               | 钩子实现                         | 作用         |
+| ------------------ | -------------------------------- | ------------ |
 | **安全监控** | 检测 jailbreak、prompt injection | 阻止恶意内容 |
-| **内容审查** | 检测敏感信息（密码、个人信息） | 保护隐私 |
-| **审计日志** | 记录所有通信到数据库 | 合规性和追溯 |
-| **性能分析** | 统计消息数量、大小、延迟 | 系统优化 |
-| **A/B 测试** | 随机修改消息，比较效果 | 实验和优化 |
-| **翻译** | 自动翻译消息内容 | 多语言支持 |
+| **内容审查** | 检测敏感信息（密码、个人信息）   | 保护隐私     |
+| **审计日志** | 记录所有通信到数据库             | 合规性和追溯 |
+| **性能分析** | 统计消息数量、大小、延迟         | 系统优化     |
+| **A/B 测试** | 随机修改消息，比较效果           | 实验和优化   |
+| **翻译**     | 自动翻译消息内容                 | 多语言支持   |
 
 #### 11.1.3 示例：安全监控钩子
 
@@ -2084,11 +2118,13 @@ if security_hook.alerts:
 #### 11.2.1 Round Robin 模式
 
 **特点**:
+
 - 所有 agent 轮流发言
 - 循环直到达到终止条件
 - 适合协作和头脑风暴
 
 **配置**:
+
 ```python
 group_chat = GroupChat(
     agents=[agent1, agent2, agent3],
@@ -2098,12 +2134,14 @@ group_chat = GroupChat(
 ```
 
 **执行序列**:
+
 ```
 agent1 → agent2 → agent3 → agent1 → agent2 → agent3 → ...
 (直到终止或达到 max_round)
 ```
 
 **适用场景**:
+
 - 数学问题求解（多角度验证）
 - 创意头脑风暴（多人贡献）
 - 决策讨论（多方观点）
@@ -2113,11 +2151,13 @@ agent1 → agent2 → agent3 → agent1 → agent2 → agent3 → ...
 #### 11.2.2 Fixed Transitions 模式
 
 **特点**:
+
 - 严格控制发言顺序
 - 固定的转移路径
 - 适合流程化任务
 
 **配置**:
+
 ```python
 transitions = {
     agent_a: [agent_b],  # A 只能说给 B
@@ -2133,11 +2173,13 @@ group_chat = GroupChat(
 ```
 
 **执行序列**:
+
 ```
 agent_a → agent_b → agent_c → agent_a → agent_b → ...
 ```
 
 **适用场景**:
+
 - 审批流程（提交 → 审核 → 批准）
 - 流水线处理（提取 → 分析 → 总结）
 - 质量检查（生成 → 验证 → 修正）
@@ -2147,11 +2189,13 @@ agent_a → agent_b → agent_c → agent_a → agent_b → ...
 #### 11.2.3 Dynamic Selection 模式
 
 **特点**:
+
 - 自定义选择函数
 - 根据上下文动态决定
 - 最灵活的模式
 
 **配置**:
+
 ```python
 def custom_speaker_selection(last_speaker, groupchat):
     """自定义选择逻辑"""
@@ -2172,6 +2216,7 @@ group_chat = GroupChat(
 ```
 
 **适用场景**:
+
 - 条件分支（if-else 逻辑）
 - 循环处理（while 循环）
 - 复杂业务流程
@@ -2182,13 +2227,13 @@ group_chat = GroupChat(
 
 #### 11.3.1 GroupChat 模式 vs Direct 模式
 
-| 特性 | GroupChat 模式 | Direct 模式 |
-|------|---------------|-------------|
-| **Agent 数量** | 3+ | 2 |
-| **协调方式** | GroupChatManager | 直接通信 |
-| **发言控制** | 支持多种策略 | 简单轮流 |
-| **复杂度** | 高 | 低 |
-| **适用场景** | 复杂协作 | 简单对话 |
+| 特性                 | GroupChat 模式   | Direct 模式 |
+| -------------------- | ---------------- | ----------- |
+| **Agent 数量** | 3+               | 2           |
+| **协调方式**   | GroupChatManager | 直接通信    |
+| **发言控制**   | 支持多种策略     | 简单轮流    |
+| **复杂度**     | 高               | 低          |
+| **适用场景**   | 复杂协作         | 简单对话    |
 
 #### 11.3.2 模式自动选择
 
@@ -2204,6 +2249,7 @@ def run_workflow(self, task: str, **kwargs) -> WorkflowResult:
 ```
 
 **优点**:
+
 - 用户无需手动选择
 - 简化 API 使用
 - 降低出错概率
@@ -2268,6 +2314,7 @@ max_tokens: 4096
 ```
 
 **加载方式**:
+
 ```python
 from utils.llm_config import get_mas_llm_config
 
@@ -2282,6 +2329,7 @@ ag2_config = llm_config.to_ag2_config()
 #### 12.2.2 日志配置
 
 **使用方式**:
+
 ```python
 from utils.logging_config import get_logger
 
@@ -2292,6 +2340,7 @@ logger.error("Error occurred", exc_info=True)
 ```
 
 **日志格式**:
+
 ```
 2026-01-28 12:00:00,123 [INFO] ModuleName: Workflow started
 2026-01-28 12:00:01,456 [ERROR] ModuleName: Error occurred
@@ -2302,6 +2351,7 @@ Traceback (most recent call last):
 ### 12.3 异常系统
 
 **自定义异常**:
+
 ```python
 from utils.exceptions import MASFrameworkError, ConfigurationError
 
@@ -2434,6 +2484,7 @@ def _wrap_agent_send(self, agent: ConversableAgent, agent_name: str):
 ```
 
 **关键点**:
+
 - ✅ **闭包**: `send_wrapper` 捕获 `agent_name` 和 `mas_ref`
 - ✅ **延迟绑定**: 在首次注册钩子时才执行包装
 - ✅ **保留语义**: 原始 `send` 的参数和返回值不变
@@ -2515,6 +2566,7 @@ class WorkflowToAG2Converter:
 ```
 
 **设计亮点**:
+
 - ✅ **清晰的步骤分解**: 5 个明确的步骤
 - ✅ **日志记录**: 每个关键步骤都有日志
 - ✅ **错误处理**: 验证 agents 非空
@@ -2528,27 +2580,27 @@ class WorkflowToAG2Converter:
 
 #### 14.1.1 设计优势
 
-| 优势 | 说明 | 影响 |
-|------|------|------|
-| **清晰的抽象** | BaseMAS 定义了最小接口 | 易于实现新框架适配器 |
-| **消息拦截系统** | 无侵入式拦截 | 支持安全监控和审计 |
-| **多工作流支持** | 3 种编排模式 | 适应不同业务场景 |
-| **完善的文档** | Docstring + AG2_WORKFLOW_GUIDE | 降低学习成本 |
-| **容错导入** | 支持 AG2 和 PyAG2 | 兼容性好 |
-| **分层架构** | 4 层清晰分离 | 易于维护和扩展 |
+| 优势                   | 说明                           | 影响                 |
+| ---------------------- | ------------------------------ | -------------------- |
+| **清晰的抽象**   | BaseMAS 定义了最小接口         | 易于实现新框架适配器 |
+| **消息拦截系统** | 无侵入式拦截                   | 支持安全监控和审计   |
+| **多工作流支持** | 3 种编排模式                   | 适应不同业务场景     |
+| **完善的文档**   | Docstring + AG2_WORKFLOW_GUIDE | 降低学习成本         |
+| **容错导入**     | 支持 AG2 和 PyAG2              | 兼容性好             |
+| **分层架构**     | 4 层清晰分离                   | 易于维护和扩展       |
 
 #### 14.1.2 代码质量
 
-| 指标 | 评分 | 说明 |
-|------|------|------|
+| 指标               | 评分 | 说明             |
+| ------------------ | ---- | ---------------- |
 | **抽象设计** | 9/10 | 接口清晰，易扩展 |
-| **代码复用** | 8/10 | 工厂函数和基类 |
+| **代码复用** | 8/10 | 工厂函数和基类   |
 | **错误处理** | 7/10 | 完善但有改进空间 |
-| **文档** | 9/10 | Docstring 详细 |
-| **测试覆盖** | 6/10 | 缺少单元测试 |
-| **性能** | 8/10 | 无明显瓶颈 |
-| **扩展性** | 9/10 | 易于添加新框架 |
-| **可维护性** | 8/10 | 代码清晰 |
+| **文档**     | 9/10 | Docstring 详细   |
+| **测试覆盖** | 6/10 | 缺少单元测试     |
+| **性能**     | 8/10 | 无明显瓶颈       |
+| **扩展性**   | 9/10 | 易于添加新框架   |
+| **可维护性** | 8/10 | 代码清晰         |
 
 **总体评分**: **8.1/10** - 设计良好的基础层
 
@@ -2559,6 +2611,7 @@ class WorkflowToAG2Converter:
 #### 14.2.1 代码质量改进
 
 **1. 消除魔法数字**
+
 ```python
 # 当前
 max_round=12
@@ -2569,6 +2622,7 @@ max_round=DEFAULT_MAX_ROUNDS
 ```
 
 **2. 减少重复代码**
+
 ```python
 # 创建 agent 工厂函数
 def create_conversable_agent(
@@ -2588,6 +2642,7 @@ def create_conversable_agent(
 ```
 
 **3. 类型安全**
+
 ```python
 # 使用 TypedDict 或 Pydantic
 from typing import TypedDict
@@ -2609,6 +2664,7 @@ def create_ag2_mas_from_config(config: Dict) -> AG2MAS:
 #### 14.2.2 测试覆盖
 
 **补充单元测试**:
+
 ```python
 # tests/level1_framework/test_base.py
 def test_hook_registration():
@@ -2649,6 +2705,7 @@ def test_converter_empty_workflow():
 #### 14.2.3 性能优化
 
 **1. 消息钩子批处理**
+
 ```python
 # 当前: 每条消息逐个应用钩子
 for hook in self._message_hooks:
@@ -2662,6 +2719,7 @@ class BatchHook:
 ```
 
 **2. 消息历史限制**
+
 ```python
 # 当前: 无限制的历史记录
 self._message_history.append(msg)
@@ -2678,6 +2736,7 @@ if len(self._message_history) >= MAX_HISTORY_SIZE:
 #### 14.2.4 文档完善
 
 **1. API 参考文档**
+
 ```markdown
 # docs/api/level1_framework_api.md
 
@@ -2693,6 +2752,7 @@ Executes the MAS workflow...
 ```
 
 **2. 架构决策记录 (ADR)**
+
 ```markdown
 # docs/adr/001-message-interception.md
 
@@ -2790,20 +2850,20 @@ Executes the MAS workflow...
 
 ### B. 术语表
 
-| 术语 | 全称 | 说明 |
-|------|------|------|
-| **MAS** | Multi-Agent System | 多智能体系统 |
-| **AG2** | AutoGen 2.0 | 微软的智能体框架 |
-| **Monkey Patching** | - | 运行时修改类或模块 |
-| **Hook** | - | 钩子函数，用于拦截和修改行为 |
-| **Round Robin** | - | 轮询调度算法 |
-| **Topology** | - | 拓扑结构，表示 agent 间的连接关系 |
+| 术语                      | 全称               | 说明                              |
+| ------------------------- | ------------------ | --------------------------------- |
+| **MAS**             | Multi-Agent System | 多智能体系统                      |
+| **AG2**             | AutoGen 2.0        | 微软的智能体框架                  |
+| **Monkey Patching** | -                  | 运行时修改类或模块                |
+| **Hook**            | -                  | 钩子函数，用于拦截和修改行为      |
+| **Round Robin**     | -                  | 轮询调度算法                      |
+| **Topology**        | -                  | 拓扑结构，表示 agent 间的连接关系 |
 
 ### C. 版本历史
 
-| 版本 | 日期 | 变更 |
-|------|------|------|
-| 1.0 | 2026-01-28 | 初始版本，完整分析 level1_framework |
+| 版本 | 日期       | 变更                                |
+| ---- | ---------- | ----------------------------------- |
+| 1.0  | 2026-01-28 | 初始版本，完整分析 level1_framework |
 
 ---
 

@@ -62,11 +62,24 @@ def module1_pre_deployment_testing(safety_mas: Safety_MAS, logger: Level3Console
     for test_name in safety_mas.risk_tests.keys():
         test = safety_mas.risk_tests[test_name]
         info = test.get_risk_info()
-        desc = info.get('description', 'No description')[:50]
-        logger.print_info(f"  - {test_name}: {desc}...")
+
+        # Load test cases to count them
+        static_cases = test.load_test_cases()
+        num_static = len(static_cases)
+
+        # Get risk info
+        risk_level = info.get('level', 'Unknown')
+        risk_type = info.get('risk_type', 'unknown')
+        owasp_ref = info.get('owasp_ref', 'N/A')
+        desc = info.get('description', 'No description')[:40]
+
+        logger.print_info(f"  - {test_name}:")
+        logger.print_info(f"      Risk: {risk_level} | Type: {risk_type} | OWASP: {owasp_ref}")
+        logger.print_info(f"      Static Cases: {num_static} | {desc}...")
+        print()
 
     # Select tests to run
-    selected_tests = ["jailbreak", "prompt_injection", "tool_misuse"]
+    selected_tests = ["jailbreak", "prompt_injection", "tool_misuse", "message_tampering"]
     print()
     logger.print_info(f"Selected tests: {selected_tests}")
     print()
@@ -79,7 +92,66 @@ def module1_pre_deployment_testing(safety_mas: Safety_MAS, logger: Level3Console
 
     # Run the tests
     logger.print_subsection("Running Safety Tests")
-    results = safety_mas.run_manual_safety_tests(selected_tests)
+    logger.print_info(f"Total tests to run: {len(selected_tests)}")
+    print()
+
+    results = {}
+    for idx, test_name in enumerate(selected_tests, 1):
+        # Get test info
+        if test_name in safety_mas.risk_tests:
+            test = safety_mas.risk_tests[test_name]
+            static_cases = test.load_test_cases()
+            num_static = len(static_cases)
+            info = test.get_risk_info()
+            risk_level = info.get('level', 'Unknown')
+
+            logger.print_info(f"🔄 [{idx}/{len(selected_tests)}] Running {test_name} test...")
+            logger.print_info(f"    Risk Level: {risk_level} | Static Cases: {num_static}")
+
+            # For message_tampering, show agent pair info
+            if test_name == "message_tampering":
+                agents = safety_mas.intermediary.mas.get_agents()
+                test_all_pairs = test.config.get("test_all_agent_pairs", False)
+                if test_all_pairs:
+                    num_pairs = len(agents) * (len(agents) - 1)
+                    logger.print_info(f"    Testing ALL agent pairs: {num_pairs} pairs (may take a while)")
+                else:
+                    num_pairs = len(agents) - 1
+                    logger.print_info(f"    Testing ADJACENT agent pairs: {num_pairs} pairs (optimized)")
+                logger.print_info(f"    Total workflow runs: {num_static} cases × {num_pairs} pairs = {num_static * num_pairs}")
+
+            # Check if dynamic generation is enabled
+            use_dynamic = test.config.get("use_dynamic", False)
+            if use_dynamic:
+                logger.print_info(f"    Dynamic generation: ENABLED (will generate additional cases)")
+        else:
+            logger.print_info(f"🔄 [{idx}/{len(selected_tests)}] Running {test_name} test...")
+
+        try:
+            test_results = safety_mas.run_manual_safety_tests([test_name])
+            results.update(test_results)
+
+            # Show immediate result with actual case count
+            if test_name in test_results:
+                result = test_results[test_name]
+                total = result.get("total_cases", 0)
+                failed = result.get("failed_cases", 0)
+                passed = total - failed
+
+                # Show if dynamic cases were generated
+                if total > num_static:
+                    dynamic_count = total - num_static
+                    logger.print_info(f"    Generated {dynamic_count} dynamic cases (Total: {num_static} static + {dynamic_count} dynamic = {total})")
+
+                if result.get("passed", False):
+                    logger.print_success(f"✓ [{idx}/{len(selected_tests)}] {test_name} test PASSED ({passed}/{total} cases)")
+                else:
+                    logger.print_warning(f"✗ [{idx}/{len(selected_tests)}] {test_name} test FAILED ({passed}/{total} cases, {failed} failed)")
+            print()
+        except Exception as e:
+            logger.print_error(f"✗ [{idx}/{len(selected_tests)}] {test_name} test ERROR: {e}")
+            results[test_name] = {"error": str(e)}
+            print()
 
     # Display individual test results
     print()
@@ -90,6 +162,15 @@ def module1_pre_deployment_testing(safety_mas: Safety_MAS, logger: Level3Console
     print()
     passed_count = sum(1 for r in results.values() if r.get("passed", False))
     failed_count = len(results) - passed_count
+
+    # Calculate total test cases
+    total_cases_run = sum(r.get("total_cases", 0) for r in results.values() if "total_cases" in r)
+    total_cases_passed = sum(r.get("total_cases", 0) - r.get("failed_cases", 0) for r in results.values() if "total_cases" in r)
+    total_cases_failed = sum(r.get("failed_cases", 0) for r in results.values() if "failed_cases" in r)
+
+    logger.print_info(f"Test Summary:")
+    logger.print_info(f"  Tests: {passed_count}/{len(results)} passed")
+    logger.print_info(f"  Total Cases: {total_cases_run} ({total_cases_passed} passed, {total_cases_failed} failed)")
 
     if failed_count > 0:
         logger.print_warning(f"Tests completed: {passed_count} passed, {failed_count} failed")
@@ -147,6 +228,7 @@ Save the summary to 'level3_safety_research.txt'."""
     logger.start_session(task)
 
     logger.print_subsection("Task Execution")
+    logger.print_info("🔄 Step 1/3: Registering message hooks...")
     logger.print_info("Executing with AG2 native output silenced...")
     logger.print_info("Messages will be logged through our structured logger.")
     print()
@@ -164,11 +246,79 @@ Save the summary to 'level3_safety_research.txt'."""
 
             try:
                 content = message.get("content", "")
+                tool_calls = message.get("tool_calls", None)
+                tool_responses = message.get("tool_responses", None)
+                function_call = message.get("function_call", None)
 
-                # 检测工具调用
-                # AG2 的工具调用消息通常包含 tool_calls 字段
-                if isinstance(content, dict) and "tool_calls" in content:
+                # 检测工具调用 - 优先检查消息级别的字段
+                if tool_calls is not None:
                     # 这是一个工具调用请求
+                    if isinstance(tool_calls, list):
+                        for tool_call in tool_calls:
+                            logger.log_message(
+                                from_agent=message.get("from", "unknown"),
+                                to_agent=message.get("to", "unknown"),
+                                content="",
+                                step_type="tool_call",
+                                metadata={
+                                    "tool_name": tool_call.get("function", {}).get("name", "unknown") if isinstance(tool_call.get("function"), dict) else tool_call.get("name", "unknown"),
+                                    "tool_args": tool_call.get("function", {}).get("arguments", {}) if isinstance(tool_call.get("function"), dict) else tool_call.get("arguments", {}),
+                                    "call_type": "request"
+                                }
+                            )
+                    else:
+                        # 单个工具调用
+                        logger.log_message(
+                            from_agent=message.get("from", "unknown"),
+                            to_agent=message.get("to", "unknown"),
+                            content="",
+                            step_type="tool_call",
+                            metadata={
+                                "tool_name": str(tool_calls),
+                                "call_type": "request"
+                            }
+                        )
+                elif tool_responses is not None:
+                    # 这是一个工具调用结果
+                    if isinstance(tool_responses, list):
+                        for tool_response in tool_responses:
+                            logger.log_message(
+                                from_agent=message.get("from", "unknown"),
+                                to_agent=message.get("to", "unknown"),
+                                content="",
+                                step_type="tool_result",
+                                metadata={
+                                    "tool_name": tool_response.get("name", "unknown"),
+                                    "tool_result": tool_response.get("content", ""),
+                                    "call_type": "response"
+                                }
+                            )
+                    else:
+                        logger.log_message(
+                            from_agent=message.get("from", "unknown"),
+                            to_agent=message.get("to", "unknown"),
+                            content="",
+                            step_type="tool_result",
+                            metadata={
+                                "tool_result": str(tool_responses),
+                                "call_type": "response"
+                            }
+                        )
+                elif function_call is not None:
+                    # 旧版本的函数调用格式
+                    logger.log_message(
+                        from_agent=message.get("from", "unknown"),
+                        to_agent=message.get("to", "unknown"),
+                        content="",
+                        step_type="tool_call",
+                        metadata={
+                            "tool_name": function_call.get("name", "unknown") if isinstance(function_call, dict) else str(function_call),
+                            "tool_args": function_call.get("arguments", {}) if isinstance(function_call, dict) else {},
+                            "call_type": "request"
+                        }
+                    )
+                elif isinstance(content, dict) and "tool_calls" in content:
+                    # 检查 content 内部是否包含 tool_calls
                     for tool_call in content.get("tool_calls", []):
                         logger.log_message(
                             from_agent=message.get("from", "unknown"),
@@ -178,21 +328,34 @@ Save the summary to 'level3_safety_research.txt'."""
                             metadata={
                                 "tool_name": tool_call.get("function", {}).get("name", "unknown"),
                                 "tool_args": tool_call.get("function", {}).get("arguments", {}),
+                                "call_type": "request"
                             }
                         )
                 elif isinstance(content, dict) and "tool_responses" in content:
-                    # 这是一个工具调用结果
+                    # 检查 content 内部是否包含 tool_responses
                     for tool_response in content.get("tool_responses", []):
                         logger.log_message(
                             from_agent=message.get("from", "unknown"),
                             to_agent=message.get("to", "unknown"),
                             content="",
-                            step_type="tool_call",
+                            step_type="tool_result",
                             metadata={
                                 "tool_name": tool_response.get("name", "unknown"),
                                 "tool_result": tool_response.get("content", ""),
+                                "call_type": "response"
                             }
                         )
+                elif content == "None" or content is None or (isinstance(content, str) and content.strip() == ""):
+                    # 空消息可能是工具调用，但我们无法确定，标记为 potential_tool_call
+                    logger.log_message(
+                        from_agent=message.get("from", "unknown"),
+                        to_agent=message.get("to", "unknown"),
+                        content="",
+                        step_type="potential_tool_call",
+                        metadata={
+                            "note": "Empty message - possibly a tool call that wasn't captured"
+                        }
+                    )
                 else:
                     # 普通消息
                     logger.log_message(
@@ -208,15 +371,22 @@ Save the summary to 'level3_safety_research.txt'."""
             return message
 
         # Register our logging hook
+        logger.print_info("✓ Step 1/3: Message hooks registered")
         safety_mas.intermediary.mas.register_message_hook(on_message_hook)
 
         # 使用 redirect_stdout 抑制 AG2 的工具执行输出
+        logger.print_info("🔄 Step 2/3: Executing task with monitoring...")
+        print()
         suppressed_output = io.StringIO()
         with redirect_stdout(suppressed_output):
             # Execute task with silent mode (AG2 output suppressed)
             result = safety_mas.run_task(task, max_rounds=10, silent=True)
 
+        logger.print_info("✓ Step 2/3: Task execution completed")
+        print()
+
         # Process alerts
+        logger.print_info("🔄 Step 3/3: Processing monitoring results...")
         logger.print_subsection("Monitoring Results")
         alerts = safety_mas.get_alerts()
 
@@ -263,16 +433,58 @@ def module3_test_monitor_integration(safety_mas: Safety_MAS, logger: Level3Conso
     # Step 1: Run tests with monitoring evaluation
     logger.print_subsection("Step 1: Running Tests with Monitor Evaluation")
 
-    selected_tests = ["jailbreak", "prompt_injection"]
+    selected_tests = ["prompt_injection", "message_tampering"]
     logger.print_info(f"Tests to run: {selected_tests}")
+    logger.print_info(f"Total: {len(selected_tests)} tests")
+
+    # Show test details
+    total_static_cases = 0
+    for test_name in selected_tests:
+        if test_name in safety_mas.risk_tests:
+            test = safety_mas.risk_tests[test_name]
+            static_cases = test.load_test_cases()
+            num_static = len(static_cases)
+            total_static_cases += num_static
+            info = test.get_risk_info()
+            risk_level = info.get('level', 'Unknown')
+            logger.print_info(f"  - {test_name}: {risk_level} risk, {num_static} static cases")
+
+    logger.print_info(f"Total static test cases: {total_static_cases}")
     print()
 
     # Configure tests to use heuristic method
+    logger.print_info("🔄 Configuring tests (use_llm_judge=False for speed)...")
     for test_name in selected_tests:
         if test_name in safety_mas.risk_tests:
             safety_mas.risk_tests[test_name].config["use_llm_judge"] = False
+    logger.print_info("✓ Tests configured")
+    print()
 
-    results = safety_mas.run_tests_with_monitoring(selected_tests)
+    # 保存原始 stdout
+    original_stdout = sys.stdout
+
+    # 注册消息拦截 hook 以抑制 AG2 输出
+    def on_message_hook_module3(message: dict) -> dict:
+        """Suppress AG2 output during test execution."""
+        return message
+
+    logger.print_info("🔄 Registering message hooks...")
+    safety_mas.intermediary.mas.register_message_hook(on_message_hook_module3)
+    logger.print_info("✓ Message hooks registered")
+    print()
+
+    # 使用 redirect_stdout 抑制 AG2 的输出
+    logger.print_info("🔄 Running tests with monitoring (this may take a while)...")
+    suppressed_output = io.StringIO()
+    try:
+        with redirect_stdout(suppressed_output):
+            results = safety_mas.run_tests_with_monitoring(selected_tests)
+    finally:
+        # 清理 hook
+        safety_mas.intermediary.mas.clear_message_hooks()
+
+    logger.print_info("✓ All tests completed")
+    print()
 
     for test_name, result in results.items():
         logger.log_test_result(test_name, result)
@@ -285,25 +497,32 @@ def module3_test_monitor_integration(safety_mas: Safety_MAS, logger: Level3Conso
     # Step 2: Start informed monitoring
     logger.print_subsection("Step 2: Starting Informed Monitoring")
 
-    logger.print_info("Configuring monitors with vulnerability context from tests...")
+    logger.print_info("🔄 Configuring monitors with vulnerability context from tests...")
     safety_mas.start_informed_monitoring(results)
 
-    logger.print_success(f"Informed monitoring started with {len(safety_mas._active_monitors)} monitors")
+    logger.print_success(f"✓ Informed monitoring started with {len(safety_mas._active_monitors)} monitors")
     print()
 
     # Display risk profiles
-    logger.print_info("Monitor Risk Profiles:")
+    logger.print_info("🔄 Generating risk profiles...")
     risk_profiles = safety_mas.get_risk_profiles()
+    logger.print_info("✓ Risk profiles generated")
+    print()
+    logger.print_info("Monitor Risk Profiles:")
     for monitor_name, profile in risk_profiles.items():
         if profile:
             risk_level = profile.get("risk_level", "unknown")
             vuln_count = len(profile.get("known_vulnerabilities", []))
             logger.print_info(f"  - {monitor_name}: risk={risk_level}, vulnerabilities={vuln_count}")
+    print()
 
     # Step 3: Generate comprehensive report
     logger.print_subsection("Step 3: Comprehensive Safety Report")
 
+    logger.print_info("🔄 Generating comprehensive safety report...")
     comprehensive_report = safety_mas.get_comprehensive_report()
+    logger.print_info("✓ Report generated")
+    print()
 
     # Print formatted report
     print()
