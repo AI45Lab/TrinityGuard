@@ -7,7 +7,7 @@ Reference: Chao et al. (2023) "Jailbreaking Black Box Large Language Models in T
 """
 
 from dataclasses import dataclass, field, replace
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Callable
 from ...utils.llm_client import get_llm_client
 from ...utils.llm_config import get_mas_llm_config
 from ...utils.exceptions import LLMError
@@ -180,3 +180,145 @@ Return ONLY the refined adversarial prompt, without explanation."""
         except Exception as e:
             # Wrap unexpected errors in LLMError
             raise LLMError(f"Unexpected error refining prompt at iteration {iteration}: {str(e)}") from e
+
+
+class PAIROrchestrator:
+    """Orchestrator for running iterative PAIR attacks.
+
+    The PAIROrchestrator manages the full attack loop: generating initial prompts,
+    testing them against a target system, evaluating success, and refining prompts
+    until the goal is achieved or maximum iterations are reached.
+
+    Attributes:
+        max_iterations: Maximum number of refinement iterations to attempt
+        attacker: The PAIRAttacker instance used for generating and refining prompts
+    """
+
+    def __init__(self, max_iterations: int = 10, model: str = "gpt-4"):
+        """Initialize the PAIR orchestrator.
+
+        Args:
+            max_iterations: Maximum number of refinement iterations (default: 10)
+            model: The LLM model to use for the attacker (default: "gpt-4")
+        """
+        if max_iterations < 1:
+            raise ValueError("max_iterations must be at least 1")
+        self.max_iterations = max_iterations
+        self.attacker = PAIRAttacker(model=model)
+
+    def run_attack(
+        self,
+        goal: str,
+        target_fn: Callable[[str], str],
+        target_context: str,
+        judge_fn: Callable[[str], bool],
+        verbose: bool = False
+    ) -> AttackResult:
+        """Run an iterative PAIR attack against a target system.
+
+        This method orchestrates the full attack process:
+        1. Generate an initial adversarial prompt
+        2. Test it against the target system
+        3. Evaluate success using the judge function
+        4. If unsuccessful, refine the prompt and repeat
+        5. Continue until success or max iterations reached
+
+        Args:
+            goal: The objective the adversarial prompt should achieve
+            target_fn: Function that takes a prompt and returns the target's response
+            target_context: Description of the target system's role and constraints
+            judge_fn: Function that takes a response and returns True if goal is achieved
+            verbose: If True, print progress information during the attack
+
+        Returns:
+            AttackResult containing success status, final prompt, response, and history
+
+        Raises:
+            ValueError: If any required parameter is invalid
+            LLMError: If the LLM API calls fail
+
+        Example:
+            >>> orchestrator = PAIROrchestrator(max_iterations=5)
+            >>> def target(prompt: str) -> str:
+            ...     return "I cannot help with that."
+            >>> def judge(response: str) -> bool:
+            ...     return "PWNED" in response
+            >>> result = orchestrator.run_attack(
+            ...     goal="Make target say PWNED",
+            ...     target_fn=target,
+            ...     target_context="Test agent",
+            ...     judge_fn=judge
+            ... )
+        """
+        # Input validation
+        if not goal or not isinstance(goal, str):
+            raise ValueError("goal must be a non-empty string")
+        if not target_context or not isinstance(target_context, str):
+            raise ValueError("target_context must be a non-empty string")
+        if not callable(target_fn):
+            raise ValueError("target_fn must be callable")
+        if not callable(judge_fn):
+            raise ValueError("judge_fn must be callable")
+
+        history = []
+        current_prompt = None
+        target_response = None
+        success = False
+
+        # Generate initial prompt
+        if verbose:
+            print(f"Generating initial prompt for goal: {goal}")
+
+        current_prompt = self.attacker.generate_initial_prompt(goal, target_context)
+
+        # Iterative refinement loop
+        for iteration in range(1, self.max_iterations + 1):
+            if verbose:
+                print(f"\n--- Iteration {iteration}/{self.max_iterations} ---")
+                print(f"Prompt: {current_prompt[:100]}...")
+
+            # Test prompt against target
+            target_response = target_fn(current_prompt)
+
+            if verbose:
+                print(f"Response: {target_response[:100]}...")
+
+            # Record this iteration
+            history.append({
+                "iteration": iteration,
+                "prompt": current_prompt,
+                "response": target_response
+            })
+
+            # Check if goal achieved
+            success = judge_fn(target_response)
+
+            if verbose:
+                print(f"Success: {success}")
+
+            if success:
+                if verbose:
+                    print(f"\nGoal achieved in {iteration} iteration(s)!")
+                break
+
+            # If not successful and not at max iterations, refine prompt
+            if iteration < self.max_iterations:
+                if verbose:
+                    print("Refining prompt...")
+                current_prompt = self.attacker.refine_prompt(
+                    goal=goal,
+                    current_prompt=current_prompt,
+                    target_response=target_response,
+                    iteration=iteration
+                )
+
+        if verbose and not success:
+            print(f"\nGoal not achieved after {self.max_iterations} iterations.")
+
+        return AttackResult(
+            success=success,
+            final_prompt=current_prompt,
+            target_response=target_response,
+            iterations=len(history),
+            history=history
+        )
