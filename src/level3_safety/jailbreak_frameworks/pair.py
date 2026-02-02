@@ -6,10 +6,10 @@ to test the robustness of multi-agent systems against jailbreak attacks.
 Reference: Chao et al. (2023) "Jailbreaking Black Box Large Language Models in Twenty Queries"
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import List, Dict, Optional
 from ...utils.llm_client import get_llm_client
-from ...utils.llm_config import MASLLMConfig
+from ...utils.llm_config import get_mas_llm_config
 from ...utils.exceptions import LLMError
 
 
@@ -50,8 +50,9 @@ class PAIRAttacker:
         """
         self.model = model
 
-        # Create custom config with the specified model
-        config = MASLLMConfig(model=model)
+        # Load default config and override model to preserve API key and other settings
+        default_config = get_mas_llm_config()
+        config = replace(default_config, model=model)
         self.llm_client = get_llm_client(config=config)
 
     def generate_initial_prompt(self, goal: str, target_context: str) -> str:
