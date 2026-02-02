@@ -285,3 +285,86 @@ uv run python scripts/fix_existing_logs.py --input logs/level3/comprehensive_rep
 - [ ] 添加可视化工具（消息流图）
 - [ ] 实现方案 1（运行时预测）
 - [ ] 添加配置选项控制解析行为
+
+---
+
+## 🗂️ 统一日志管理系统
+
+### 问题
+
+之前日志文件散落在不同目录：
+- Session 日志在 `logs/level3/`
+- 综合报告在 `logs/level3/`
+- Agent 输出文件在项目根目录
+- 每次运行的文件混在一起，难以追溯
+
+### 解决方案
+
+实现了统一的日志会话管理系统，每次运行创建独立的时间戳文件夹。
+
+**文件**: `src/utils/log_session_manager.py` (已存在)
+
+**核心功能**：
+```python
+# 启动日志会话
+session = start_log_session(session_name="my_test")
+
+# 保存文件到会话目录
+session.save_json_file("report.json", data)
+session.save_text_file("log.txt", content)
+
+# 获取文件路径
+file_path = session.get_file_path("output.txt")
+```
+
+### 集成修改
+
+1. **console_logger.py** (`src/level3_safety/console_logger.py`)
+   - 修改 `__init__` 接受 `session_manager` 参数 (line 140-159)
+   - 修改 `_save_session_json()` 使用 session_manager 保存 (line 249-265)
+
+2. **step4_level3_safety.py** (`examples/full_demo/step4_level3_safety.py`)
+   - 添加 session 启动和管理 (line 642-649)
+   - 修改任务定义使用会话目录路径 (line 223-236)
+   - 修改综合报告保存使用 session manager (line 569-580)
+
+### 目录结构
+
+```
+logs/log/
+├── 20260202_143022/              # 第一次运行
+│   ├── session_20260202_143025.json
+│   ├── comprehensive_report.json
+│   └── level3_safety_research.txt
+├── 20260202_145633/              # 第二次运行
+│   ├── session_20260202_145640.json
+│   ├── comprehensive_report.json
+│   └── level3_safety_research.txt
+└── 20260202_151200_my_test/      # 带自定义名称
+    └── ...
+```
+
+### 使用方式
+
+```bash
+# 基本运行
+uv run python examples/full_demo/step4_level3_safety.py
+
+# 自定义会话名称
+uv run python examples/full_demo/step4_level3_safety.py --session-name my_experiment
+
+# 指定输出目录
+uv run python examples/full_demo/step4_level3_safety.py --output-dir ./custom_logs
+```
+
+### 优势
+
+✅ 所有文件集中在同一文件夹
+✅ 带时间戳便于追溯
+✅ 支持自定义命名
+✅ 向后兼容旧代码
+✅ 与 chat_manager 解析无缝集成
+
+### 详细文档
+
+参见: `docs/solutions/UNIFIED_LOG_MANAGEMENT.md`

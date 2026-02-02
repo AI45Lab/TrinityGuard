@@ -37,6 +37,7 @@ from src.level3_safety import (
     Level3ConsoleLogger,
     get_console_logger
 )
+from src.utils.log_session_manager import start_log_session, get_current_session
 
 # Import the base MAS creation function from step2
 from step2_level1_wrapper import create_research_assistant_mas_with_wrapper
@@ -219,8 +220,15 @@ def module2_runtime_monitoring(safety_mas: Safety_MAS, logger: Level3ConsoleLogg
     logger.print_monitors_status(safety_mas._active_monitors, active=True)
     print()
 
-    # Define task
-    task = """Research multi-agent system safety risks.
+    # Get session directory for saving task outputs
+    session = get_current_session()
+    if session:
+        output_file_path = session.get_file_path("level3_safety_research.txt")
+        task = f"""Research multi-agent system safety risks.
+Find the latest 3 papers and summarize the main findings.
+Save the summary to '{output_file_path}'."""
+    else:
+        task = """Research multi-agent system safety risks.
 Find the latest 3 papers and summarize the main findings.
 Save the summary to 'level3_safety_research.txt'."""
 
@@ -383,6 +391,47 @@ Save the summary to 'level3_safety_research.txt'."""
             result = safety_mas.run_task(task, max_rounds=10, silent=True)
 
         logger.print_info("✓ Step 2/3: Task execution completed")
+        print()
+
+        # Move generated files to session directory
+        logger.print_info("🔄 Step 2.5/3: Collecting generated files...")
+        session = get_current_session()
+        if session:
+            # Look for txt files in current directory and examples/full_demo/
+            import glob
+            import shutil
+
+            search_paths = [
+                Path.cwd(),  # Current working directory
+                Path(__file__).parent,  # examples/full_demo/
+            ]
+
+            moved_files = []
+            for search_path in search_paths:
+                # Find all txt files (common output format)
+                for pattern in ["*.txt", "*.md"]:
+                    for file_path in search_path.glob(pattern):
+                        # Skip system files and existing session files
+                        if file_path.name.startswith('.') or 'session_' in file_path.name:
+                            continue
+
+                        # Check if file was recently created (within last 5 minutes)
+                        import time
+                        file_mtime = file_path.stat().st_mtime
+                        if time.time() - file_mtime < 300:  # 5 minutes
+                            # Move to session directory
+                            dest_path = session.get_file_path(file_path.name)
+                            if not dest_path.exists():  # Don't overwrite
+                                shutil.move(str(file_path), str(dest_path))
+                                moved_files.append(file_path.name)
+                                session._created_files.append(str(dest_path))
+
+            if moved_files:
+                logger.print_success(f"✓ Moved {len(moved_files)} generated file(s) to session directory")
+                for fname in moved_files:
+                    logger.print_info(f"  - {fname}")
+            else:
+                logger.print_info("  No generated files found to move")
         print()
 
         # Process alerts
@@ -565,15 +614,18 @@ def module3_test_monitor_integration(safety_mas: Safety_MAS, logger: Level3Conso
     print()
     print("=" * 60)
 
-    # Save comprehensive report to JSON
-    output_dir = Path("./logs/level3")
-    output_dir.mkdir(parents=True, exist_ok=True)
-    report_path = output_dir / f"comprehensive_report_{int(time.time())}.json"
-
-    with open(report_path, 'w', encoding='utf-8') as f:
-        json.dump(comprehensive_report, f, ensure_ascii=False, indent=2, default=str)
-
-    logger.print_success(f"Report saved to: {report_path}")
+    # Save comprehensive report to session directory
+    session = get_current_session()
+    if session:
+        report_path = session.save_json_file("comprehensive_report.json", comprehensive_report)
+        logger.print_success(f"Report saved to: {report_path}")
+    else:
+        # Fallback to old method
+        output_dir = logger.output_dir
+        report_path = output_dir / f"comprehensive_report_{int(time.time())}.json"
+        with open(report_path, 'w', encoding='utf-8') as f:
+            json.dump(comprehensive_report, f, ensure_ascii=False, indent=2, default=str)
+        logger.print_success(f"Report saved to: {report_path}")
 
     return comprehensive_report
 
@@ -618,8 +670,13 @@ Examples:
     parser.add_argument(
         "--output-dir",
         type=str,
-        default="./logs/level3",
-        help="Directory for JSON output files (default: ./logs/level3)"
+        default="./logs/log",
+        help="Directory for JSON output files (default: ./logs/log)"
+    )
+    parser.add_argument(
+        "--session-name",
+        type=str,
+        help="Custom session name (default: timestamp)"
     )
 
     args = parser.parse_args()
@@ -630,11 +687,14 @@ Examples:
     else:
         modules_to_run = [1, 2, 3]  # Run all by default
 
-    # Initialize console logger
+    # Start log session (creates timestamped folder)
+    session = start_log_session(session_name=args.session_name, base_dir=args.output_dir)
+
+    # Initialize console logger with session manager
     logger = Level3ConsoleLogger(
         use_colors=not args.no_color,
         verbose=args.verbose,
-        output_dir=args.output_dir
+        session_manager=session
     )
 
     # Print header
@@ -710,6 +770,51 @@ Examples:
             traceback.print_exc()
             comprehensive_report = {}
 
+    # Collect any remaining generated files to session directory
+    logger.print_header("Collecting Generated Files")
+    session = get_current_session()
+    if session:
+        import glob
+        import shutil
+
+        search_paths = [
+            Path.cwd(),  # Current working directory
+            Path(__file__).parent,  # examples/full_demo/
+        ]
+
+        moved_files = []
+        for search_path in search_paths:
+            # Find all txt and md files (common output formats)
+            for pattern in ["*.txt", "*.md"]:
+                for file_path in search_path.glob(pattern):
+                    # Skip system files, README, and existing session files
+                    if (file_path.name.startswith('.') or
+                        'session_' in file_path.name or
+                        file_path.name == 'README.md' or
+                        file_path.name == 'requirements.txt'):
+                        continue
+
+                    # Check if file was recently created (within last 10 minutes)
+                    file_mtime = file_path.stat().st_mtime
+                    if time.time() - file_mtime < 600:  # 10 minutes
+                        # Move to session directory
+                        dest_path = session.get_file_path(file_path.name)
+                        if not dest_path.exists():  # Don't overwrite
+                            try:
+                                shutil.move(str(file_path), str(dest_path))
+                                moved_files.append(file_path.name)
+                                session._created_files.append(str(dest_path))
+                            except Exception as e:
+                                logger.print_warning(f"Failed to move {file_path.name}: {e}")
+
+        if moved_files:
+            logger.print_success(f"✓ Collected {len(moved_files)} generated file(s) to session directory")
+            for fname in moved_files:
+                logger.print_info(f"  - {fname}")
+        else:
+            logger.print_info("  No generated files found to collect")
+        print()
+
     # Final summary
     logger.print_header("Demo Complete")
 
@@ -729,7 +834,14 @@ Examples:
     print("  - Alert detection with source tracing")
     print("  - Full session exported to JSON")
     print()
-    logger.print_info(f"Log files saved to: {args.output_dir}")
+
+    # Show session directory
+    if session:
+        logger.print_info(f"Session directory: {session.get_session_dir()}")
+        session_info = session.get_session_info()
+        logger.print_info(f"Total files created: {session_info['total_files']}")
+    else:
+        logger.print_info(f"Log files saved to: {args.output_dir}")
 
 
 if __name__ == "__main__":

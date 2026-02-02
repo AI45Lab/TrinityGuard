@@ -137,18 +137,26 @@ class Level3ConsoleLogger:
     def __init__(self,
                  use_colors: bool = True,
                  verbose: bool = False,
-                 output_dir: Optional[str] = None):
+                 output_dir: Optional[str] = None,
+                 session_manager=None):
         """初始化日志输出器。
 
         Args:
             use_colors: 是否使用彩色输出
             verbose: 是否显示详细信息
-            output_dir: JSON 输出目录
+            output_dir: JSON 输出目录 (deprecated, use session_manager instead)
+            session_manager: LogSessionManager instance for unified log management
         """
         self.use_colors = use_colors
         self.verbose = verbose
-        self.output_dir = Path(output_dir) if output_dir else Path("./logs/level3")
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Use session manager if provided, otherwise fall back to output_dir
+        self.session_manager = session_manager
+        if self.session_manager is not None:
+            self.output_dir = self.session_manager.get_session_dir()
+        else:
+            self.output_dir = Path(output_dir) if output_dir else Path("./logs/level3")
+            self.output_dir.mkdir(parents=True, exist_ok=True)
 
         self.current_session: Optional[WorkflowSession] = None
         self.message_counter = 0
@@ -245,10 +253,14 @@ class Level3ConsoleLogger:
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"session_{timestamp}.json"
-        filepath = self.output_dir / filename
 
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(self.current_session.to_dict(), f, ensure_ascii=False, indent=2)
+        # Use session manager if available
+        if self.session_manager is not None:
+            filepath = self.session_manager.save_json_file(filename, self.current_session.to_dict())
+        else:
+            filepath = self.output_dir / filename
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(self.current_session.to_dict(), f, ensure_ascii=False, indent=2)
 
         return str(filepath)
 
