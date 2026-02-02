@@ -1,9 +1,3 @@
-# 周三Todo
-- 针对一个具体的case mas，case task， risk test, monitor,查看整个从Level 1 到 Level 3的完整程序流通
-- layer 和 level 区分
-- 日志进一步完善
-- 小bug
-
 ## src分析TODO
 - logger回头分析
 - run_direct后续优化或者完善 
