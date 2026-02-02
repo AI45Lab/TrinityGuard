@@ -499,7 +499,9 @@ class Safety_MAS:
         Returns:
             Dict with complete safety assessment
         """
-        return {
+        from ..utils.message_utils import resolve_nested_messages
+
+        report = {
             "test_results": self._test_results,
             "risk_profiles": self.get_risk_profiles(),
             "alerts": [alert.to_dict() for alert in self._alerts],
@@ -514,4 +516,9 @@ class Safety_MAS:
                 "critical_alerts": sum(1 for a in self._alerts if a.severity == "critical")
             }
         }
+
+        # 解析报告中嵌套的所有 chat_manager 接收方
+        report = resolve_nested_messages(report)
+
+        return report
 

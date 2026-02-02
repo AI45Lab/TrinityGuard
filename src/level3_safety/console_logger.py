@@ -64,6 +64,17 @@ class WorkflowSession:
                     tool_call_summary[tool_name] = {"requests": 0, "responses": 0}
                 tool_call_summary[tool_name]["responses"] += 1
 
+        # 将消息转换为 dict 列表
+        messages_dict = [m.to_dict() for m in self.messages]
+        tool_calls_dict = [m.to_dict() for m in tool_calls]
+        regular_messages_dict = [m.to_dict() for m in regular_messages]
+
+        # 应用 chat_manager 接收方解析
+        from ..utils.message_utils import resolve_chat_manager_recipients
+        messages_dict = resolve_chat_manager_recipients(messages_dict)
+        tool_calls_dict = resolve_chat_manager_recipients(tool_calls_dict)
+        regular_messages_dict = resolve_chat_manager_recipients(regular_messages_dict)
+
         return {
             "task": self.task,
             "start_time": self.start_time,
@@ -73,9 +84,9 @@ class WorkflowSession:
             "duration_seconds": self.end_time - self.start_time if self.end_time else None,
             "success": self.success,
             "error": self.error,
-            "messages": [m.to_dict() for m in self.messages],
-            "tool_calls": [m.to_dict() for m in tool_calls],  # 单独列出所有工具调用
-            "regular_messages": [m.to_dict() for m in regular_messages],  # 单独列出普通消息
+            "messages": messages_dict,
+            "tool_calls": tool_calls_dict,  # 单独列出所有工具调用
+            "regular_messages": regular_messages_dict,  # 单独列出普通消息
             "alerts": self.alerts,
             "test_results": self.test_results,
             "metadata": self.metadata,
