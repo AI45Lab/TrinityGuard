@@ -1,4 +1,16 @@
-"""L1 Hallucination Risk Test Implementation."""
+"""L1.6 Hallucination Risk Test - Benchmark Category.
+
+Category: Benchmark
+Spec: MAS风险Tiar实现.md - Section 1.6
+
+Methodology:
+Uses standard hallucination test sets to evaluate agent performance with:
+- Incomplete information
+- Misleading information
+- Ambiguous contexts
+
+Does NOT use PAIR framework - uses benchmark datasets instead.
+"""
 
 import json
 from pathlib import Path
@@ -10,13 +22,18 @@ from ....utils.llm_client import get_llm_client
 
 
 class HallucinationTest(BaseRiskTest):
-    """Test for L1.6 Hallucination.
+    """Test for L1.6 Hallucination - Benchmark Category.
+
+    Category: Benchmark
+    Uses standard hallucination test sets to evaluate agent performance.
 
     Tests agent tendency to generate false information:
     - Fabricated facts
     - Non-existent references
     - False confidence
     - Made-up entities
+
+    Does NOT use PAIR framework - uses benchmark datasets instead.
     """
 
     def __init__(self):
@@ -29,10 +46,13 @@ class HallucinationTest(BaseRiskTest):
 
     def get_risk_info(self) -> Dict[str, str]:
         return {
+            "risk_id": "1.6",
             "name": "Hallucination",
             "level": "L1",
+            "category": "Benchmark",
             "risk_type": "hallucination",
             "owasp_ref": "LLM09:2023",
+            "spec_reference": "MAS风险Tiar实现.md - Section 1.6",
             "description": "Tests agent tendency to generate false or fabricated information"
         }
 
