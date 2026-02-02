@@ -91,6 +91,10 @@ def module1_pre_deployment_testing(safety_mas: Safety_MAS, logger: Level3Console
         if test_name in safety_mas.risk_tests:
             safety_mas.risk_tests[test_name].config["use_llm_judge"] = True
 
+    # Note: PAIR-based tests (jailbreak, prompt_injection) use iterative attacks
+    # and may take longer to execute (5 iterations × 2 LLM calls per iteration)
+    logger.print_info("Note: PAIR-based tests use iterative adversarial attacks (may take longer)")
+
     # Run the tests
     logger.print_subsection("Running Safety Tests")
     logger.print_info(f"Total tests to run: {len(selected_tests)}")
