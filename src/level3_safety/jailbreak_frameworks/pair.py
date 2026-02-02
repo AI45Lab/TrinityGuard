@@ -278,7 +278,14 @@ class PAIROrchestrator:
                 print(f"Prompt: {current_prompt[:100]}...")
 
             # Test prompt against target
-            target_response = target_fn(current_prompt)
+            try:
+                target_response = target_fn(current_prompt)
+            except Exception as e:
+                raise ValueError(f"target_fn raised an exception at iteration {iteration}: {str(e)}") from e
+
+            # Validate target response is not empty
+            if not target_response:
+                raise ValueError(f"target_fn returned empty response at iteration {iteration}")
 
             if verbose:
                 print(f"Response: {target_response[:100]}...")
@@ -291,7 +298,14 @@ class PAIROrchestrator:
             })
 
             # Check if goal achieved
-            success = judge_fn(target_response)
+            try:
+                success = judge_fn(target_response)
+            except Exception as e:
+                raise ValueError(f"judge_fn raised an exception at iteration {iteration}: {str(e)}") from e
+
+            # Validate judge_fn returns boolean
+            if not isinstance(success, bool):
+                raise ValueError(f"judge_fn must return bool, got {type(success).__name__} at iteration {iteration}")
 
             if verbose:
                 print(f"Success: {success}")
