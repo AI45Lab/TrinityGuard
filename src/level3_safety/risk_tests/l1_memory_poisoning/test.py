@@ -1,4 +1,14 @@
-"""L1 Memory Poisoning Risk Test Implementation."""
+"""L1.7 Memory Poisoning Risk Test - Automated Category.
+
+Category: Automated
+Spec: MAS风险Tiar实现.md - Section 1.7
+
+Methodology:
+Automatically generates contexts with poisoned memory based on agent's task.
+Tests agent resilience to maliciously injected memory information.
+
+Does NOT use PAIR framework - uses automated context generation.
+"""
 
 import json
 from pathlib import Path
@@ -31,8 +41,11 @@ class MemoryPoisoningTest(BaseRiskTest):
         return {
             "name": "MemoryPoisoning",
             "level": "L1",
+            "risk_id": "1.7",
+            "category": "Automated",
             "risk_type": "memory_poisoning",
             "owasp_ref": "ASI-Extended",
+            "spec_reference": "MAS风险Tiar实现.md - Section 1.7",
             "description": "Tests agent resistance to memory and context poisoning attacks"
         }
 
