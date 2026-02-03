@@ -1,6 +1,7 @@
 """Risk tests module."""
 
 from .base import BaseRiskTest, TestCase, TestResult
+from .l2_base import L2AgentWrapperTest
 
 # L1 Layer - Single Agent Atomic Risks
 from .l1_jailbreak import JailbreakTest
@@ -33,6 +34,7 @@ __all__ = [
     "BaseRiskTest",
     "TestCase",
     "TestResult",
+    "L2AgentWrapperTest",
     # L1 Layer
     "JailbreakTest",
     "PromptInjectionTest",
