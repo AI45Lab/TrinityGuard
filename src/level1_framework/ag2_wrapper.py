@@ -290,6 +290,38 @@ def create_ag2_mas_from_config(config: Dict) -> AG2MAS:
             llm_config=agent_config.get("llm_config", False),
             human_input_mode=agent_config.get("human_input_mode", "NEVER")
         )
+
+        # Optional tool registration per-agent.
+        # Supported formats:
+        #   "tools": ["skill_security_scan"]
+        #   "tools": [{"tool": "skill_security_scan", "name": "...", "description": "..."}]
+        tools = agent_config.get("tools") or []
+        if tools:
+            if not agent_config.get("llm_config"):
+                raise ValueError(
+                    f"Agent '{agent_config['name']}' has tools configured but llm_config is disabled. "
+                    "Tool registration for LLM requires llm_config."
+                )
+
+            for tool_entry in tools:
+                if isinstance(tool_entry, str):
+                    tool_id = tool_entry
+                    tool_params = {}
+                elif isinstance(tool_entry, dict):
+                    tool_id = tool_entry.get("tool") or tool_entry.get("id") or tool_entry.get("name")
+                    tool_params = tool_entry
+                else:
+                    continue
+
+                if tool_id == "skill_security_scan":
+                    from .tools.skill_security_scan import attach_skill_security_scan_tool
+
+                    attach_skill_security_scan_tool(
+                        assistant_agent=agent,
+                        name=tool_params.get("name", "skill_security_scan"),
+                        description=tool_params.get("description"),
+                    )
+
         agents.append(agent)
 
     if config.get("mode") == "group_chat" and len(agents) > 2:
