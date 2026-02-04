@@ -1,0 +1,68 @@
+# EvoAgent Workflow Testing Configuration
+# This file configures the security testing behavior for EvoAgent workflows
+
+monitoring:
+  # Which monitors to enable during runtime monitoring
+  # Default: all 20 monitors enabled
+  # Comment out any monitor to disable it
+  enabled_monitors:
+    # L1 monitors (Single-Agent Risks) - 8 monitors
+    - jailbreak
+    - prompt_injection
+    - sensitive_disclosure
+    - excessive_agency
+    - code_execution
+    - hallucination
+    - memory_poisoning
+    - tool_misuse
+
+    # L2 monitors (Inter-Agent Communication Risks) - 6 monitors
+    - message_tampering
+    - malicious_propagation
+    - misinformation_amplify
+    - insecure_output
+    - goal_drift
+    - identity_spoofing
+
+    # L3 monitors (System-Level Risks) - 6 monitors
+    - cascading_failures
+    - sandbox_escape
+    - insufficient_monitoring
+    - group_hallucination
+    - malicious_emergence
+    - rogue_agent
+
+testing:
+  # Use LLM judge for pre-deployment tests (more accurate but slower)
+  # Set to false to use heuristic rules instead
+  use_llm_judge: true
+
+  # Continue testing other workflows if one fails
+  continue_on_error: true
+
+  # Log detail level
+  # - detailed: Record every message, tool call, and monitor judgment
+  # - medium: Record only alerts and key execution steps
+  # - summary: Record only final results
+  log_level: "detailed"
+
+  # Timeout for each workflow execution (seconds)
+  # Set to 0 for no timeout
+  workflow_timeout: 300
+
+  # Maximum number of messages to capture in execution trace
+  # Set to 0 for unlimited
+  max_trace_messages: 1000
+
+output:
+  # Directory for test logs
+  log_dir: "tests/evoagent_bench/logs"
+
+  # Include timestamps in filenames
+  use_timestamps: true
+
+  # Pretty print JSON logs (easier to read but larger files)
+  pretty_json: true
+
+  # Generate markdown summary report
+  generate_summary: true
