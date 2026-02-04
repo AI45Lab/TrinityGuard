@@ -3,8 +3,15 @@
 This module provides a custom IOStream implementation that filters out
 AG2's verbose messages (EXECUTING FUNCTION, EXECUTED FUNCTION, TERMINATING RUN)
 while preserving other output.
+
+AG2 uses two output mechanisms:
+1. IOStream.send() for event-based output
+2. logging.Logger ('ag2.event.processor') for event_print() output
+
+This module handles both mechanisms to fully suppress verbose output.
 """
 
+import logging
 from typing import Any, Callable
 from contextlib import contextmanager
 
@@ -72,6 +79,38 @@ class FilteredIOConsole(IOConsole):
         super().send(message)
 
 
+# AG2 event logger name (from autogen.logger.logger_utils)
+_AG2_EVENT_LOGGER_NAME = "ag2.event.processor"
+
+
+class AG2EventFilter(logging.Filter):
+    """Logging filter to suppress AG2 tool execution messages.
+
+    This filter blocks log messages containing EXECUTING FUNCTION or
+    EXECUTED FUNCTION patterns from the ag2.event.processor logger.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Filter out tool execution messages.
+
+        Args:
+            record: The log record to filter
+
+        Returns:
+            False to suppress the message, True to allow it
+        """
+        msg = record.getMessage()
+        # Suppress tool execution messages
+        if ">>>>>>>> EXECUTING FUNCTION" in msg:
+            return False
+        if ">>>>>>>> EXECUTED FUNCTION" in msg:
+            return False
+        # Suppress termination messages
+        if ">>>>>>>> TERMINATING RUN" in msg:
+            return False
+        return True
+
+
 @contextmanager
 def suppress_ag2_tool_output():
     """Context manager to suppress AG2 tool execution output.
@@ -81,23 +120,37 @@ def suppress_ag2_tool_output():
             # AG2 code that calls tools
             result = mas.run_workflow(task)
 
-    This temporarily replaces the global IOStream with a filtered version
-    that suppresses EXECUTING/EXECUTED FUNCTION messages.
+    This suppresses EXECUTING/EXECUTED FUNCTION messages by:
+    1. Setting filtered IOStream as both global and context-local default
+    2. Adding a filter to the ag2.event.processor logger
+
+    Note: AG2 uses IOStream.get_default() which checks context-local default first,
+    then falls back to global default. We must set both to ensure filtering works.
     """
-    # Create filtered console
+    # Create filtered console for IOStream
     filtered_console = FilteredIOConsole(filter_tool_messages=True)
 
     # Save original global default
     try:
-        original_default = IOStream.get_global_default()
+        original_global = IOStream.get_global_default()
     except RuntimeError:
-        original_default = None
+        original_global = None
+
+    # Create and add filter to AG2 event logger
+    event_filter = AG2EventFilter()
+    ag2_logger = logging.getLogger(_AG2_EVENT_LOGGER_NAME)
+    ag2_logger.addFilter(event_filter)
 
     try:
         # Set filtered console as global default
         IOStream.set_global_default(filtered_console)
-        yield
+        # Also set as context-local default using the context manager
+        # This ensures AG2's get_default() returns our filtered console
+        with IOStream.set_default(filtered_console):
+            yield
     finally:
-        # Restore original default
-        if original_default is not None:
-            IOStream.set_global_default(original_default)
+        # Restore original global default
+        if original_global is not None:
+            IOStream.set_global_default(original_global)
+        # Remove the filter from logger
+        ag2_logger.removeFilter(event_filter)
