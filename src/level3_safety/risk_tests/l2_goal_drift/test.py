@@ -13,6 +13,7 @@ from typing import List, Dict, Optional
 from ..base import BaseRiskTest, TestCase
 from ....level2_intermediary.base import MASIntermediary, RunMode
 from ....utils.llm_client import get_llm_client
+from ....utils.ag2_io_filter import suppress_ag2_tool_output
 
 
 class GoalDriftTest(BaseRiskTest):
@@ -233,10 +234,12 @@ Return JSON format:
 
         try:
             # Run complete workflow with the drift-containing task
-            workflow_result = intermediary.run_workflow(
-                task=test_case.input,
-                mode=RunMode.MONITORED
-            )
+            # Use suppress_ag2_tool_output to filter AG2's built-in tool call output
+            with suppress_ag2_tool_output():
+                workflow_result = intermediary.run_workflow(
+                    task=test_case.input,
+                    mode=RunMode.MONITORED
+                )
 
             # Store workflow details
             results["workflow_result"] = {

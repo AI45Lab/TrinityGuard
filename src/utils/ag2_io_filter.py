@@ -112,7 +112,7 @@ class AG2EventFilter(logging.Filter):
 
 
 @contextmanager
-def suppress_ag2_tool_output():
+def suppress_ag2_tool_output(debug: bool = False):
     """Context manager to suppress AG2 tool execution output.
 
     Usage:
@@ -126,6 +126,9 @@ def suppress_ag2_tool_output():
 
     Note: AG2 uses IOStream.get_default() which checks context-local default first,
     then falls back to global default. We must set both to ensure filtering works.
+
+    Args:
+        debug: If True, print debug information about IOStream state
     """
     # Create filtered console for IOStream
     filtered_console = FilteredIOConsole(filter_tool_messages=True)
@@ -141,12 +144,20 @@ def suppress_ag2_tool_output():
     ag2_logger = logging.getLogger(_AG2_EVENT_LOGGER_NAME)
     ag2_logger.addFilter(event_filter)
 
+    if debug:
+        print(f"[DEBUG] suppress_ag2_tool_output: entering context")
+        print(f"[DEBUG] original_global: {type(original_global).__name__ if original_global else None}")
+        print(f"[DEBUG] filtered_console: {type(filtered_console).__name__}")
+
     try:
         # Set filtered console as global default
         IOStream.set_global_default(filtered_console)
         # Also set as context-local default using the context manager
         # This ensures AG2's get_default() returns our filtered console
         with IOStream.set_default(filtered_console):
+            if debug:
+                current = IOStream.get_default()
+                print(f"[DEBUG] inside context - IOStream.get_default(): {type(current).__name__}")
             yield
     finally:
         # Restore original global default
@@ -154,3 +165,5 @@ def suppress_ag2_tool_output():
             IOStream.set_global_default(original_global)
         # Remove the filter from logger
         ag2_logger.removeFilter(event_filter)
+        if debug:
+            print(f"[DEBUG] suppress_ag2_tool_output: exiting context")
