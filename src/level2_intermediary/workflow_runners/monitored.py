@@ -81,20 +81,40 @@ class MonitoredWorkflowRunner(WorkflowRunner):
                 - to: Logical target agent name (for GroupChat, this is the actual recipient)
                 - physical_to: Physical recipient (may be chat_manager in GroupChat mode)
                 - content: Message content
+                - tool_calls: Optional tool call information
+                - tool_responses: Optional tool response information
 
         Returns:
             Unmodified message dict
         """
         # Extract message info
-        # Use logical target (to) for logging, not physical target (physical_to)
         from_agent = message.get("from", "unknown")
-        to_agent = message.get("to", "unknown")  # Logical target
-        physical_to = message.get("physical_to")  # Physical recipient (may differ in GroupChat)
-        content = message.get("content", "")
+        to_agent = message.get("to", "unknown")
+        physical_to = message.get("physical_to")
+        content = message.get("content")
+        tool_calls = message.get("tool_calls")
+        tool_responses = message.get("tool_responses")
+        function_call = message.get("function_call")
+
+        # Determine message type
+        if tool_calls:
+            message_type = "tool_call"
+            content_str = f"[Tool Call] {tool_calls}"
+        elif tool_responses:
+            message_type = "tool_response"
+            content_str = str(content) if content else f"[Tool Response] {tool_responses}"
+        elif function_call:
+            message_type = "tool_call"
+            content_str = f"[Function Call] {function_call}"
+        elif content is None:
+            message_type = "empty"
+            content_str = "[No Content]"
+        else:
+            message_type = "text"
+            content_str = str(content)
 
         # Log message
         message_id = str(uuid.uuid4())
-        # Build message metadata with routing info
         msg_metadata = {}
         if physical_to and physical_to != to_agent:
             msg_metadata["physical_to"] = physical_to
@@ -103,26 +123,36 @@ class MonitoredWorkflowRunner(WorkflowRunner):
         self.log_writer.log_message(
             from_agent=from_agent,
             to_agent=to_agent,
-            message=content,
+            message=content_str,
             message_id=message_id,
+            message_type=message_type,
+            tool_calls=tool_calls,
             metadata=msg_metadata if msg_metadata else None
         )
 
         # Build metadata with routing info
         step_metadata = {
             "from": from_agent,
-            "message_id": message_id
+            "message_id": message_id,
+            "message_type": message_type
         }
-        # Include physical_to if it differs from logical target (GroupChat mode)
         if physical_to and physical_to != to_agent:
             step_metadata["physical_to"] = physical_to
             step_metadata["routing_mode"] = "group_chat"
 
-        # Log as agent step (receive)
+        # Determine step type based on message type
+        if message_type == "tool_call":
+            step_type = "tool_call"
+        elif message_type == "tool_response":
+            step_type = "tool_response"
+        else:
+            step_type = "receive"
+
+        # Log as agent step
         self.log_writer.log_agent_step(
             agent_name=to_agent,
-            step_type="receive",
-            content=content,
+            step_type=step_type,
+            content=content_str,
             metadata=step_metadata
         )
 

@@ -14,6 +14,7 @@ class MessageInterception:
     target_agent: Optional[str]  # None = all targets
     modifier: Callable[[str], str]  # Function to modify message content
     condition: Optional[Callable[[Dict], bool]] = None  # When to apply
+    attack_type: Optional[str] = None  # Type of attack being simulated
 
 
 class InterceptingWorkflowRunner(WorkflowRunner):

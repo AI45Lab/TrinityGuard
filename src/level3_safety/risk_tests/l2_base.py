@@ -16,6 +16,7 @@ from ...level2_intermediary.base import MASIntermediary, RunMode
 from ...level2_intermediary.workflow_runners import MessageInterception
 from ...utils.llm_client import get_llm_client
 from ...utils.exceptions import LLMError
+from ...utils.ag2_io_filter import suppress_ag2_tool_output
 
 
 class L2AgentWrapperTest(BaseRiskTest):
@@ -401,13 +402,22 @@ Return ONLY the task description (1-3 sentences), nothing else:"""
             # Create message modifier from test case
             modifier = self.create_message_modifier(test_case)
 
+            # Get attack type from test case metadata or risk info
+            risk_info = self.get_risk_info()
+            attack_type = None
+            if test_case.metadata:
+                attack_type = test_case.metadata.get("attack_type") or test_case.metadata.get("attack_goal")
+            if not attack_type:
+                attack_type = risk_info.get("risk_type", "unknown")
+
             # Create interception configurations for all pairs
             interceptions = []
             for src, tgt in pairs_to_use:
                 interceptions.append(MessageInterception(
                     source_agent=src,
                     target_agent=tgt,
-                    modifier=modifier
+                    modifier=modifier,
+                    attack_type=attack_type
                 ))
 
             # Determine task to execute
@@ -415,19 +425,20 @@ Return ONLY the task description (1-3 sentences), nothing else:"""
                 task_to_use = task
             else:
                 # Auto-generate task based on MAS architecture
-                risk_info = self.get_risk_info()
+                # risk_info already fetched above
                 risk_type = risk_info.get("risk_type", "general")
                 task_to_use = self.generate_task_for_mas(intermediary, risk_type)
 
             results["task_used"] = task_to_use
 
-            # Run workflow with interception
-            workflow_result = intermediary.run_workflow(
-                task=task_to_use,
-                mode=RunMode.MONITORED_INTERCEPTING,
-                interceptions=interceptions,
-                silent=True  # Suppress AG2 native console output
-            )
+            # Run workflow with interception, suppressing AG2 tool output
+            with suppress_ag2_tool_output():
+                workflow_result = intermediary.run_workflow(
+                    task=task_to_use,
+                    mode=RunMode.MONITORED_INTERCEPTING,
+                    interceptions=interceptions,
+                    silent=True  # Suppress AG2 native console output
+                )
 
             results["workflow_success"] = workflow_result.success
 
@@ -511,8 +522,8 @@ Return ONLY the task description (1-3 sentences), nothing else:"""
 
         Creates a JSON log file with:
         - Test case info
-        - All messages (with original and modified content for intercepted messages)
-        - Interception details
+        - All messages (with clear message types)
+        - Interception details (original vs modified content)
         - Workflow result
 
         Args:
@@ -527,6 +538,11 @@ Return ONLY the task description (1-3 sentences), nothing else:"""
         """
         try:
             log_dir = Path(self.config.get("log_dir", "logs/l2_tests"))
+            # Resolve relative paths to project root
+            if not log_dir.is_absolute():
+                # Project root is 4 levels up from this file (src/level3_safety/risk_tests/l2_base.py)
+                project_root = Path(__file__).parent.parent.parent.parent
+                log_dir = project_root / log_dir
             log_dir.mkdir(parents=True, exist_ok=True)
 
             # Generate log filename
@@ -535,29 +551,19 @@ Return ONLY the task description (1-3 sentences), nothing else:"""
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             log_file = log_dir / f"{risk_type}_{test_case.name}_{timestamp}.json"
 
-            # Extract interception logs from workflow result
+            # Extract data from workflow result
             interception_logs = []
-            all_messages = []
+            messages = []
 
             if workflow_result.metadata:
-                # Get structured logs which include interception details
-                logs = workflow_result.metadata.get("logs", [])
-                for log in logs:
-                    if isinstance(log, dict):
-                        if log.get("step_type") == "intercept":
-                            interception_logs.append(log)
-                        elif log.get("step_type") == "receive":
-                            all_messages.append(log)
-
-                # Also get trace messages
                 trace = workflow_result.metadata.get("trace", {})
                 if trace:
-                    trace_messages = trace.get("messages", [])
-                    for msg in trace_messages:
-                        if isinstance(msg, dict) and msg not in all_messages:
-                            all_messages.append(msg)
+                    # Get interceptions from trace
+                    interception_logs = trace.get("interceptions", [])
+                    # Get messages from trace
+                    messages = trace.get("messages", [])
 
-            # Build log data
+            # Build clean log data structure
             log_data = {
                 "test_info": {
                     "risk_type": risk_type,
@@ -573,13 +579,12 @@ Return ONLY the task description (1-3 sentences), nothing else:"""
                 },
                 "task": task_used,
                 "interceptions": interception_logs,
-                "messages": workflow_result.messages if workflow_result.messages else [],
+                "messages": messages,
                 "workflow_result": {
                     "success": workflow_result.success,
                     "output": str(workflow_result.output)[:2000] if workflow_result.output else None,
                     "error": workflow_result.error,
                 },
-                "structured_logs": all_messages,
             }
 
             # Write log file

@@ -1,6 +1,6 @@
 """Structured logging module."""
 
-from .schemas import AgentStepLog, MessageLog, WorkflowTrace, StepType
+from .schemas import AgentStepLog, MessageLog, WorkflowTrace, StepType, InterceptionLog
 from .logger import StructuredLogWriter
 
 __all__ = [
@@ -8,5 +8,6 @@ __all__ = [
     "MessageLog",
     "WorkflowTrace",
     "StepType",
+    "InterceptionLog",
     "StructuredLogWriter",
 ]

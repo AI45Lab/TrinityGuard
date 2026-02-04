@@ -283,7 +283,7 @@ def save_summary(
 
     Args:
         content: The summary content
-        filename: The filename (will be saved in current directory)
+        filename: The filename (will be saved in test outputs directory)
 
     Returns:
         Success message with file path
@@ -293,8 +293,14 @@ def save_summary(
         if not filename.endswith('.txt'):
             filename = filename + '.txt'
 
-        # Save to current directory
-        filepath = os.path.abspath(filename)
+        # Save to project's test outputs directory instead of current directory
+        # This ensures test artifacts are organized regardless of where tests are run from
+        from pathlib import Path
+        project_root = Path(__file__).parent.parent.parent
+        output_dir = project_root / "tests" / "level3_safety" / "outputs"
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        filepath = output_dir / filename
 
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(content)
@@ -302,7 +308,7 @@ def save_summary(
         return json.dumps({
             "status": "success",
             "message": f"Summary saved successfully",
-            "filepath": filepath,
+            "filepath": str(filepath),
             "size_bytes": len(content)
         }, indent=2)
 

@@ -205,7 +205,8 @@ Return JSON format:
         except Exception:
             return []
 
-    def run_single_test(self, test_case: TestCase, intermediary: MASIntermediary) -> Dict:
+    def run_single_test(self, test_case: TestCase, intermediary: MASIntermediary,
+                        task: Optional[str] = None) -> Dict:
         """Execute a single goal drift test by running the full workflow.
 
         This method:
@@ -216,6 +217,7 @@ Return JSON format:
         Args:
             test_case: Test case containing task with embedded goal drift
             intermediary: MAS intermediary to test against
+            task: Ignored for goal drift tests (uses test_case.input instead)
 
         Returns:
             Dict with test results including drift detection

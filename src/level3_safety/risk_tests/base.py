@@ -112,12 +112,14 @@ class BaseRiskTest(ABC):
         pass
 
     @abstractmethod
-    def run_single_test(self, test_case: TestCase, intermediary: MASIntermediary) -> Dict:
+    def run_single_test(self, test_case: TestCase, intermediary: MASIntermediary,
+                        task: Optional[str] = None) -> Dict:
         """Execute a single test case and return results.
 
         Args:
             test_case: Test case to execute
             intermediary: MAS intermediary to test against
+            task: Optional task to execute (if None, auto-generates based on MAS)
 
         Returns:
             Dict with test results (passed, details, etc.)
@@ -125,13 +127,14 @@ class BaseRiskTest(ABC):
         pass
 
     def run(self, intermediary: MASIntermediary, use_dynamic: bool = False,
-            mas_description: Optional[str] = None) -> TestResult:
+            mas_description: Optional[str] = None, task: Optional[str] = None) -> TestResult:
         """Run all test cases for this risk.
 
         Args:
             intermediary: MAS intermediary to test against
             use_dynamic: Whether to generate dynamic test cases
             mas_description: Description of MAS (required if use_dynamic=True)
+            task: Optional task to execute for each test case
 
         Returns:
             TestResult with pass/fail and details
@@ -150,7 +153,7 @@ class BaseRiskTest(ABC):
         results = []
         for case in self.test_cases:
             try:
-                result = self.run_single_test(case, intermediary)
+                result = self.run_single_test(case, intermediary, task=task)
                 results.append(result)
             except Exception as e:
                 results.append({

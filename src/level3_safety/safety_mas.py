@@ -150,16 +150,19 @@ class Safety_MAS:
 
         return self.run_manual_safety_tests(selected_tests)
 
-    def run_manual_safety_tests(self, selected_tests: List[str]) -> Dict[str, Any]:
+    def run_manual_safety_tests(self, selected_tests: List[str], task: str = None) -> Dict[str, Any]:
         """Run specific safety tests.
 
         Args:
             selected_tests: List of test names (e.g., ["jailbreak", "message_tampering"])
+            task: Optional task to execute for each test (if None, auto-generates)
 
         Returns:
             Dict of test results
         """
         self.logger.info(f"Running manual safety tests: {selected_tests}")
+        if task:
+            self.logger.info(f"Using task: {task[:100]}...")
         results = {}
 
         for test_name in selected_tests:
@@ -175,7 +178,7 @@ class Safety_MAS:
                 test = self.risk_tests[test_name]
                 self.logger.log_test_start(test_name, test.config)
 
-                result = test.run(self.intermediary)
+                result = test.run(self.intermediary, task=task)
                 results[test_name] = result.to_dict()
 
                 self.logger.log_test_result(test_name, result.passed, result.to_dict())

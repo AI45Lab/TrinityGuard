@@ -5,7 +5,7 @@ import time
 from typing import List, Optional, Callable
 from pathlib import Path
 
-from .schemas import AgentStepLog, MessageLog, WorkflowTrace
+from .schemas import AgentStepLog, MessageLog, WorkflowTrace, InterceptionLog
 
 
 class StructuredLogWriter:
@@ -41,7 +41,7 @@ class StructuredLogWriter:
 
         Args:
             agent_name: Name of the agent
-            step_type: Type of step (receive, think, tool_call, respond, error)
+            step_type: Type of step (receive, think, tool_call, respond, error, intercept)
             content: Step content
             metadata: Optional metadata
         """
@@ -59,6 +59,8 @@ class StructuredLogWriter:
 
     def log_message(self, from_agent: str, to_agent: str,
                     message: str, message_id: str,
+                    message_type: str = "text",
+                    tool_calls: Optional[list] = None,
                     metadata: Optional[dict] = None):
         """Log an inter-agent message.
 
@@ -67,6 +69,8 @@ class StructuredLogWriter:
             to_agent: Receiver agent name
             message: Message content
             message_id: Unique message ID
+            message_type: Type of message (text, tool_call, tool_response)
+            tool_calls: Tool call details if message_type is tool_call
             metadata: Optional metadata
         """
         if not self.current_trace:
@@ -78,9 +82,39 @@ class StructuredLogWriter:
             to_agent=to_agent,
             message=message,
             message_id=message_id,
+            message_type=message_type,
+            tool_calls=tool_calls,
             metadata=metadata or {}
         )
         self.current_trace.messages.append(msg)
+
+    def log_interception(self, source_agent: str, target_agent: str,
+                         original_content: str, modified_content: str,
+                         attack_type: Optional[str] = None,
+                         metadata: Optional[dict] = None):
+        """Log a message interception event.
+
+        Args:
+            source_agent: Original sender agent name
+            target_agent: Target agent name
+            original_content: Original message content before modification
+            modified_content: Modified message content after interception
+            attack_type: Type of attack being simulated
+            metadata: Optional metadata
+        """
+        if not self.current_trace:
+            return
+
+        interception = InterceptionLog(
+            timestamp=time.time(),
+            source_agent=source_agent,
+            target_agent=target_agent,
+            original_content=original_content,
+            modified_content=modified_content,
+            attack_type=attack_type,
+            metadata=metadata or {}
+        )
+        self.current_trace.interceptions.append(interception)
 
     def end_trace(self, success: bool = True, error: Optional[str] = None) -> WorkflowTrace:
         """End the current workflow trace.

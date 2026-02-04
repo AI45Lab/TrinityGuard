@@ -72,16 +72,18 @@ class AG2MAS(BaseMAS):
             if mas_ref._group_chat is not None and mas_ref._manager is not None:
                 manager_name = mas_ref._manager.name if hasattr(mas_ref._manager, 'name') else "chat_manager"
 
-                # If sending to chat_manager, the logical target is the next speaker
-                # We track this by recording the current speaker
+                # If sending to chat_manager, the logical target is "broadcast" (all agents)
+                # The actual next speaker will be determined by the GroupChatManager
                 if recipient_name == manager_name:
-                    # The logical flow is: last_speaker -> current_speaker
-                    if mas_ref._last_speaker is not None and mas_ref._last_speaker != agent_name:
-                        logical_target = agent_name  # Message is being received by current agent
-                        # Record logical flow: last_speaker sent to current agent
+                    # In GroupChat, messages go through manager to all agents
+                    # Use "broadcast" to clearly indicate this is a broadcast message
+                    logical_target = "broadcast"
+
+                    # Record logical flow
+                    if mas_ref._last_speaker is not None:
                         mas_ref._logical_message_flow.append({
-                            "from": mas_ref._last_speaker,
-                            "to": agent_name,
+                            "from": agent_name,
+                            "to": "broadcast",
                             "via": manager_name
                         })
 

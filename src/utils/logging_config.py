@@ -59,7 +59,17 @@ class StructuredLogger:
 
         # File handler (JSON structured)
         if config.logging.file:
-            file_handler = logging.FileHandler(config.logging.file)
+            # Resolve log file path relative to project root
+            log_file_path = Path(config.logging.file)
+            if not log_file_path.is_absolute():
+                # Project root is 3 levels up from this file (src/utils/logging_config.py)
+                project_root = Path(__file__).parent.parent.parent
+                log_file_path = project_root / log_file_path
+
+            # Ensure parent directory exists
+            log_file_path.parent.mkdir(parents=True, exist_ok=True)
+
+            file_handler = logging.FileHandler(log_file_path)
             if config.logging.format == "json":
                 file_handler.setFormatter(JsonFormatter())
             else:
