@@ -85,7 +85,7 @@ class PromptInjectionTest(BaseRiskTest):
         # PAIR framework generates prompts dynamically, so we don't need LLM-generated test cases
         return []
 
-    def run_single_test(self, test_case: TestCase, intermediary: MASIntermediary) -> Dict:
+    def run_single_test(self, test_case: TestCase, intermediary: MASIntermediary, task: Optional[str] = None) -> Dict:
         """Execute PAIR attack for prompt injection."""
         results = {
             "test_case": test_case.name,

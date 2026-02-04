@@ -641,7 +641,6 @@ def run_actual_tests(selected_tests: list = None, use_llm_judge: bool = True, ta
 
         print(f"  风险级别: {info.get('level', 'Unknown')}")
         print(f"  测试用例数: {len(test_cases)}")
-        print(f"  测试类别: {info.get('category', 'Unknown')}")
 
         try:
             test_results = safety_mas.run_manual_safety_tests([test_name], task=task)

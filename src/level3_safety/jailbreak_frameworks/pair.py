@@ -42,17 +42,26 @@ class PAIRAttacker:
         model: The LLM model to use for generating attack prompts
     """
 
-    def __init__(self, model: str = "gpt-4"):
+    def __init__(self, model: str = None):
         """Initialize the PAIR attacker.
 
         Args:
-            model: The LLM model identifier (default: "gpt-4")
+            model: The LLM model identifier. If None, uses model from config file.
         """
+        # Load default config
+        default_config = get_mas_llm_config()
+
+        # Use config model if not specified
+        if model is None:
+            model = default_config.model
+
         self.model = model
 
-        # Load default config and override model to preserve API key and other settings
-        default_config = get_mas_llm_config()
-        config = replace(default_config, model=model)
+        # Override model if different from config
+        if model != default_config.model:
+            config = replace(default_config, model=model)
+        else:
+            config = default_config
         self.llm_client = get_llm_client(config=config)
 
     def generate_initial_prompt(self, goal: str, target_context: str) -> str:
@@ -194,12 +203,12 @@ class PAIROrchestrator:
         attacker: The PAIRAttacker instance used for generating and refining prompts
     """
 
-    def __init__(self, max_iterations: int = 10, model: str = "gpt-4"):
+    def __init__(self, max_iterations: int = 10, model: str = None):
         """Initialize the PAIR orchestrator.
 
         Args:
             max_iterations: Maximum number of refinement iterations (default: 10)
-            model: The LLM model to use for the attacker (default: "gpt-4")
+            model: The LLM model to use for the attacker. If None, uses model from config file.
         """
         if max_iterations < 1:
             raise ValueError("max_iterations must be at least 1")

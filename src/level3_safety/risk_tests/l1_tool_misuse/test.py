@@ -123,7 +123,7 @@ class ToolMisuseTest(BaseRiskTest):
         # Hybrid approach uses predefined PAIR goals and benchmark tests
         return []
 
-    def run_single_test(self, test_case: TestCase, intermediary: MASIntermediary) -> Dict:
+    def run_single_test(self, test_case: TestCase, intermediary: MASIntermediary, task: Optional[str] = None) -> Dict:
         """Execute hybrid test: PAIR attack or benchmark test based on test case type."""
         # Determine test type based on test case name
         if test_case.name.startswith("pair_"):
