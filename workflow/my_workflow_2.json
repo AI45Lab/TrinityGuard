@@ -1,0 +1,278 @@
+{
+  "workflow": {
+    "class_name": "WorkFlowGraph",
+    "goal": "分析 daily_paper_digest.pdf 并生成总结",
+    "nodes": [
+      {
+        "name": "DocAgent_Node",
+        "original_name": "DocAgent",
+        "description": "高级 Agent: DocAgent",
+        "inputs": [
+          "user_input"
+        ],
+        "outputs": [
+          "processed_result"
+        ],
+        "agents": [
+          "DocAgent"
+        ],
+        "system_prompt": "你是一个 DocAgent，负责处理相关任务。\n\n你的主要能力包括:\n- document_ingestion: 摄取和处理多种格式的文档（PDF、Word、Excel、PPT、HTML、Markdown 等），转换为向量存储\n- rag_query: 基于摄取的文档进行检索增强生成（RAG），回答用户问题，支持带引用的查询\n- document_analysis: 对文档进行深度分析，提取关键信息、生成摘要、分析数据\n- multi_document_qa: 跨多个文档进行问答，支持文档集合的统一查询\n\n\n请根据你的能力处理输入，并提供准确、详细的结果。\n",
+        "is_advanced_agent": true,
+        "advanced_agent_config": {
+          "agent_class": "DocAgent",
+          "wrapper_config": {
+            "collection_name": "doc_collection_20260127_151117",
+            "parsed_docs_path": "./parsed_docs",
+            "enable_citations": true
+          }
+        }
+      },
+      {
+        "name": "final_summary_agent",
+        "description": "Final summary agent - 总结并整合所有分析结果",
+        "inputs": [
+          "processed_result"
+        ],
+        "outputs": [
+          "final_answer"
+        ],
+        "system_prompt": "你是一个专业的总结助手，负责整合和总结前面 Agent 的分析结果。\n\n你的任务是：\n1. 仔细阅读前面 Agent 提供的分析内容\n2. 提取关键信息和重要结论\n3. 用清晰、简洁的语言总结给用户\n4. 如果内容较长，使用结构化的方式呈现（如列表、分点等）\n\n重要：在输出总结后，必须在最后一行单独输出 \"TERMINATE\" 来结束对话。\n\n请直接给出总结，不要重复原始内容，也不要添加额外的分析。",
+        "is_summary_agent": true
+      }
+    ],
+    "edges": [
+      {
+        "from": "DocAgent_Node",
+        "to": "final_summary_agent",
+        "condition": "always"
+      }
+    ],
+    "uploaded_files": {
+      "project_report.txt": "/home/czc/evoagentx/ag2/autogen/interop/evoagentx/v3.1/upload_files/project_report.txt",
+      "data.csv": "/home/czc/evoagentx/ag2/autogen/interop/evoagentx/v3.1/upload_files/data.csv",
+      "project_report.pdf": "/home/czc/evoagentx/ag2/autogen/interop/evoagentx/v3.1/upload_files/project_report.pdf",
+      "daily_paper_digest.pdf": "/home/czc/evoagentx/ag2/autogen/interop/evoagentx/v3.1/upload_files/daily_paper_digest.pdf"
+    },
+    "original_nodes": [
+      {
+        "class_name": "WorkFlowNode",
+        "name": "pdf_text_extraction",
+        "description": "Extract text content from the PDF file `daily_paper_digest.pdf`.",
+        "inputs": [
+          {
+            "class_name": "Parameter",
+            "name": "goal",
+            "type": "string",
+            "description": "The user's goal in textual format.",
+            "required": true
+          }
+        ],
+        "outputs": [
+          {
+            "class_name": "Parameter",
+            "name": "extracted_text",
+            "type": "string",
+            "description": "The raw text extracted from the provided PDF.",
+            "required": true
+          }
+        ],
+        "reason": "This sub-task is required to retrieve the raw textual data from the input PDF for further processing.",
+        "agents": [
+          {
+            "name": "pdf_text_extraction_agent",
+            "description": "This agent is responsible for extracting raw textual data from the PDF file `daily_paper_digest.pdf` as a preparatory step for analysis and summarization.",
+            "inputs": [
+              {
+                "name": "goal",
+                "type": "string",
+                "description": "The user's goal in textual format.",
+                "required": true
+              }
+            ],
+            "outputs": [
+              {
+                "name": "extracted_text",
+                "type": "string",
+                "description": "The raw text extracted from the provided PDF.",
+                "required": true
+              }
+            ],
+            "prompt": "### Objective\nExtract raw text data from the provided PDF file `daily_paper_digest.pdf` to prepare it for further analysis and summarization.\n\n### Instructions\n1. Understand the user's goal based on the textual input: <input>{goal}</input>\n2. Open the file `daily_paper_digest.pdf` and process its content.\n3. Use appropriate methods to extract all textual data from the PDF file, ensuring that the extraction is as accurate and complete as possible.\n4. Compile the extracted text into a single, coherent string format suitable for further processing.\n5. Return the raw extracted text as the output.\n\n### Output Format\nYour final output should ALWAYS in the following format:\n\n## Thought\nBriefly explain the reasoning process for extracting text from the PDF.\n\n## extracted_text\nThe raw text extracted from the provided PDF."
+          }
+        ],
+        "status": "pending"
+      },
+      {
+        "class_name": "WorkFlowNode",
+        "name": "content_analysis",
+        "description": "Analyze the extracted text to identify key points, topics, or themes presented in the document.",
+        "inputs": [
+          {
+            "class_name": "Parameter",
+            "name": "goal",
+            "type": "string",
+            "description": "The user's goal in textual format.",
+            "required": true
+          },
+          {
+            "class_name": "Parameter",
+            "name": "extracted_text",
+            "type": "string",
+            "description": "The raw text extracted from the PDF file.",
+            "required": true
+          }
+        ],
+        "outputs": [
+          {
+            "class_name": "Parameter",
+            "name": "analyzed_content",
+            "type": "string",
+            "description": "A structured analysis of the text, organizing key points, topics, or themes within the PDF.",
+            "required": true
+          }
+        ],
+        "reason": "This sub-task ensures the relevant information is identified and organized, which is critical for generating a coherent summary.",
+        "agents": [
+          {
+            "name": "content_analysis_agent",
+            "description": "This agent analyzes the extracted text and organizes key points, topics, or themes based on the user's goal, producing a structured analysis.",
+            "inputs": [
+              {
+                "name": "goal",
+                "type": "string",
+                "description": "The user's goal in textual format.",
+                "required": true
+              },
+              {
+                "name": "extracted_text",
+                "type": "string",
+                "description": "The raw text extracted from the PDF file.",
+                "required": true
+              }
+            ],
+            "outputs": [
+              {
+                "name": "analyzed_content",
+                "type": "string",
+                "description": "A structured analysis of the text, organizing key points, topics, or themes within the PDF.",
+                "required": true
+              }
+            ],
+            "prompt": "### Objective\nAnalyze the extracted text from the PDF to identify and organize key points, topics, or themes in alignment with the user's goal. Produce a structured analysis formatted logically based on the extracted content.\n\n### Instructions\n1. Review the user's goal: <input>{goal}</input>.\n2. Examine the provided extracted text from the PDF: <input>{extracted_text}</input>.\n3. Identify and extract key points, important topics, or themes that align with the user's goal.\n4. Structure the analysis logically, categorizing the key points under relevant topics or themes, ensuring clarity and organization.\n5. Clearly describe each identified key point and its relevance to the user's goal.\n6. Produce the structured analysis as the output, ensuring it is clear, concise, and aligned with the goal.\n\n### Output Format\nYour final output should ALWAYS in the following format:\n\n## Thought\nBriefly explain the reasoning process for identifying and structuring the key points, topics, or themes in alignment with the user's goal.\n\n## analyzed_content\nA structured analysis of the text, organizing key points, topics, or themes within the PDF."
+          }
+        ],
+        "status": "pending"
+      },
+      {
+        "class_name": "WorkFlowNode",
+        "name": "summary_generation",
+        "description": "Generate a concise summary of the document based on the analyzed content.",
+        "inputs": [
+          {
+            "class_name": "Parameter",
+            "name": "goal",
+            "type": "string",
+            "description": "The user's goal in textual format.",
+            "required": true
+          },
+          {
+            "class_name": "Parameter",
+            "name": "analyzed_content",
+            "type": "string",
+            "description": "The structured analysis of the text, organizing key points, topics, or themes.",
+            "required": true
+          }
+        ],
+        "outputs": [
+          {
+            "class_name": "Parameter",
+            "name": "summary",
+            "type": "string",
+            "description": "A concise summary of the PDF content.",
+            "required": true
+          }
+        ],
+        "reason": "This sub-task produces the final output, a summarized version of the PDF content tailored to the user's goal.",
+        "agents": [
+          {
+            "name": "summary_generation_agent",
+            "description": "This agent generates a concise summary of the PDF content based on the analyzed content and aligns it with the user's goal.",
+            "inputs": [
+              {
+                "name": "goal",
+                "type": "string",
+                "description": "The user's goal in textual format.",
+                "required": true
+              },
+              {
+                "name": "analyzed_content",
+                "type": "string",
+                "description": "The structured analysis of the text, organizing key points, topics, or themes.",
+                "required": true
+              }
+            ],
+            "outputs": [
+              {
+                "name": "summary",
+                "type": "string",
+                "description": "A concise summary of the PDF content.",
+                "required": true
+              }
+            ],
+            "prompt": "### Objective\nGenerate a concise summary of the analyzed content from the document, ensuring it aligns with the user's goal.\n\n### Instructions\n1. Understand the user's goal provided as input: <input>{goal}</input>.\n2. Review the structured analysis of the document's content: <input>{analyzed_content}</input>.\n3. Identify the key points, topics, or themes from the analyzed content that are most relevant to the user's goal.\n4. Synthesize a concise and coherent summary that conveys the identified key points and topics in alignment with the goal.\n\n### Output Format\nYour final output should ALWAYS in the following format:\n\n## Thought\nBriefly explain the reasoning process for synthesizing the summary and aligning it with the goal.\n\n## summary\nProvide a concise summary of the PDF content based on the analyzed content, aligned with the user's goal."
+          }
+        ],
+        "status": "pending"
+      }
+    ],
+    "start_nodes": [
+      "DocAgent_Node"
+    ],
+    "end_nodes": [
+      "DocAgent_Node"
+    ],
+    "global_tools": [
+      "AGENT:DocAgent"
+    ],
+    "metadata": {
+      "enhanced": true,
+      "enhanced_version": "v3.1",
+      "enhanced_at": "2026-01-27T15:11:17.588315",
+      "integrated_agents": [
+        "DocAgent"
+      ],
+      "enhancement_flags": {
+        "should_use_docagent": true,
+        "should_use_deep_research": false,
+        "input_files_supported": true,
+        "vector_database_needed": true,
+        "web_search_needed": false
+      }
+    }
+  },
+  "execution_context": {
+    "goal": "分析 daily_paper_digest.pdf 并生成总结",
+    "zh": true,
+    "parser_config": {
+      "parser_type": "mineru",
+      "server_url": null
+    },
+    "collection_name": null,
+    "uploaded_files": {
+      "project_report.txt": "/home/czc/evoagentx/ag2/autogen/interop/evoagentx/v3.1/upload_files/project_report.txt",
+      "data.csv": "/home/czc/evoagentx/ag2/autogen/interop/evoagentx/v3.1/upload_files/data.csv",
+      "project_report.pdf": "/home/czc/evoagentx/ag2/autogen/interop/evoagentx/v3.1/upload_files/project_report.pdf",
+      "daily_paper_digest.pdf": "/home/czc/evoagentx/ag2/autogen/interop/evoagentx/v3.1/upload_files/daily_paper_digest.pdf"
+    },
+    "enable_advanced_agents": true,
+    "capabilities_dir": "agent_capabilities"
+  },
+  "metadata": {
+    "generated_at": "2026-01-27T15:11:17.588615",
+    "generator_version": "v3.1",
+    "llm_config_file": "/home/czc/evoagentx/ag2/OAI_CONFIG_LIST",
+    "matched_agents": [
+      "DocAgent"
+    ]
+  }
+}
