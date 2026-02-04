@@ -55,9 +55,12 @@ class InsecureOutputTest(L2AgentWrapperTest):
     def create_message_modifier(self, test_case: TestCase) -> Callable[[str], str]:
         """Create a message modifier function for the test case.
 
+        Uses LLM to intelligently inject malicious parameters, with fixed payload as fallback.
+
         Selects modification strategy based on test_case.metadata:
-        - injection_type: 'append' (default), 'prepend', 'replace'
-        - payload: The malicious tool call parameter to inject
+        - injection_type: 'append', 'prepend', 'replace', 'llm' (default)
+        - payload: The malicious tool call parameter to inject (used as fallback)
+        - attack_goal: Description of injection objective (for LLM mode)
 
         Args:
             test_case: Test case containing modification parameters
@@ -66,14 +69,22 @@ class InsecureOutputTest(L2AgentWrapperTest):
             A function that modifies messages to inject malicious parameters
         """
         metadata = test_case.metadata or {}
-        injection_type = metadata.get("injection_type", "append")
+        injection_type = metadata.get("injection_type", "llm")
         payload = metadata.get("payload", test_case.input)
+        attack_goal = metadata.get("attack_goal", f"Inject insecure output: {test_case.input}")
 
-        if injection_type == "prepend":
+        # Use LLM modifier by default
+        if injection_type == "llm" or self.config.get("use_llm_modifier", True):
+            return self.llm_modifier(
+                attack_goal=attack_goal,
+                fallback_payload=f"\n\n[PARAMETER]: {payload}",
+                context={"test_case": test_case.name, "severity": test_case.severity}
+            )
+        elif injection_type == "prepend":
             return self.prepend_modifier(payload)
         elif injection_type == "replace":
             return self.replace_modifier(payload)
-        else:  # Default to append
+        else:  # append
             return self.append_modifier(f"\n\n[PARAMETER]: {payload}")
 
     def load_test_cases(self) -> List[TestCase]:

@@ -38,6 +38,9 @@ class AG2MAS(BaseMAS):
         self._manager = manager
         self._message_history: List[Dict] = []
         self._hooks_installed = False
+        # Track logical message flow in GroupChat mode
+        self._last_speaker: Optional[str] = None
+        self._logical_message_flow: List[Dict] = []
 
     def _setup_message_interception(self):
         """Set up message interception for all agents."""
@@ -61,10 +64,36 @@ class AG2MAS(BaseMAS):
             else:
                 msg_dict = message.copy() if isinstance(message, dict) else {"content": str(message)}
 
+            # Determine logical target in GroupChat mode
+            recipient_name = recipient.name if hasattr(recipient, 'name') else str(recipient)
+            logical_target = recipient_name
+
+            # In GroupChat mode, track logical message flow
+            if mas_ref._group_chat is not None and mas_ref._manager is not None:
+                manager_name = mas_ref._manager.name if hasattr(mas_ref._manager, 'name') else "chat_manager"
+
+                # If sending to chat_manager, the logical target is the next speaker
+                # We track this by recording the current speaker
+                if recipient_name == manager_name:
+                    # The logical flow is: last_speaker -> current_speaker
+                    if mas_ref._last_speaker is not None and mas_ref._last_speaker != agent_name:
+                        logical_target = agent_name  # Message is being received by current agent
+                        # Record logical flow: last_speaker sent to current agent
+                        mas_ref._logical_message_flow.append({
+                            "from": mas_ref._last_speaker,
+                            "to": agent_name,
+                            "via": manager_name
+                        })
+
+                # Update last speaker
+                mas_ref._last_speaker = agent_name
+
             # Build hook message format with full message info
+            # Use logical_target for interception matching
             hook_msg = {
                 "from": agent_name,
-                "to": recipient.name if hasattr(recipient, 'name') else str(recipient),
+                "to": logical_target,
+                "physical_to": recipient_name,  # Actual recipient
                 "content": msg_dict.get("content", ""),
                 "tool_calls": msg_dict.get("tool_calls", None),
                 "tool_responses": msg_dict.get("tool_responses", None),
@@ -83,10 +112,11 @@ class AG2MAS(BaseMAS):
                 modified_message = msg_dict
                 modified_message["content"] = modified_hook_msg["content"]
 
-            # Log message
+            # Log message with both logical and physical targets
             mas_ref._message_history.append({
                 "from": agent_name,
-                "to": hook_msg["to"],
+                "to": logical_target,
+                "physical_to": recipient_name,
                 "content": modified_hook_msg["content"],
                 "timestamp": time.time()
             })
@@ -136,6 +166,9 @@ class AG2MAS(BaseMAS):
         """
         self.logger.log_workflow_start(task, "ag2_group_chat")
         self._message_history.clear()
+        # Reset logical message flow tracking
+        self._last_speaker = None
+        self._logical_message_flow.clear()
 
         try:
             if self._manager and self._group_chat:
@@ -186,7 +219,8 @@ class AG2MAS(BaseMAS):
             messages=self._message_history,
             metadata={
                 "mode": "group_chat",
-                "rounds": len(self._message_history)
+                "rounds": len(self._message_history),
+                "logical_message_flow": self._logical_message_flow.copy()
             }
         )
 

@@ -76,31 +76,54 @@ class MonitoredWorkflowRunner(WorkflowRunner):
         """Log message and call stream callback.
 
         Args:
-            message: Message dict
+            message: Message dict with fields:
+                - from: Source agent name
+                - to: Logical target agent name (for GroupChat, this is the actual recipient)
+                - physical_to: Physical recipient (may be chat_manager in GroupChat mode)
+                - content: Message content
 
         Returns:
             Unmodified message dict
         """
         # Extract message info
+        # Use logical target (to) for logging, not physical target (physical_to)
         from_agent = message.get("from", "unknown")
-        to_agent = message.get("to", "unknown")
+        to_agent = message.get("to", "unknown")  # Logical target
+        physical_to = message.get("physical_to")  # Physical recipient (may differ in GroupChat)
         content = message.get("content", "")
 
         # Log message
         message_id = str(uuid.uuid4())
+        # Build message metadata with routing info
+        msg_metadata = {}
+        if physical_to and physical_to != to_agent:
+            msg_metadata["physical_to"] = physical_to
+            msg_metadata["routing_mode"] = "group_chat"
+
         self.log_writer.log_message(
             from_agent=from_agent,
             to_agent=to_agent,
             message=content,
-            message_id=message_id
+            message_id=message_id,
+            metadata=msg_metadata if msg_metadata else None
         )
+
+        # Build metadata with routing info
+        step_metadata = {
+            "from": from_agent,
+            "message_id": message_id
+        }
+        # Include physical_to if it differs from logical target (GroupChat mode)
+        if physical_to and physical_to != to_agent:
+            step_metadata["physical_to"] = physical_to
+            step_metadata["routing_mode"] = "group_chat"
 
         # Log as agent step (receive)
         self.log_writer.log_agent_step(
             agent_name=to_agent,
             step_type="receive",
             content=content,
-            metadata={"from": from_agent, "message_id": message_id}
+            metadata=step_metadata
         )
 
         # Call stream callback if provided

@@ -29,9 +29,14 @@ class LLMConfig:
 class LoggingConfig:
     """Logging configuration."""
     level: str = "INFO"
-    file: str = "massafety.log"
+    file: str = "logs/massafety.log"  # Main log file in logs directory
     format: str = "json"
     console_output: bool = True
+    # Test log directories
+    l1_test_dir: str = "logs/l1_tests"
+    l2_test_dir: str = "logs/l2_tests"
+    l3_test_dir: str = "logs/l3_tests"
+    workflow_trace_dir: str = "logs/workflow_traces"
 
 
 @dataclass

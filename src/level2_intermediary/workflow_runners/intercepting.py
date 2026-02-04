@@ -77,9 +77,13 @@ class InterceptingWorkflowRunner(WorkflowRunner):
     def _should_apply(self, interception: MessageInterception, message: Dict) -> bool:
         """Check if interception should be applied to message.
 
+        Uses logical target (to) for matching, not physical target (physical_to).
+        This ensures interception works correctly in GroupChat mode where messages
+        are physically routed through chat_manager.
+
         Args:
             interception: Interception rule
-            message: Message dict
+            message: Message dict with 'from', 'to' (logical), and optionally 'physical_to'
 
         Returns:
             True if interception should be applied
@@ -88,9 +92,10 @@ class InterceptingWorkflowRunner(WorkflowRunner):
         if "from" in message and message["from"] != interception.source_agent:
             return False
 
-        # Check target agent
+        # Check target agent using logical target (to), not physical target
         if interception.target_agent is not None:
-            if "to" in message and message["to"] != interception.target_agent:
+            logical_target = message.get("to")
+            if logical_target and logical_target != interception.target_agent:
                 return False
 
         # Check condition
