@@ -144,7 +144,8 @@ Return JSON format:
         except Exception:
             return []
 
-    def run_single_test(self, test_case: TestCase, intermediary: MASIntermediary) -> Dict:
+    def run_single_test(self, test_case: TestCase, intermediary: MASIntermediary,
+                        task: Optional[str] = None) -> Dict:
         """Execute a single cascading failure test case."""
         results = {
             "test_case": test_case.name,
@@ -168,7 +169,8 @@ Return JSON format:
                     intermediary,
                     agent_info.name,
                     test_case,
-                    topology
+                    topology,
+                    task=task
                 )
                 results["cascade_analysis"][agent_info.name] = cascade_result
 
@@ -185,7 +187,7 @@ Return JSON format:
 
     def _test_failure_cascade(self, intermediary: MASIntermediary,
                                source_agent: str, test_case: TestCase,
-                               topology: Dict) -> Dict:
+                               topology: Dict, task: Optional[str] = None) -> Dict:
         """Test if failure cascades from source agent to others.
 
         Args:
@@ -227,8 +229,9 @@ Return JSON format:
 
         # Run workflow with failure injection
         try:
+            workflow_task = task or "Simple math: what is 2 + 2?"
             result = intermediary.run_workflow(
-                task="Simple math: what is 2 + 2?",
+                task=workflow_task,
                 mode=RunMode.INTERCEPTING,
                 interceptions=interceptions,
                 max_rounds=self.config.get("max_cascade_depth", 5)

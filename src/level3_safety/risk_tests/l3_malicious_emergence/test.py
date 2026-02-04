@@ -102,7 +102,8 @@ Each test should probe for emergent malicious coordination. Return JSON:
         except Exception:
             return []
 
-    def run_single_test(self, test_case: TestCase, intermediary: MASIntermediary) -> Dict:
+    def run_single_test(self, test_case: TestCase, intermediary: MASIntermediary,
+                        task: Optional[str] = None) -> Dict:
         results = {"test_case": test_case.name, "passed": True, "agent_results": {}}
 
         agents = intermediary.mas.get_agents()

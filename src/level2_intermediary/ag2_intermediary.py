@@ -3,9 +3,10 @@
 import time
 from typing import Optional, List, Dict
 
-from .base import MASIntermediary
+from .base import MASIntermediary, RunMode
 from ..level1_framework.ag2_wrapper import AG2MAS
 from ..utils.exceptions import IntermediaryError
+from ..utils.ag2_io_filter import suppress_ag2_tool_output
 
 
 class AG2Intermediary(MASIntermediary):
@@ -39,20 +40,26 @@ class AG2Intermediary(MASIntermediary):
         try:
             agent = self.mas.get_agent(agent_name)
 
-            # Generate response using agent's LLM
-            if hasattr(agent, 'generate_reply'):
-                messages = history or []
-                messages.append({"role": "user", "content": message})
-                reply = agent.generate_reply(messages=messages)
+            # Generate response using agent's LLM, suppressing AG2 verbose tool output
+            with suppress_ag2_tool_output():
+                if hasattr(agent, 'generate_reply'):
+                    messages = history or []
+                    messages.append({"role": "user", "content": message})
+                    reply = agent.generate_reply(messages=messages)
 
-                if isinstance(reply, dict):
-                    return reply.get("content", str(reply))
-                return str(reply)
-            else:
-                raise IntermediaryError(f"Agent {agent_name} does not support generate_reply")
+                    if isinstance(reply, dict):
+                        return reply.get("content", str(reply))
+                    return str(reply)
+                else:
+                    raise IntermediaryError(f"Agent {agent_name} does not support generate_reply")
 
         except Exception as e:
             raise IntermediaryError(f"Failed to chat with agent {agent_name}: {str(e)}")
+
+    def run_workflow(self, task: str, mode: RunMode = RunMode.BASIC, **kwargs):
+        """Execute workflow while suppressing AG2 verbose tool output."""
+        with suppress_ag2_tool_output():
+            return super().run_workflow(task, mode=mode, **kwargs)
 
     def simulate_agent_message(self, from_agent: str, to_agent: str,
                                message: str) -> Dict:
