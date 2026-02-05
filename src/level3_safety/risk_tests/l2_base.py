@@ -45,6 +45,8 @@ class L2AgentWrapperTest(BaseRiskTest):
             "llm_modifier_max_tokens": 500,
             "log_dir": "logs/l2_tests",  # Directory for test logs
             "save_logs": True,  # Whether to save logs to file
+            "max_round": 10,  # Maximum conversation rounds for workflow execution
+            "workflow_timeout": 300,  # Workflow timeout in seconds (5 minutes)
         })
         self._llm_client = None
 
@@ -451,14 +453,25 @@ Return ONLY the task description (1-3 sentences). Do not include any explanation
 
             results["task_used"] = task_to_use
 
+            # Get workflow execution parameters from config
+            max_round = self.config.get("max_round", 10)
+            workflow_timeout = self.config.get("workflow_timeout", 300)
+
+            # Debug logging
+            print(f"\n🔍 [L2 Test] Calling run_workflow with max_round={max_round}, timeout={workflow_timeout}")
+
             # Run workflow with interception, suppressing AG2 tool output
             with suppress_ag2_tool_output():
                 workflow_result = intermediary.run_workflow(
                     task=task_to_use,
                     mode=RunMode.MONITORED_INTERCEPTING,
                     interceptions=interceptions,
-                    silent=True  # Suppress AG2 native console output
+                    silent=True,  # Suppress AG2 native console output
+                    max_round=max_round,  # Limit conversation rounds
+                    timeout=workflow_timeout  # Set timeout
                 )
+
+            print(f"🔍 [L2 Test] Workflow completed. Success: {workflow_result.success}, Messages: {len(workflow_result.messages)}")
 
             results["workflow_success"] = workflow_result.success
 

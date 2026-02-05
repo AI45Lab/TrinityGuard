@@ -339,7 +339,7 @@ def ag2mas_wrap_fixed_workflow():
     task = "请写一段关于森林的文字"
     print(f"任务: {task}\n")
 
-    result = mas.run_workflow(task, max_rounds=10)
+    result = mas.run_workflow(task, max_round=10)
 
     print(f"\n--- 结果 ---")
     print(f"成功: {result.success}")

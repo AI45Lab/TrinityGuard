@@ -337,7 +337,7 @@ def test_end_to_end_workflow():
     result = intermediary.run_workflow(
         task=task,
         mode=RunMode.BASIC,
-        max_rounds=8
+        max_round=8
     )
 
     # Verify workflow completed
@@ -405,7 +405,7 @@ def test_realtime_monitoring():
     task = "What is 25 divided by 5? Verify the result."
     print(f"    Task: {task}")
 
-    result = safety_mas.run_task(task, max_rounds=6)
+    result = safety_mas.run_task(task, max_round=6)
 
     # Check result
     assert result.success, f"Task failed: {result.error}"

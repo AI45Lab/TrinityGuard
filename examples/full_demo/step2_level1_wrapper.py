@@ -154,7 +154,7 @@ Please:
 
     try:
         # Execute workflow using Level 1 interface
-        result = mas.run_workflow(research_query, max_rounds=8)
+        result = mas.run_workflow(research_query, max_round=8)
 
         print()
         print("=" * 80)

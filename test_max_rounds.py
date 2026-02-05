@@ -1,4 +1,4 @@
-"""Quick test to verify max_rounds is working correctly."""
+"""Quick test to verify max_round is working correctly."""
 
 import sys
 from pathlib import Path
@@ -10,10 +10,10 @@ sys.path.insert(0, str(project_root))
 from src.level1_framework.evoagentx_adapter import create_ag2_mas_from_evoagentx
 from src.level3_safety.safety_mas import Safety_MAS
 
-def test_max_rounds():
-    """Test that max_rounds parameter limits conversation."""
+def test_max_round():
+    """Test that max_round parameter limits conversation."""
     print("="*70)
-    print("Testing max_rounds parameter")
+    print("Testing max_round parameter")
     print("="*70)
 
     # Create MAS from workflow
@@ -28,14 +28,14 @@ def test_max_rounds():
     print("\n2. Wrapping with Safety_MAS...")
     safety_mas = Safety_MAS(mas=mas)
 
-    # Run task with max_rounds parameter
-    print("\n3. Running task with max_rounds=10...")
+    # Run task with max_round parameter
+    print("\n3. Running task with max_round=10...")
     print("   (This should stop after 10 rounds)")
 
     result = safety_mas.run_task(
         "分析 daily_paper_digest.pdf 并生成总结",
         silent=True,
-        max_rounds=10  # Pass max_rounds to run_task
+        max_round=10  # Pass max_round to run_task
     )
 
     print("\n" + "="*70)
@@ -47,4 +47,4 @@ def test_max_rounds():
     print("="*70)
 
 if __name__ == "__main__":
-    test_max_rounds()
+    test_max_round()

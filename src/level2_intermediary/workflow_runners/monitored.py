@@ -29,7 +29,7 @@ class MonitoredWorkflowRunner(WorkflowRunner):
         Args:
             task: Task description
             **kwargs: Additional parameters including:
-                - max_rounds: Maximum conversation rounds
+                - max_round: Maximum conversation rounds
                 - silent: If True, suppress native framework output
 
         Returns:

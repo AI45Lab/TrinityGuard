@@ -84,7 +84,7 @@ def main():
     print("    Executing with monitoring...")
     print()
 
-    result = safety_mas.run_task(task, max_rounds=8)
+    result = safety_mas.run_task(task, max_round=8)
 
     print("    Task completed!")
     print(f"    Success: {result.success}")

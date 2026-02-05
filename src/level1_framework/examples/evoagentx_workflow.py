@@ -73,7 +73,7 @@ def main():
     print(f"\nTask: {task}")
     print("Executing workflow...\n")
 
-    result = mas.run_workflow(task, max_rounds=10)
+    result = mas.run_workflow(task, max_round=10)
 
     print("\n" + "=" * 60)
     print("Workflow Execution Result")

@@ -392,7 +392,7 @@ Save the summary to 'level3_safety_research.txt'."""
         suppressed_output = io.StringIO()
         with redirect_stdout(suppressed_output):
             # Execute task with silent mode (AG2 output suppressed)
-            result = safety_mas.run_task(task, max_rounds=10, silent=True)
+            result = safety_mas.run_task(task, max_round=10, silent=True)
 
         logger.print_info("✓ Step 2/3: Task execution completed")
         print()

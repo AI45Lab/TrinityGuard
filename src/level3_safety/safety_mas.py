@@ -150,12 +150,14 @@ class Safety_MAS:
 
         return self.run_manual_safety_tests(selected_tests)
 
-    def run_manual_safety_tests(self, selected_tests: List[str], task: str = None) -> Dict[str, Any]:
+    def run_manual_safety_tests(self, selected_tests: List[str], task: str = None,
+                                progress_callback: Optional[callable] = None) -> Dict[str, Any]:
         """Run specific safety tests.
 
         Args:
             selected_tests: List of test names (e.g., ["jailbreak", "message_tampering"])
             task: Optional task to execute for each test (if None, auto-generates)
+            progress_callback: Optional callback function(current, total) for test case progress
 
         Returns:
             Dict of test results
@@ -178,7 +180,7 @@ class Safety_MAS:
                 test = self.risk_tests[test_name]
                 self.logger.log_test_start(test_name, test.config)
 
-                result = test.run(self.intermediary, task=task)
+                result = test.run(self.intermediary, task=task, progress_callback=progress_callback)
                 results[test_name] = result.to_dict()
 
                 self.logger.log_test_result(test_name, result.passed, result.to_dict())
@@ -272,7 +274,7 @@ class Safety_MAS:
         Args:
             task: Task description
             **kwargs: Additional parameters including:
-                - max_rounds: Maximum conversation rounds
+                - max_round: Maximum conversation rounds
                 - silent: If True, suppress AG2 native console output
 
         Returns:

@@ -177,6 +177,34 @@ class WorkflowTestRunner:
             "malicious_emergence", "rogue_agent"
         ]
 
+    def _filter_risks_by_level(self, risk_levels: List[str]) -> List[str]:
+        """Filter risks by level (L1, L2, L3)
+
+        Args:
+            risk_levels: List of risk levels to include (e.g., ["L2", "L3"])
+
+        Returns:
+            List of risk names matching the specified levels
+        """
+        all_risks = self._get_all_risk_names()
+
+        # Define risk level mappings
+        l1_risks = all_risks[0:8]   # First 8 are L1
+        l2_risks = all_risks[8:14]  # Next 6 are L2
+        l3_risks = all_risks[14:20] # Last 6 are L3
+
+        filtered_risks = []
+        for level in risk_levels:
+            level_upper = level.upper()
+            if level_upper == "L1":
+                filtered_risks.extend(l1_risks)
+            elif level_upper == "L2":
+                filtered_risks.extend(l2_risks)
+            elif level_upper == "L3":
+                filtered_risks.extend(l3_risks)
+
+        return filtered_risks
+
     def _get_related_steps(self, execution_trace: List[Dict], step_index: int, context_window: int = 3) -> List[Dict]:
         """Get execution steps around a specific step index
 
@@ -270,13 +298,16 @@ class WorkflowTestRunner:
     def test_single_workflow(
         self,
         workflow_path: Path,
-        enabled_monitors: Optional[List[str]] = None
+        enabled_monitors: Optional[List[str]] = None,
+        risk_levels: Optional[List[str]] = None
     ) -> WorkflowTestResult:
         """Test a single workflow with pre-deployment tests and runtime monitoring
 
         Args:
             workflow_path: Path to workflow JSON file
             enabled_monitors: Optional list of monitors to enable
+            risk_levels: Optional list of risk levels to test (e.g., ["L2", "L3"])
+                        If None, tests all risks
 
         Returns:
             WorkflowTestResult with comprehensive test data
@@ -309,8 +340,16 @@ class WorkflowTestRunner:
             safety_mas = Safety_MAS(mas=mas)
 
             # Step 4: Run pre-deployment tests
-            self.logger.info("Step 4: Running pre-deployment tests (20 risks)...")
-            all_risks = self._get_all_risk_names()
+            self.logger.info("Step 4: Running pre-deployment tests...")
+
+            # Determine which risks to test
+            if risk_levels:
+                all_risks = self._filter_risks_by_level(risk_levels)
+                self.logger.info(f"  Testing risk levels: {', '.join(risk_levels)} ({len(all_risks)} risks)")
+            else:
+                all_risks = self._get_all_risk_names()
+                self.logger.info(f"  Testing all risk levels (20 risks)")
+
             total_risks = len(all_risks)
 
             pre_test_results = {}
@@ -320,9 +359,26 @@ class WorkflowTestRunner:
                     progress_pct = (idx / total_risks) * 100
                     self.logger.info(f"  [{idx}/{total_risks}] ({progress_pct:.0f}%) Testing {risk}...")
 
-                    result = safety_mas.run_manual_safety_tests([risk])
+                    # Define progress callback for test cases
+                    def test_case_progress(current, total, status='running'):
+                        if status == 'starting':
+                            # Print test case starting message
+                            print(f"\r    Test case {current}/{total}: Starting (running workflow)...", end='', flush=True)
+                        elif status == 'completed':
+                            # Print test case completion
+                            print(f"\r    Test case {current}/{total}: Completed                      ", end='', flush=True)
+                        elif status == 'error':
+                            # Print test case error
+                            print(f"\r    Test case {current}/{total}: Error                          ", end='', flush=True)
+
+                    result = safety_mas.run_manual_safety_tests([risk], progress_callback=test_case_progress)
+
+                    # Print newline after test cases complete
+                    print()  # Move to next line after progress
+
                     pre_test_results[risk] = result
                 except Exception as e:
+                    print()  # Ensure newline on error
                     self.logger.error(f"  Error testing {risk}: {str(e)}")
                     pre_test_results[risk] = {
                         "error": str(e),
@@ -390,7 +446,7 @@ class WorkflowTestRunner:
             except Exception as e:
                 self.logger.warning(f"Could not register step callback: {str(e)}")
 
-            # Execute workflow with max_rounds limit and timeout
+            # Execute workflow with max_round limit and timeout
             workflow_exec_start = time.time()
             self.logger.info(f"  🚀 Starting workflow execution...")
 
@@ -402,7 +458,7 @@ class WorkflowTestRunner:
             print(f"{'='*70}\n")
 
             try:
-                result = safety_mas.run_task(goal, silent=True, max_rounds=10)
+                result = safety_mas.run_task(goal, silent=True, max_round=10)
             except Exception as e:
                 print(f"\n{'!'*70}")
                 print(f"WORKFLOW EXECUTION ERROR: {str(e)}")
@@ -541,7 +597,8 @@ class WorkflowTestRunner:
         self,
         workflow_dir: str = "workflow",
         specific_workflows: Optional[List[str]] = None,
-        enabled_monitors: Optional[List[str]] = None
+        enabled_monitors: Optional[List[str]] = None,
+        risk_levels: Optional[List[str]] = None
     ) -> List[WorkflowTestResult]:
         """Run tests for all workflows
 
@@ -549,6 +606,7 @@ class WorkflowTestRunner:
             workflow_dir: Directory containing workflow files
             specific_workflows: Optional list of specific workflows to test
             enabled_monitors: Optional list of monitors to enable
+            risk_levels: Optional list of risk levels to test (e.g., ["L2", "L3"])
 
         Returns:
             List of WorkflowTestResult objects
@@ -562,6 +620,8 @@ class WorkflowTestRunner:
         total_workflows = len(workflows)
         self.logger.info(f"\n{'='*70}")
         self.logger.info(f"Starting tests for {total_workflows} workflow(s)")
+        if risk_levels:
+            self.logger.info(f"Risk levels: {', '.join(risk_levels)}")
         self.logger.info(f"{'='*70}\n")
 
         results = []
@@ -573,7 +633,7 @@ class WorkflowTestRunner:
             self.logger.info(f"WORKFLOW {idx}/{total_workflows} ({overall_progress:.0f}%): {workflow_path.name}")
             self.logger.info(f"{'#'*70}")
 
-            result = self.test_single_workflow(workflow_path, enabled_monitors)
+            result = self.test_single_workflow(workflow_path, enabled_monitors, risk_levels)
             results.append(result)
 
             # Save individual JSON log immediately
@@ -893,6 +953,13 @@ def main():
     )
 
     parser.add_argument(
+        "--risk-levels",
+        nargs="+",
+        choices=["L1", "L2", "L3", "l1", "l2", "l3"],
+        help="Risk levels to test (e.g., L2 L3). Default: all levels"
+    )
+
+    parser.add_argument(
         "--no-llm-judge",
         action="store_true",
         help="Use heuristic rules instead of LLM judge (faster)"
@@ -934,7 +1001,8 @@ def main():
         results = runner.run_all_tests(
             workflow_dir=args.workflow_dir,
             specific_workflows=args.workflows,
-            enabled_monitors=args.monitors
+            enabled_monitors=args.monitors,
+            risk_levels=args.risk_levels
         )
 
         # Generate summary report

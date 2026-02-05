@@ -130,7 +130,7 @@ def test_simple_task_execution():
     task = "Analyze the benefits of regular exercise"
     print(f"    Task: {task}")
 
-    result = mas.process_task(task, max_rounds=10)
+    result = mas.process_task(task, max_round=10)
 
     assert result is not None, "Expected result"
     assert len(result) > 0, "Expected non-empty result"
@@ -185,7 +185,7 @@ def test_agent_collaboration():
     result = intermediary.run_workflow(
         task=task,
         mode=RunMode.BASIC,
-        max_rounds=8
+        max_round=8
     )
 
     assert result.success, f"Workflow failed: {result.error}"
@@ -247,7 +247,7 @@ def test_error_handling():
 
     # Test with empty task
     try:
-        result = mas.process_task("", max_rounds=2)
+        result = mas.process_task("", max_round=2)
         print("    Empty task handled without crash")
     except Exception as e:
         print(f"    Empty task raised: {type(e).__name__} (acceptable)")
@@ -255,7 +255,7 @@ def test_error_handling():
     # Test with very long task
     long_task = "Analyze " + "very complex " * 50
     try:
-        result = mas.process_task(long_task, max_rounds=2)
+        result = mas.process_task(long_task, max_round=2)
         print("    Long task handled without crash")
     except Exception as e:
         print(f"    Long task raised: {type(e).__name__} (acceptable)")
@@ -281,7 +281,7 @@ def test_workflow_performance():
     print(f"    Task: {task}")
 
     start_time = time.time()
-    result = mas.process_task(task, max_rounds=6)
+    result = mas.process_task(task, max_round=6)
     end_time = time.time()
 
     duration = end_time - start_time

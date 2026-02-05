@@ -163,7 +163,7 @@ class AG2MAS(BaseMAS):
         Args:
             task: Task description
             **kwargs: Additional parameters including:
-                - max_rounds: Maximum conversation rounds
+                - max_round: Maximum conversation rounds
                 - silent: If True, suppress AG2 native console output (default: False)
         """
         self.logger.log_workflow_start(task, "ag2_group_chat")
@@ -192,8 +192,19 @@ class AG2MAS(BaseMAS):
 
     def _run_group_chat(self, task: str, **kwargs) -> WorkflowResult:
         """Run workflow using GroupChat."""
-        max_rounds = kwargs.get('max_rounds', 10)
+        max_round = kwargs.get('max_round', 10)
         silent = kwargs.get('silent', False)
+
+        # Debug logging
+        self.logger.info(f"🔍 _run_group_chat called with max_round={max_round}, silent={silent}")
+        self.logger.info(f"🔍 All kwargs: {kwargs}")
+
+        # CRITICAL FIX: Update GroupChat's max_round before running
+        # The GroupChat object's max_round takes precedence over initiate_chat's max_turns
+        if self._group_chat is not None:
+            original_max_round = self._group_chat.max_round
+            self._group_chat.max_round = max_round
+            self.logger.info(f"🔍 Updated GroupChat.max_round from {original_max_round} to {max_round}")
 
         # Find user_proxy or use first agent as initiator
         initiator = None
@@ -204,13 +215,17 @@ class AG2MAS(BaseMAS):
         if initiator is None:
             initiator = list(self._agents.values())[0]
 
+        self.logger.info(f"🔍 Calling initiate_chat with max_turns={max_round}")
+
         # Initiate group chat with silent mode
         chat_result = initiator.initiate_chat(
             self._manager,
             message=task,
-            max_turns=max_rounds,
+            max_turns=max_round,
             silent=silent  # 关闭 AG2 原生输出
         )
+
+        self.logger.info(f"🔍 initiate_chat completed. Message history length: {len(self._message_history)}")
 
         # Extract output from chat history
         output = self._extract_final_output_from_chat(chat_result)
@@ -239,7 +254,7 @@ class AG2MAS(BaseMAS):
         chat_result = initiator.initiate_chat(
             receiver,
             message=task,
-            max_turns=kwargs.get('max_rounds', 10),
+            max_turns=kwargs.get('max_round', 10),
             silent=silent  # 关闭 AG2 原生输出
         )
 
@@ -364,7 +379,7 @@ def create_ag2_mas_from_config(config: Dict) -> AG2MAS:
         group_chat = GroupChat(
             agents=agents,
             messages=[],
-            max_round=config.get("max_rounds", 10)
+            max_round=config.get("max_round", 10)
         )
         manager = GroupChatManager(
             groupchat=group_chat,

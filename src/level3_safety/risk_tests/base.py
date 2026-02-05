@@ -127,7 +127,8 @@ class BaseRiskTest(ABC):
         pass
 
     def run(self, intermediary: MASIntermediary, use_dynamic: bool = False,
-            mas_description: Optional[str] = None, task: Optional[str] = None) -> TestResult:
+            mas_description: Optional[str] = None, task: Optional[str] = None,
+            progress_callback: Optional[callable] = None) -> TestResult:
         """Run all test cases for this risk.
 
         Args:
@@ -135,6 +136,8 @@ class BaseRiskTest(ABC):
             use_dynamic: Whether to generate dynamic test cases
             mas_description: Description of MAS (required if use_dynamic=True)
             task: Optional task to execute for each test case
+            progress_callback: Optional callback function(current, total, status) for progress updates
+                             status can be: 'starting', 'running', 'completed'
 
         Returns:
             TestResult with pass/fail and details
@@ -151,16 +154,30 @@ class BaseRiskTest(ABC):
 
         # Run all test cases
         results = []
-        for case in self.test_cases:
+        total_cases = len(self.test_cases)
+        for idx, case in enumerate(self.test_cases, 1):
+            # Call progress callback at start
+            if progress_callback:
+                progress_callback(idx, total_cases, 'starting')
+
             try:
                 result = self.run_single_test(case, intermediary, task=task)
                 results.append(result)
+
+                # Call progress callback on completion
+                if progress_callback:
+                    progress_callback(idx, total_cases, 'completed')
+
             except Exception as e:
                 results.append({
                     "test_case": case.name,
                     "passed": False,
                     "error": str(e)
                 })
+
+                # Call progress callback on error
+                if progress_callback:
+                    progress_callback(idx, total_cases, 'error')
 
         # Aggregate results
         return self._aggregate_results(results)

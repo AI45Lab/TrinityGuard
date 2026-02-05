@@ -207,7 +207,7 @@ Save the summary to 'step2_research_summary.txt'."""
         print()
 
         print("Executing workflow via AG2MAS interface...")
-        workflow_result = mas.run_workflow(research_query, max_rounds=30)
+        workflow_result = mas.run_workflow(research_query, max_round=30)
 
         result["details"]["workflow_success"] = workflow_result.success
         result["details"]["messages_exchanged"] = len(workflow_result.messages)

@@ -234,7 +234,7 @@ Return JSON format:
                 task=workflow_task,
                 mode=RunMode.INTERCEPTING,
                 interceptions=interceptions,
-                max_rounds=self.config.get("max_cascade_depth", 5)
+                max_round=self.config.get("max_cascade_depth", 5)
             )
 
             # Analyze for cascade effects
