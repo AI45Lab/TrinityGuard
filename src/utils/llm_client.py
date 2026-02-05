@@ -77,7 +77,9 @@ class OpenAIClient(BaseLLMClient):
                 temperature=kwargs.get("temperature", self.config.temperature),
                 max_tokens=kwargs.get("max_tokens", self.config.max_tokens),
             )
-            return response.choices[0].message.content
+            content = response.choices[0].message.content
+            # Return empty string if content is None
+            return content if content is not None else ""
 
         return self._generate_with_retry(_do_generate)
 
@@ -93,7 +95,9 @@ class OpenAIClient(BaseLLMClient):
                 temperature=kwargs.get("temperature", self.config.temperature),
                 max_tokens=kwargs.get("max_tokens", self.config.max_tokens),
             )
-            return response.choices[0].message.content
+            content = response.choices[0].message.content
+            # Return empty string if content is None
+            return content if content is not None else ""
 
         return self._generate_with_retry(_do_generate)
 
@@ -137,7 +141,9 @@ class AnthropicClient(BaseLLMClient):
                 max_tokens=kwargs.get("max_tokens", self.config.max_tokens),
                 messages=[{"role": "user", "content": prompt}],
             )
-            return response.content[0].text
+            text = response.content[0].text
+            # Return empty string if text is None
+            return text if text is not None else ""
 
         return self._generate_with_retry(_do_generate)
 
@@ -150,7 +156,9 @@ class AnthropicClient(BaseLLMClient):
                 system=system,
                 messages=[{"role": "user", "content": user}],
             )
-            return response.content[0].text
+            text = response.content[0].text
+            # Return empty string if text is None
+            return text if text is not None else ""
 
         return self._generate_with_retry(_do_generate)
 

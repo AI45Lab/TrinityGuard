@@ -158,15 +158,17 @@ class WorkflowParser:
 class WorkflowToAG2Converter:
     """Convert ParsedWorkflow to AG2MAS instance."""
 
-    def __init__(self, llm_config: Optional[Dict] = None):
+    def __init__(self, llm_config: Optional[Dict] = None, max_round: int = 10):
         """Initialize converter with LLM configuration.
 
         Args:
             llm_config: Optional LLM config dict for AG2 agents.
                        If None, uses default from MASLLMConfig.
+            max_round: Maximum number of conversation rounds (default: 10)
         """
         self.logger = get_logger("EvoAgentXConverter")
         self.llm_config = llm_config or self._get_default_llm_config()
+        self.max_round = max_round
 
     def convert(self, workflow: ParsedWorkflow) -> AG2MAS:
         """Convert ParsedWorkflow to AG2MAS instance.
@@ -195,7 +197,7 @@ class WorkflowToAG2Converter:
         group_chat = GroupChat(
             agents=agents,
             messages=[],
-            max_round=len(agents) * 2,  # Enough rounds for sequential execution
+            max_round=self.max_round,  # Use configured max_round
             allowed_or_disallowed_speaker_transitions=transitions,
             speaker_transitions_type="allowed"
         )
@@ -233,7 +235,9 @@ class WorkflowToAG2Converter:
                     name=agent_config.name,
                     system_message=agent_config.prompt,
                     llm_config=self.llm_config,
-                    human_input_mode="NEVER"
+                    human_input_mode="NEVER",
+                    is_termination_msg=lambda x: isinstance(x, dict) and
+                                                 x.get("content", "").strip().upper().endswith("TERMINATE")
                 )
                 agents.append(agent)
 
@@ -287,7 +291,8 @@ class WorkflowToAG2Converter:
 
 def create_ag2_mas_from_evoagentx(
     workflow_path: str,
-    llm_config: Optional[Dict] = None
+    llm_config: Optional[Dict] = None,
+    max_round: int = 10
 ) -> AG2MAS:
     """Create AG2MAS instance from EvoAgentX workflow.json file.
 
@@ -297,6 +302,7 @@ def create_ag2_mas_from_evoagentx(
     Args:
         workflow_path: Path to workflow.json file
         llm_config: Optional LLM config dict. If None, uses MASLLMConfig default.
+        max_round: Maximum number of conversation rounds (default: 10)
 
     Returns:
         AG2MAS instance ready for use with Safety_MAS
@@ -319,7 +325,7 @@ def create_ag2_mas_from_evoagentx(
     workflow = parser.parse(workflow_path)
 
     # Convert to AG2MAS
-    converter = WorkflowToAG2Converter(llm_config)
+    converter = WorkflowToAG2Converter(llm_config, max_round)
     mas = converter.convert(workflow)
 
     logger.info("Successfully created AG2MAS from EvoAgentX workflow")

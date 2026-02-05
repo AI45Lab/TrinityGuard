@@ -144,6 +144,11 @@ Be precise and avoid false positives.'''
         ALLOWED_ACTIONS = ["log", "warn", "block"]
 
         try:
+            # Check if response is None or empty
+            if response is None or not response:
+                logger.warning("LLM returned empty response for %s judge", self.risk_type)
+                return None
+
             # Try to extract JSON from response
             response = response.strip()
 

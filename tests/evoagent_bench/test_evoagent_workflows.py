@@ -311,11 +311,15 @@ class WorkflowTestRunner:
             # Step 4: Run pre-deployment tests
             self.logger.info("Step 4: Running pre-deployment tests (20 risks)...")
             all_risks = self._get_all_risk_names()
+            total_risks = len(all_risks)
 
             pre_test_results = {}
-            for risk in all_risks:
+            for idx, risk in enumerate(all_risks, 1):
                 try:
-                    self.logger.info(f"  Testing {risk}...")
+                    # Progress indicator
+                    progress_pct = (idx / total_risks) * 100
+                    self.logger.info(f"  [{idx}/{total_risks}] ({progress_pct:.0f}%) Testing {risk}...")
+
                     result = safety_mas.run_manual_safety_tests([risk])
                     pre_test_results[risk] = result
                 except Exception as e:
@@ -339,12 +343,16 @@ class WorkflowTestRunner:
 
             # Step 6: Execute workflow with detailed tracing
             self.logger.info(f"Step 6: Executing workflow with goal: {goal}")
+            self.logger.info(f"  (Max 10 rounds of conversation, monitoring in progress...)")
             execution_trace = []
             message_history = []
+            conversation_rounds = 0
 
             # Capture execution steps via callback
             def capture_step(log_entry):
                 """Capture each execution step"""
+                nonlocal conversation_rounds
+
                 step_data = {
                     "step": len(execution_trace) + 1,
                     "timestamp": log_entry.timestamp,
@@ -354,6 +362,17 @@ class WorkflowTestRunner:
                     "metadata": log_entry.metadata
                 }
                 execution_trace.append(step_data)
+
+                # Track conversation rounds (count agent responses)
+                if log_entry.step_type == "respond":
+                    conversation_rounds += 1
+                    # Print directly to console
+                    print(f"  >>> Round {conversation_rounds}/10 - Agent: {log_entry.agent_name}")
+                    self.logger.info(f"  >>> Round {conversation_rounds}/10 - Agent: {log_entry.agent_name}")
+
+                # Log progress every few steps
+                if len(execution_trace) % 5 == 0:
+                    self.logger.info(f"  ... {len(execution_trace)} execution steps completed")
 
                 # Also track messages for context
                 if log_entry.step_type in ["receive", "respond"]:
@@ -371,13 +390,57 @@ class WorkflowTestRunner:
             except Exception as e:
                 self.logger.warning(f"Could not register step callback: {str(e)}")
 
-            # Execute workflow
-            result = safety_mas.run_task(goal, silent=True)
+            # Execute workflow with max_rounds limit and timeout
+            workflow_exec_start = time.time()
+            self.logger.info(f"  🚀 Starting workflow execution...")
+
+            # Print to console directly (bypass logger)
+            print(f"\n{'='*70}")
+            print(f"WORKFLOW EXECUTION STARTED: {workflow_name}")
+            print(f"Goal: {goal}")
+            print(f"Max rounds: 10")
+            print(f"{'='*70}\n")
+
+            try:
+                result = safety_mas.run_task(goal, silent=True, max_rounds=10)
+            except Exception as e:
+                print(f"\n{'!'*70}")
+                print(f"WORKFLOW EXECUTION ERROR: {str(e)}")
+                print(f"{'!'*70}\n")
+                raise
+
+            workflow_exec_time = time.time() - workflow_exec_start
+
+            # Print completion to console directly
+            print(f"\n{'='*70}")
+            print(f"🏁 WORKFLOW EXECUTION COMPLETED: {workflow_name}")
+            print(f"{'='*70}")
+            print(f"Execution time: {workflow_exec_time:.2f}s")
+            print(f"Conversation rounds: {conversation_rounds}")
+            print(f"Total execution steps: {len(execution_trace)}")
+            print(f"Total messages: {len(message_history)}")
+            print(f"{'='*70}\n")
+
+            self.logger.info(f"\n  {'='*60}")
+            self.logger.info(f"  🏁 WORKFLOW EXECUTION COMPLETED")
+            self.logger.info(f"  {'='*60}")
+            self.logger.info(f"  Execution time: {workflow_exec_time:.2f}s")
+            self.logger.info(f"  Conversation rounds: {conversation_rounds}/10")
+            self.logger.info(f"  Total execution steps: {len(execution_trace)}")
+            self.logger.info(f"  Total messages: {len(message_history)}")
+            self.logger.info(f"  {'='*60}\n")
 
             # Step 7: Collect alerts with full context
             self.logger.info("Step 7: Collecting alerts with full context...")
             alerts = safety_mas.get_alerts()
-            self.logger.info(f"  Total alerts: {len(alerts)}")
+
+            # Count alerts by severity
+            critical_count = sum(1 for a in alerts if a.severity == "critical")
+            warning_count = sum(1 for a in alerts if a.severity == "warning")
+            info_count = sum(1 for a in alerts if a.severity == "info")
+
+            self.logger.info(f"  Total alerts: {len(alerts)} "
+                           f"(Critical: {critical_count}, Warning: {warning_count}, Info: {info_count})")
 
             # Convert alerts to dictionaries with full context
             alert_dicts = []
@@ -447,7 +510,16 @@ class WorkflowTestRunner:
                 execution_time=execution_time
             )
 
+            # Summary of test results
+            pre_summary = test_result.pre_deployment_tests.get("summary", {})
+            self.logger.info(f"\n{'='*70}")
             self.logger.info(f"✅ Workflow test completed successfully in {execution_time:.2f}s")
+            self.logger.info(f"{'='*70}")
+            self.logger.info(f"Pre-deployment: {pre_summary.get('passed', 0)}/{pre_summary.get('total', 0)} tests passed")
+            self.logger.info(f"Runtime alerts: {len(alert_dicts)} total "
+                           f"({critical_count} critical, {warning_count} warning, {info_count} info)")
+            self.logger.info(f"{'='*70}\n")
+
             return test_result
 
         except Exception as e:
@@ -487,18 +559,37 @@ class WorkflowTestRunner:
             self.logger.error("No workflows found to test")
             return []
 
+        total_workflows = len(workflows)
+        self.logger.info(f"\n{'='*70}")
+        self.logger.info(f"Starting tests for {total_workflows} workflow(s)")
+        self.logger.info(f"{'='*70}\n")
+
         results = []
 
-        for workflow_path in workflows:
+        for idx, workflow_path in enumerate(workflows, 1):
+            # Overall progress
+            overall_progress = (idx / total_workflows) * 100
+            self.logger.info(f"\n{'#'*70}")
+            self.logger.info(f"WORKFLOW {idx}/{total_workflows} ({overall_progress:.0f}%): {workflow_path.name}")
+            self.logger.info(f"{'#'*70}")
+
             result = self.test_single_workflow(workflow_path, enabled_monitors)
             results.append(result)
 
             # Save individual JSON log immediately
             self.save_workflow_log(result)
 
+            # Show completion status
+            status_icon = "✅" if result.success else "❌"
+            self.logger.info(f"\n{status_icon} Workflow {idx}/{total_workflows} completed in {result.execution_time:.2f}s")
+
             if not result.success and not self.continue_on_error:
                 self.logger.error("Stopping due to error (continue_on_error=False)")
                 break
+
+        self.logger.info(f"\n{'='*70}")
+        self.logger.info(f"All tests completed: {len(results)}/{total_workflows} workflows tested")
+        self.logger.info(f"{'='*70}\n")
 
         return results
 
