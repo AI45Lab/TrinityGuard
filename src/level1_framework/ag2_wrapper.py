@@ -221,7 +221,7 @@ class AG2MAS(BaseMAS):
         chat_result = initiator.initiate_chat(
             self._manager,
             message=task,
-            max_turns=max_round,
+            max_turns=1,
             silent=silent  # 关闭 AG2 原生输出
         )
 
