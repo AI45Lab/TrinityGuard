@@ -192,7 +192,6 @@ class AG2MAS(BaseMAS):
 
     def _run_group_chat(self, task: str, **kwargs) -> WorkflowResult:
         """Run workflow using GroupChat."""
-        max_round = kwargs.get('max_round', 10)
         silent = kwargs.get('silent', False)
 
         # Debug logging
@@ -203,8 +202,7 @@ class AG2MAS(BaseMAS):
         # The GroupChat object's max_round takes precedence over initiate_chat's max_turns
         if self._group_chat is not None:
             original_max_round = self._group_chat.max_round
-            self._group_chat.max_round = max_round
-            self.logger.info(f"🔍 Updated GroupChat.max_round from {original_max_round} to {max_round}")
+            self.logger.info(f"🔍 GroupChat.max_round from {original_max_round}")
 
         # Find user_proxy or use first agent as initiator
         initiator = None

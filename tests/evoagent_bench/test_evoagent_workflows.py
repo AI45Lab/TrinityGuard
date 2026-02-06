@@ -332,7 +332,8 @@ class WorkflowTestRunner:
             # Step 2: Create AG2MAS instance
             self.logger.info("Step 2: Creating AG2MAS instance...")
             mas = create_ag2_mas_from_evoagentx(
-                workflow_path=str(workflow_path)
+                workflow_path=str(workflow_path),
+                max_round=5
             )
 
             # Step 3: Wrap with Safety_MAS
