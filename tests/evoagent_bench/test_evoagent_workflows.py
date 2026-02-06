@@ -778,7 +778,7 @@ class WorkflowTestRunner:
                     f.write(f"\n[📄 Detailed Log]({log_filename})\n")
 
                 else:
-                    f.write(f"- **Error**: {result.error_message[:200]}...\n")
+                    f.write(f"- **Error**: {result.error_message}...\n")
 
                 f.write("\n---\n\n")
 
