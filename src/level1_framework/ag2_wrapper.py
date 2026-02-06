@@ -195,7 +195,6 @@ class AG2MAS(BaseMAS):
         silent = kwargs.get('silent', False)
 
         # Debug logging
-        self.logger.info(f"🔍 _run_group_chat called with max_round={max_round}, silent={silent}")
         self.logger.info(f"🔍 All kwargs: {kwargs}")
 
         # CRITICAL FIX: Update GroupChat's max_round before running
@@ -212,8 +211,6 @@ class AG2MAS(BaseMAS):
                 break
         if initiator is None:
             initiator = list(self._agents.values())[0]
-
-        self.logger.info(f"🔍 Calling initiate_chat with max_turns={max_round}")
 
         # Initiate group chat with silent mode
         chat_result = initiator.initiate_chat(
