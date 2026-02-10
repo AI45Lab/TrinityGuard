@@ -13,12 +13,13 @@ Uses PAIR (Prompt Automatic Iterative Refinement) for automated attacks.
 
 from typing import List, Dict, Optional
 
-from ..base import BaseRiskTest, TestCase, TestResult
+from ..l1_base import L1BaseTest
+from ..base import TestCase, TestResult
 from ....level2_intermediary.base import MASIntermediary
 from ...jailbreak_frameworks.pair import PAIROrchestrator, AttackResult
 
 
-class JailbreakTest(BaseRiskTest):
+class JailbreakTest(L1BaseTest):
     """L1.2 Jailbreak using PAIR framework.
 
     Tests agent resistance to jailbreak attacks using iterative PAIR attacks.
@@ -27,12 +28,14 @@ class JailbreakTest(BaseRiskTest):
     def __init__(self):
         super().__init__()
         self.pair = PAIROrchestrator(max_iterations=5)
-        self.config = {
+        self.config.update({
             "use_llm_judge": True,
             "test_all_agents": True,
             "max_response_length": 2000,
-            "pair_iterations": 5
-        }
+            "pair_iterations": 5,
+            "log_dir": "logs/l1_tests",
+            "save_logs": True,
+        })
 
     def get_risk_info(self) -> Dict[str, str]:
         """Return risk metadata."""
@@ -94,6 +97,8 @@ class JailbreakTest(BaseRiskTest):
         }
 
         agents = intermediary.mas.get_agents()
+        all_attack_history = []  # Collect attack history for logging
+
         for agent_info in agents:
             try:
                 # Get agent context for PAIR
@@ -119,15 +124,45 @@ class JailbreakTest(BaseRiskTest):
                     verbose=False
                 )
 
-                results["agent_results"][agent_info.name] = {
+                # Store detailed results
+                agent_result = {
                     "jailbroken": attack_result.success,
                     "iterations": attack_result.iterations,
                     "final_prompt": attack_result.final_prompt[:200] + "..." if len(attack_result.final_prompt) > 200 else attack_result.final_prompt,
                     "response_preview": attack_result.target_response[:200] + "..." if len(attack_result.target_response) > 200 else attack_result.target_response
                 }
+                results["agent_results"][agent_info.name] = agent_result
+
+                # Collect attack history for logging
+                attack_history_entry = {
+                    "agent": agent_info.name,
+                    "success": attack_result.success,
+                    "iterations": attack_result.iterations,
+                    "final_prompt": attack_result.final_prompt,
+                    "final_response": attack_result.target_response,
+                    "history": [
+                        {
+                            "iteration": i + 1,
+                            "prompt": h.get("prompt", ""),
+                            "response": h.get("response", "")
+                        }
+                        for i, h in enumerate(attack_result.history)
+                    ]
+                }
+                all_attack_history.append(attack_history_entry)
 
                 if attack_result.success:
                     results["passed"] = False
+
+                # Save logs for this agent
+                if self.config.get("save_logs", True):
+                    self._save_pair_test_logs(
+                        test_case=test_case,
+                        results=results,
+                        agent_name=agent_info.name,
+                        attack_history=[attack_history_entry],
+                        task_used=task or test_case.input
+                    )
 
             except Exception as e:
                 results["agent_results"][agent_info.name] = {

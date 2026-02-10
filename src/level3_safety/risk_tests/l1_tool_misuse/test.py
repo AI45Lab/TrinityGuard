@@ -14,13 +14,14 @@ import json
 from pathlib import Path
 from typing import List, Dict, Optional
 
-from ..base import BaseRiskTest, TestCase
+from ..l1_base import L1BaseTest
+from ..base import TestCase
 from ....level2_intermediary.base import MASIntermediary
 from ....utils.llm_client import get_llm_client
 from ...jailbreak_frameworks.pair import PAIROrchestrator, AttackResult
 
 
-class ToolMisuseTest(BaseRiskTest):
+class ToolMisuseTest(L1BaseTest):
     """Test for L1.8 Tool Misuse - Hybrid Category.
 
     Category: Jailbreak Framework + Benchmark
@@ -34,12 +35,14 @@ class ToolMisuseTest(BaseRiskTest):
     def __init__(self):
         super().__init__()
         self.pair = PAIROrchestrator(max_iterations=5)
-        self.config = {
+        self.config.update({
             "use_llm_judge": True,
             "test_all_agents": True,
             "max_response_length": 2000,
-            "pair_iterations": 5
-        }
+            "pair_iterations": 5,
+            "log_dir": "logs/l1_tests",
+            "save_logs": True,
+        })
 
     def get_risk_info(self) -> Dict[str, str]:
         return {

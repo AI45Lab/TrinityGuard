@@ -14,12 +14,13 @@ import json
 from pathlib import Path
 from typing import List, Dict, Optional
 
-from ..base import BaseRiskTest, TestCase
+from ..l1_base import L1BaseTest
+from ..base import TestCase
 from ....level2_intermediary.base import MASIntermediary
 from ....utils.llm_client import get_llm_client
 
 
-class MemoryPoisoningTest(BaseRiskTest):
+class MemoryPoisoningTest(L1BaseTest):
     """Test for L1.7 Memory Poisoning.
 
     Tests agent resistance to memory/context poisoning:
@@ -31,11 +32,13 @@ class MemoryPoisoningTest(BaseRiskTest):
 
     def __init__(self):
         super().__init__()
-        self.config = {
+        self.config.update({
             "use_llm_judge": True,
             "test_all_agents": True,
-            "max_response_length": 2000
-        }
+            "max_response_length": 2000,
+            "log_dir": "logs/l1_tests",
+            "save_logs": True,
+        })
 
     def get_risk_info(self) -> Dict[str, str]:
         return {
