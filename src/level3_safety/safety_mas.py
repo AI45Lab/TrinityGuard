@@ -13,6 +13,7 @@ from ..level2_intermediary.ag2_intermediary import AG2Intermediary
 from ..level2_intermediary.structured_logging import AgentStepLog
 from .risk_tests.base import BaseRiskTest, TestResult
 from .monitor_agents.base import BaseMonitorAgent, Alert
+from .monitoring import GlobalMonitorAgent, apply_monitor_decision
 from ..utils.exceptions import MASSafetyError
 from ..utils.logging_config import get_logger
 
@@ -38,6 +39,8 @@ class Safety_MAS:
         self.risk_tests: Dict[str, BaseRiskTest] = {}
         self.monitor_agents: Dict[str, BaseMonitorAgent] = {}
         self._active_monitors: List[BaseMonitorAgent] = []
+        self._active_monitor_names: set = set()
+        self._global_monitor: Optional[GlobalMonitorAgent] = None
         self._test_results: Dict[str, TestResult] = {}
         self._alerts: List[Alert] = []
         self._step_counter: int = 0  # 用于追踪步骤序号
@@ -233,12 +236,14 @@ class Safety_MAS:
 
     def start_runtime_monitoring(self,
                                  mode: MonitorSelectionMode = MonitorSelectionMode.MANUAL,
-                                 selected_monitors: Optional[List[str]] = None):
+                                 selected_monitors: Optional[List[str]] = None,
+                                 progressive_config: Optional[Dict[str, Any]] = None):
         """Configure runtime monitoring.
 
         Args:
             mode: How to select monitors (MANUAL, AUTO_LLM, PROGRESSIVE)
             selected_monitors: List of monitor names (required for MANUAL mode)
+            progressive_config: Optional config for PROGRESSIVE mode
 
         Raises:
             ValueError: If MANUAL mode without selected_monitors
@@ -252,16 +257,38 @@ class Safety_MAS:
                 self.monitor_agents[m] for m in selected_monitors
                 if m in self.monitor_agents
             ]
+            self._active_monitor_names = {m for m in selected_monitors if m in self.monitor_agents}
             self.logger.info(f"Activated {len(self._active_monitors)} monitors")
+            self._global_monitor = None
 
         elif mode == MonitorSelectionMode.AUTO_LLM:
             # Future: Use LLM to select appropriate monitors
             self._active_monitors = list(self.monitor_agents.values())
+            self._active_monitor_names = set(self.monitor_agents.keys())
             self.logger.info(f"Auto-selected {len(self._active_monitors)} monitors")
+            self._global_monitor = None
 
         elif mode == MonitorSelectionMode.PROGRESSIVE:
-            # Future: Start with meta-monitor that activates others as needed
-            self._active_monitors = list(self.monitor_agents.values())
+            progressive_config = progressive_config or {}
+            initial_active = progressive_config.get("initial_active")
+            if initial_active is None:
+                initial_active = selected_monitors or []
+
+            self._active_monitor_names = {m for m in initial_active if m in self.monitor_agents}
+            self._active_monitors = [
+                self.monitor_agents[m] for m in self.monitor_agents
+                if m in self._active_monitor_names
+            ]
+
+            decision_provider = progressive_config.get("decision_provider")
+            config = {k: v for k, v in progressive_config.items() if k not in ("decision_provider", "initial_active")}
+
+            self._global_monitor = GlobalMonitorAgent(
+                available_monitors=list(self.monitor_agents.keys()),
+                config=config,
+                decision_provider=decision_provider
+            )
+            self._global_monitor.reset()
             self.logger.info("Progressive monitoring activated")
 
         # Reset all monitors
@@ -345,6 +372,14 @@ class Safety_MAS:
                     self._handle_alert(alert)
             except Exception as e:
                 self.logger.error(f"Monitor {monitor.get_monitor_info()['name']} failed: {str(e)}")
+
+        if self._global_monitor is not None:
+            decision = self._global_monitor.ingest(
+                log_entry,
+                active_monitors=sorted(self._active_monitor_names)
+            )
+            if decision:
+                self._apply_progressive_decision(decision)
 
     def _handle_alert(self, alert: Alert):
         """Handle an alert from a monitor.
@@ -468,6 +503,7 @@ class Safety_MAS:
 
         # Activate all monitors and set test context
         self._active_monitors = []
+        self._active_monitor_names = set()
 
         for monitor_name, monitor in self.monitor_agents.items():
             monitor.reset()
@@ -483,8 +519,35 @@ class Safety_MAS:
                                        f"test context from '{test_name}'")
 
             self._active_monitors.append(monitor)
+            self._active_monitor_names.add(monitor_name)
 
         self.logger.info(f"Informed monitoring started with {len(self._active_monitors)} monitors")
+        self._global_monitor = None
+
+    def _apply_progressive_decision(self, decision: Dict[str, Any]):
+        """Apply global monitor decision to active monitors."""
+        new_active, info = apply_monitor_decision(
+            available=self.monitor_agents,
+            active_names=self._active_monitor_names,
+            decision=decision
+        )
+
+        if new_active != self._active_monitor_names:
+            self._active_monitor_names = new_active
+            self._active_monitors = [
+                self.monitor_agents[m] for m in self.monitor_agents
+                if m in self._active_monitor_names
+            ]
+
+        self.logger.info(
+            "Global monitor decision applied",
+            event_type="monitor_decision",
+            extra_data={
+                "decision": decision,
+                "change": info,
+                "active_monitors": sorted(self._active_monitor_names)
+            }
+        )
 
     def get_risk_profiles(self) -> Dict[str, Dict]:
         """Get risk profiles from all active monitors.
@@ -526,4 +589,3 @@ class Safety_MAS:
         report = resolve_nested_messages(report)
 
         return report
-

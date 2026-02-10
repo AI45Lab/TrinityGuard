@@ -20,6 +20,7 @@ MASSafetyGuard provides comprehensive safety testing and monitoring for multi-ag
 ✅ **Framework-Agnostic Design** - Supports AG2/AutoGen (fixed workflow & group chat)
 ✅ **Pre-Deployment Testing** - Identify vulnerabilities before deployment
 ✅ **Runtime Monitoring** - Real-time risk detection during execution
+✅ **Progressive Runtime Monitoring** - Global monitor with windowed summaries and dynamic sub-monitor activation
 ✅ **Extensible Plugin System** - Easy to add new risk tests, monitors, and judge types
 
 ## Installation
@@ -89,6 +90,21 @@ print(f"Output: {result.output}")
 print(f"Alerts: {len(safety_mas.get_alerts())}")
 ```
 
+### Progressive Monitoring (Global Monitor)
+
+```python
+from massafetyguard import MonitorSelectionMode
+
+safety_mas.start_runtime_monitoring(
+    mode=MonitorSelectionMode.PROGRESSIVE,
+    progressive_config={
+        "window_size": 10,
+        "max_events": 8,
+        # Optional: initial_active or custom decision_provider(summary, active, available)
+    }
+)
+```
+
 ### Running the Example
 
 ```bash
@@ -104,6 +120,7 @@ MASSafetyGuard uses a 3-layer architecture with a unified Judge system:
 │   Level 3: Safety_MAS Layer             │
 │   - Risk Test Library (20 types)        │
 │   - Monitor Agent Repository            │
+│   - Global Monitor (progressive)        │
 │   - Safety_MAS orchestration            │
 │   - Unified Judge Factory               │
 └─────────────────────────────────────────┘
@@ -228,6 +245,18 @@ from massafetyguard import load_config
 load_config("config.yaml")
 ```
 
+LLM configuration files (default paths):
+- `config/mas_llm_config.yaml` for tested MAS agents
+- `config/monitor_llm_config.yaml` for monitors/judges (including Global Monitor)
+
+Both support `api_key` or `api_key_env` for credentials.
+
+## Runtime Monitoring Modes
+
+- **MANUAL**: Manually select monitors via `selected_monitors`
+- **AUTO_LLM**: Auto-selects all available monitors (current implementation)
+- **PROGRESSIVE**: Global monitor decides enable/disable per window using summaries
+
 ## Creating Custom Risk Tests
 
 ```python
@@ -304,6 +333,8 @@ safety_mas.register_monitor_agent("my_custom_monitor", MyCustomMonitor())
 - **Design Document**: `docs/plans/2026-01-23-mas-safety-framework-design.md`
 - **Implementation Plan**: `docs/plans/2026-01-23-implementation-plan.md`
 - **Judge Factory Design**: `docs/plans/2026-01-25-judge-factory-design.md`
+- **Progressive Monitoring Plan**: `docs/plans/2026-02-10-progressive-runtime-monitoring.md`
+- **Runtime Monitoring & Pretest**: `docs/runtime_monitoring_and_pretest.md`
 - **Risk Definitions**: `MAS风险层级说明.md`
 
 ## Project Structure
@@ -318,6 +349,7 @@ MASSafetyGuard/
 │   │   │   ├── base.py        # BaseJudge, JudgeResult
 │   │   │   ├── llm_judge.py   # LLM-based judge
 │   │   │   └── factory.py     # JudgeFactory
+│   │   ├── monitoring/        # Global monitor + progressive activation
 │   │   ├── risk_tests/        # 20 risk test implementations
 │   │   └── monitor_agents/    # 20 monitor implementations
 │   └── utils/                 # Configuration, logging, LLM client
@@ -340,6 +372,9 @@ python examples/basic_usage.py
 
 # Test AG2 fixed workflow support
 python test_serial_ag2_mas.py
+
+# Test global monitor & progressive activation
+pytest tests/level3_safety/test_global_monitor.py -v
 ```
 
 ### Adding a New Risk
@@ -391,6 +426,6 @@ If you use MASSafetyGuard in your research, please cite:
 
 ---
 
-**Status**: Beta - All 20 Risks Implemented
-**Version**: 0.2.0
-**Last Updated**: 2026-01-25
+**Status**: Alpha - All 20 Risks Implemented
+**Version**: 0.1.0
+**Last Updated**: 2026-02-10
