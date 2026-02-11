@@ -92,15 +92,72 @@ print(f"Alerts: {len(safety_mas.get_alerts())}")
 
 ### Progressive Monitoring (Global Monitor)
 
+Progressive monitoring uses a global coordinator to dynamically enable or disable specific risk monitors based on the conversation context. This reduces computational overhead while maintaining safety coverage.
+
+#### 1. Standard LLM-based Progressive Monitoring
+
+This mode uses an LLM (Global Monitor) to analyze a sliding window of events and decide which specific monitors should be active.
+
 ```python
 from massafetyguard import MonitorSelectionMode
 
 safety_mas.start_runtime_monitoring(
     mode=MonitorSelectionMode.PROGRESSIVE,
     progressive_config={
-        "window_size": 10,
-        "max_events": 8,
-        # Optional: initial_active or custom decision_provider(summary, active, available)
+        # Window settings
+        "window_size": 10,       # Number of steps to aggregate before decision
+        "max_events": 8,         # Max events to include in summary to LLM
+        
+        # Initial state
+        "initial_active": ["jailbreak", "sensitive_disclosure"]
+    }
+)
+```
+
+#### 2. Advanced: Custom Logic (No LLM)
+
+You can provide your own `decision_provider` function to implement rule-based or hybrid monitoring logic without using the default LLM.
+
+```python
+def my_custom_decision_logic(summary, active_monitors, available_monitors):
+    """
+    Custom logic to determine which monitors should be active.
+    
+    Args:
+        summary: Dict containing 'events', 'counts', etc.
+        active_monitors: List of currently active monitor names
+        available_monitors: List of all available monitor names
+        
+    Returns:
+        Dict with 'enable', 'disable', and 'reason'
+    """
+    decision = {
+        "enable": [],
+        "disable": [],
+        "reason": "rule-based update"
+    }
+    
+    # Example Rule 1: Enable code scanner if coding keywords appear
+    recent_content = " ".join([e["content_preview"] for e in summary["events"]]).lower()
+    if "python" in recent_content or "code" in recent_content:
+        if "code_execution" in available_monitors and "code_execution" not in active_monitors:
+            decision["enable"].append("code_execution")
+            
+    # Example Rule 2: Disable expensive monitors if nothing is happening
+    if summary["counts"]["by_step_type"].get("receive", 0) < 2:
+        # Maybe disable everything except essential ones
+        for m in active_monitors:
+            if m != "jailbreak":
+                decision["disable"].append(m)
+                
+    return decision
+
+# Apply the custom logic
+safety_mas.start_runtime_monitoring(
+    mode=MonitorSelectionMode.PROGRESSIVE,
+    progressive_config={
+        "window_size": 5,
+        "decision_provider": my_custom_decision_logic
     }
 )
 ```
@@ -181,38 +238,38 @@ All 20 risks are fully implemented with LLM-powered intelligent analysis and pat
 
 ### L1: Single-Agent Risks (8 types)
 
-| Risk | Test | Monitor | Description |
-|------|------|---------|-------------|
-| Jailbreak | ✅ | ✅ | Bypass safety guidelines |
-| Prompt Injection | ✅ | ✅ | Inject malicious instructions |
-| Sensitive Disclosure | ✅ | ✅ | Leak sensitive information |
-| Excessive Agency | ✅ | ✅ | Unauthorized actions |
-| Code Execution | ✅ | ✅ | Dangerous code execution |
-| Hallucination | ✅ | ✅ | Generate false information |
-| Memory Poisoning | ✅ | ✅ | Corrupt agent memory |
-| Tool Misuse | ✅ | ✅ | Misuse available tools |
+| Risk                 | Test | Monitor | Description                   |
+| -------------------- | ---- | ------- | ----------------------------- |
+| Jailbreak            | ✅    | ✅       | Bypass safety guidelines      |
+| Prompt Injection     | ✅    | ✅       | Inject malicious instructions |
+| Sensitive Disclosure | ✅    | ✅       | Leak sensitive information    |
+| Excessive Agency     | ✅    | ✅       | Unauthorized actions          |
+| Code Execution       | ✅    | ✅       | Dangerous code execution      |
+| Hallucination        | ✅    | ✅       | Generate false information    |
+| Memory Poisoning     | ✅    | ✅       | Corrupt agent memory          |
+| Tool Misuse          | ✅    | ✅       | Misuse available tools        |
 
 ### L2: Inter-Agent Communication Risks (6 types)
 
-| Risk | Test | Monitor | Description |
-|------|------|---------|-------------|
-| Message Tampering | ✅ | ✅ | Modify messages in transit |
-| Malicious Propagation | ✅ | ✅ | Spread harmful content |
-| Misinformation Amplify | ✅ | ✅ | Amplify false information |
-| Insecure Output | ✅ | ✅ | Unsafe output handling |
-| Goal Drift | ✅ | ✅ | Deviate from original goals |
-| Identity Spoofing | ✅ | ✅ | Impersonate other agents |
+| Risk                   | Test | Monitor | Description                 |
+| ---------------------- | ---- | ------- | --------------------------- |
+| Message Tampering      | ✅    | ✅       | Modify messages in transit  |
+| Malicious Propagation  | ✅    | ✅       | Spread harmful content      |
+| Misinformation Amplify | ✅    | ✅       | Amplify false information   |
+| Insecure Output        | ✅    | ✅       | Unsafe output handling      |
+| Goal Drift             | ✅    | ✅       | Deviate from original goals |
+| Identity Spoofing      | ✅    | ✅       | Impersonate other agents    |
 
 ### L3: System-Level Risks (6 types)
 
-| Risk | Test | Monitor | Description |
-|------|------|---------|-------------|
-| Cascading Failures | ✅ | ✅ | Failure propagation |
-| Sandbox Escape | ✅ | ✅ | Break isolation boundaries |
-| Insufficient Monitoring | ✅ | ✅ | Inadequate oversight |
-| Group Hallucination | ✅ | ✅ | Collective false beliefs |
-| Malicious Emergence | ✅ | ✅ | Harmful emergent behavior |
-| Rogue Agent | ✅ | ✅ | Uncontrolled agent behavior |
+| Risk                    | Test | Monitor | Description                 |
+| ----------------------- | ---- | ------- | --------------------------- |
+| Cascading Failures      | ✅    | ✅       | Failure propagation         |
+| Sandbox Escape          | ✅    | ✅       | Break isolation boundaries  |
+| Insufficient Monitoring | ✅    | ✅       | Inadequate oversight        |
+| Group Hallucination     | ✅    | ✅       | Collective false beliefs    |
+| Malicious Emergence     | ✅    | ✅       | Harmful emergent behavior   |
+| Rogue Agent             | ✅    | ✅       | Uncontrolled agent behavior |
 
 ## Configuration
 
