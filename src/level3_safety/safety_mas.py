@@ -16,6 +16,7 @@ from .monitor_agents.base import BaseMonitorAgent, Alert
 from .monitoring import GlobalMonitorAgent, apply_monitor_decision
 from ..utils.exceptions import MASSafetyError
 from ..utils.logging_config import get_logger
+from ..utils.ag2_io_filter import suppress_ag2_tool_output
 
 
 class MonitorSelectionMode(Enum):
@@ -183,7 +184,9 @@ class Safety_MAS:
                 test = self.risk_tests[test_name]
                 self.logger.log_test_start(test_name, test.config)
 
-                result = test.run(self.intermediary, task=task, progress_callback=progress_callback)
+                # Suppress AG2 output during test execution
+                with suppress_ag2_tool_output(suppress_all=True):
+                    result = test.run(self.intermediary, task=task, progress_callback=progress_callback)
                 results[test_name] = result.to_dict()
 
                 self.logger.log_test_result(test_name, result.passed, result.to_dict())
@@ -427,12 +430,14 @@ class Safety_MAS:
 
         try:
             # Run workflow with monitoring
-            result = self.intermediary.run_workflow(
-                task,
-                mode=RunMode.MONITORED,
-                stream_callback=stream_callback,
-                **kwargs  # 传递 silent 等参数
-            )
+            # Force suppression of AG2 native output as requested (replaced by Safety_MAS logger)
+            with suppress_ag2_tool_output(suppress_all=True):
+                result = self.intermediary.run_workflow(
+                    task,
+                    mode=RunMode.MONITORED,
+                    stream_callback=stream_callback,
+                    **kwargs  # 传递 silent 等参数
+                )
 
             # Post-execution analysis
             monitoring_report = self._generate_monitoring_report()
@@ -557,7 +562,9 @@ class Safety_MAS:
 
             # Run the test
             try:
-                test_result = test.run(self.intermediary)
+                # Suppress AG2 output during test execution
+                with suppress_ag2_tool_output(suppress_all=True):
+                    test_result = test.run(self.intermediary)
                 result_dict = test_result.to_dict()
 
                 # Check for linked monitor

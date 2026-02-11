@@ -409,7 +409,9 @@ def run_preattack_tests(
     # --- Step 1: Create MAS ---
     print(f"[1/4] Creating {mas_info['display_name']}...")
     try:
-        mas = create_mas()
+        from src.utils.ag2_io_filter import suppress_ag2_tool_output
+        with suppress_ag2_tool_output(suppress_all=True):
+            mas = create_mas()
         agents = mas.get_agents()
         agent_names = [a.name for a in agents]
         print(f"      Created MAS with {len(agents)} agents: {agent_names}")
