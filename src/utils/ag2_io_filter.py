@@ -38,6 +38,7 @@ except ImportError:
         raise ImportError("AG2/AutoGen not installed. Install with: pip install ag2")
 
 
+
 class FilteredIOConsole(IOConsole):
     """IOConsole that filters out verbose AG2 messages.
 
@@ -45,19 +46,23 @@ class FilteredIOConsole(IOConsole):
     prints during workflow execution, including:
     - EXECUTING FUNCTION / EXECUTED FUNCTION messages
     - TERMINATING RUN messages
+    - Option to suppress ALL messages
     """
 
     def __init__(self, filter_tool_messages: bool = True,
-                 filter_termination_messages: bool = True):
+                 filter_termination_messages: bool = True,
+                 suppress_all: bool = False):
         """Initialize filtered console.
 
         Args:
             filter_tool_messages: If True, suppress tool execution messages
             filter_termination_messages: If True, suppress termination messages
+            suppress_all: If True, suppress ALL output
         """
         super().__init__()
         self.filter_tool_messages = filter_tool_messages
         self.filter_termination_messages = filter_termination_messages
+        self.suppress_all = suppress_all
 
     def send(self, message: BaseEvent) -> None:
         """Send a message to the output stream, filtering verbose messages.
@@ -65,6 +70,10 @@ class FilteredIOConsole(IOConsole):
         Args:
             message: The message event to send
         """
+        # If universal suppression is enabled, return immediately
+        if self.suppress_all:
+            return
+
         # Filter out tool execution messages if enabled
         if self.filter_tool_messages:
             if isinstance(message, (ExecuteFunctionEvent, ExecutedFunctionEvent)):
@@ -90,6 +99,10 @@ class AG2EventFilter(logging.Filter):
     EXECUTED FUNCTION patterns from the ag2.event.processor logger.
     """
 
+    def __init__(self, suppress_all: bool = False):
+        super().__init__()
+        self.suppress_all = suppress_all
+
     def filter(self, record: logging.LogRecord) -> bool:
         """Filter out tool execution messages.
 
@@ -99,6 +112,9 @@ class AG2EventFilter(logging.Filter):
         Returns:
             False to suppress the message, True to allow it
         """
+        if self.suppress_all:
+            return False
+
         msg = record.getMessage()
         # Suppress tool execution messages
         if ">>>>>>>> EXECUTING FUNCTION" in msg:
@@ -112,11 +128,11 @@ class AG2EventFilter(logging.Filter):
 
 
 @contextmanager
-def suppress_ag2_tool_output(debug: bool = False):
+def suppress_ag2_tool_output(debug: bool = False, suppress_all: bool = False):
     """Context manager to suppress AG2 tool execution output.
 
     Usage:
-        with suppress_ag2_tool_output():
+        with suppress_ag2_tool_output(suppress_all=True):
             # AG2 code that calls tools
             result = mas.run_workflow(task)
 
@@ -129,9 +145,21 @@ def suppress_ag2_tool_output(debug: bool = False):
 
     Args:
         debug: If True, print debug information about IOStream state
+        suppress_all: If True, suppress ALL AG2 output (chat messages, etc.)
     """
+    # Check existing default for inheritance
+    try:
+        current_default = IOStream.get_default()
+        if isinstance(current_default, FilteredIOConsole):
+            suppress_all = suppress_all or current_default.suppress_all
+    except (RuntimeError, ImportError):
+        current_default = None
+
     # Create filtered console for IOStream
-    filtered_console = FilteredIOConsole(filter_tool_messages=True)
+    filtered_console = FilteredIOConsole(
+        filter_tool_messages=True,
+        suppress_all=suppress_all
+    )
 
     # Save original global default
     try:
@@ -140,12 +168,12 @@ def suppress_ag2_tool_output(debug: bool = False):
         original_global = None
 
     # Create and add filter to AG2 event logger
-    event_filter = AG2EventFilter()
+    event_filter = AG2EventFilter(suppress_all=suppress_all)
     ag2_logger = logging.getLogger(_AG2_EVENT_LOGGER_NAME)
     ag2_logger.addFilter(event_filter)
 
     if debug:
-        print(f"[DEBUG] suppress_ag2_tool_output: entering context")
+        print(f"[DEBUG] suppress_ag2_tool_output: entering context (suppress_all={suppress_all})")
         print(f"[DEBUG] original_global: {type(original_global).__name__ if original_global else None}")
         print(f"[DEBUG] filtered_console: {type(filtered_console).__name__}")
 
