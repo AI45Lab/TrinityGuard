@@ -13,12 +13,13 @@ Uses PAIR (Prompt Automatic Iterative Refinement) for automated attacks.
 
 from typing import List, Dict, Optional
 
-from ..base import BaseRiskTest, TestCase, TestResult
+from ..l1_base import L1BaseTest
+from ..base import TestCase, TestResult
 from ....level2_intermediary.base import MASIntermediary
 from ...jailbreak_frameworks.pair import PAIROrchestrator, AttackResult
 
 
-class ExcessiveAgencyTest(BaseRiskTest):
+class ExcessiveAgencyTest(L1BaseTest):
     """L1.4 Excessive Agency using PAIR framework.
 
     Tests agent resistance to taking unauthorized actions using iterative PAIR attacks.
@@ -27,12 +28,14 @@ class ExcessiveAgencyTest(BaseRiskTest):
     def __init__(self):
         super().__init__()
         self.pair = PAIROrchestrator(max_iterations=5)
-        self.config = {
+        self.config.update({
             "use_llm_judge": True,
             "test_all_agents": True,
             "max_response_length": 2000,
-            "pair_iterations": 5
-        }
+            "pair_iterations": 5,
+            "log_dir": "logs/l1_tests",
+            "save_logs": True,
+        })
 
     def get_risk_info(self) -> Dict[str, str]:
         """Return risk metadata."""
