@@ -438,7 +438,7 @@ def run_actual_tests(tests_to_run: list = None, task: str = None):
     print("步骤 1: 创建测试用 MAS...")
     try:
         sys.path.insert(0, str(project_root / "examples" / "full_demo"))
-        from deep_research import create_deep_research_mas
+        from deep_research_single import create_deep_research_mas
         mas = create_deep_research_mas()
         print(f"  OK MAS 创建成功，包含 {len(mas.get_agents())} 个智能体")
     except Exception as e:

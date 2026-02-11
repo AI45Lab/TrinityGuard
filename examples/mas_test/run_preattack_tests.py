@@ -69,6 +69,22 @@ MAS_REGISTRY = {
         "source": "build-with-ag2/game-design-agent-team",
         "log_subdir": "game_design_mas",
     },
+    "deep_research": {
+        "display_name": "Deep Research Agent MAS",
+        "module": "deep_research_mas.setup",  # Import as top-level package
+        "create_func": "create_deep_research_mas",
+        "task_func": "get_default_task",
+        "source": "build-with-ag2/deep-research-agent",
+        "log_subdir": "deep_research_mas",
+    },
+    "travel_planner": {
+        "display_name": "Travel Planner MAS",
+        "module": "travel_planner_mas.setup",  # Import as top-level package
+        "create_func": "create_travel_planner_mas",
+        "task_func": "get_default_task",
+        "source": "build-with-ag2/travel-planner",
+        "log_subdir": "travel_planner_mas",
+    },
 }
 
 # =============================================================================
@@ -166,14 +182,14 @@ def save_results(results: dict, log_dir: Path, timestamp: str):
     results_file = log_dir / f"preattack_results_{timestamp}.json"
     with open(results_file, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2, ensure_ascii=False, default=str)
-    print(f"\n📁 Full results saved to: {results_file}")
+    print(f"\n[*] Full results saved to: {results_file}")
 
     # Create and save summary
     summary = create_summary(results)
     summary_file = log_dir / f"preattack_summary_{timestamp}.json"
     with open(summary_file, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2, ensure_ascii=False, default=str)
-    print(f"📁 Summary saved to: {summary_file}")
+    print(f"[*] Summary saved to: {summary_file}")
 
     # Also save a latest symlink/copy for easy access
     latest_results = log_dir / "latest_results.json"
@@ -286,14 +302,14 @@ def print_test_report(results: dict):
             result = test_results[test_name]
 
             if "error" in result and "passed" not in result:
-                icon = "⚠️ "
+                icon = "[!]"
                 status = f"ERROR: {result['error'][:50]}"
             elif result.get("passed", False):
-                icon = "✅"
+                icon = "[OK]"
                 total = result.get("total_cases", 0)
                 status = f"PASSED ({total} cases)"
             else:
-                icon = "❌"
+                icon = "[X]"
                 total = result.get("total_cases", 0)
                 failed = result.get("failed_cases", 0)
                 pass_rate = result.get("pass_rate", 0) * 100
@@ -455,18 +471,18 @@ def run_preattack_tests(
             if test_name in result:
                 test_results[test_name] = result[test_name]
                 passed = result[test_name].get("passed", False)
-                icon = "✅" if passed else "❌"
+                icon = "[OK]" if passed else "[X]"
                 total_cases = result[test_name].get("total_cases", 0)
                 failed_cases = result[test_name].get("failed_cases", 0)
                 print(f"         {icon} {test_name}: {'PASSED' if passed else 'FAILED'} "
                       f"({total_cases} cases, {failed_cases} failed)")
             else:
                 test_results[test_name] = result.get(test_name, {"error": "No result returned"})
-                print(f"         ⚠️  {test_name}: No result returned")
+                print(f"         [!] {test_name}: No result returned")
 
         except Exception as e:
             test_results[test_name] = {"error": str(e), "status": "crashed"}
-            print(f"         ❌ {test_name}: CRASHED - {str(e)[:60]}")
+            print(f"         [X] {test_name}: CRASHED - {str(e)[:60]}")
             if verbose:
                 import traceback
                 traceback.print_exc()

@@ -179,6 +179,31 @@ class ToolMisuseTest(L1BaseTest):
                     "response_preview": attack_result.target_response[:200] + "..." if len(attack_result.target_response) > 200 else attack_result.target_response
                 }
 
+                # Save logs for this agent
+                if self.config.get("save_logs", True):
+                    attack_history_entry = {
+                        "agent": agent_info.name,
+                        "success": attack_result.success,
+                        "iterations": attack_result.iterations,
+                        "final_prompt": attack_result.final_prompt,
+                        "final_response": attack_result.target_response,
+                        "history": [
+                            {
+                                "iteration": i + 1,
+                                "prompt": h.get("prompt", ""),
+                                "response": h.get("response", "")
+                            }
+                            for i, h in enumerate(attack_result.history)
+                        ]
+                    }
+                    self._save_pair_test_logs(
+                        test_case=test_case,
+                        results=results,
+                        agent_name=agent_info.name,
+                        attack_history=[attack_history_entry],
+                        task_used=test_case.input
+                    )
+
                 if attack_result.success:
                     results["passed"] = False
 

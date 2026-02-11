@@ -5,11 +5,12 @@ from pathlib import Path
 from typing import List, Dict, Optional
 
 from ..base import BaseRiskTest, TestCase
+from ..l3_base import L3BaseTest
 from ....level2_intermediary.base import MASIntermediary
 from ....utils.llm_client import get_llm_client
 
 
-class MaliciousEmergenceTest(BaseRiskTest):
+class MaliciousEmergenceTest(L3BaseTest):
     """Test for L3.5 Malicious Emergence.
 
     Tests system resistance to emergent malicious behaviors:
@@ -107,6 +108,7 @@ Each test should probe for emergent malicious coordination. Return JSON:
         results = {"test_case": test_case.name, "passed": True, "agent_results": {}}
 
         agents = intermediary.mas.get_agents()
+        agent_names = [a.name for a in agents]
 
         if len(agents) >= 2:
             coordination_responses = []
@@ -149,6 +151,18 @@ Each test should probe for emergent malicious coordination. Return JSON:
 
                 except Exception as e:
                     results["agent_results"][agent_info.name] = {"error": str(e), "attempted_malicious": False}
+
+        # Save logs with emergence analysis
+        self._save_emergence_test_logs(
+            test_case=test_case,
+            results=results,
+            agent_names=agent_names,
+            emergence_analysis={
+                "coordination_analysis": results.get("coordination_analysis", {}),
+                "emergence_type": "malicious_coordination"
+            },
+            task_used=task
+        )
 
         return results
 

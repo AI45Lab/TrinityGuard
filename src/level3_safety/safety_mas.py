@@ -196,7 +196,116 @@ class Safety_MAS:
                 }
 
         self._test_results = results
+
+        # Save test results to file
+        self._save_test_results_to_file(selected_tests, results, task)
+
         return results
+
+    def _save_test_results_to_file(self, selected_tests: List[str], results: Dict[str, Any], task: str = None):
+        """Save test results to log file based on test level.
+
+        Args:
+            selected_tests: List of test names that were run
+            results: Test results dictionary
+            task: Optional task that was used for testing
+        """
+        import json
+        from datetime import datetime
+        from ..utils.config import get_config
+
+        config = get_config()
+        project_root = Path(__file__).parent.parent.parent
+
+        # Determine test level from test names
+        test_level = self._get_test_level(selected_tests)
+        test_dir_key = f"{test_level}_test_dir"
+        test_dir = getattr(config.logging, test_dir_key, None)
+
+        if not test_dir:
+            return
+
+        # Resolve test directory path
+        test_dir_path = project_root / test_dir
+        test_dir_path.mkdir(parents=True, exist_ok=True)
+
+        # Create log file with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_file = test_dir_path / f"test_results_{timestamp}.json"
+
+        # Prepare log data
+        log_data = {
+            "timestamp": datetime.now().isoformat(),
+            "test_level": test_level.upper(),
+            "tests_run": selected_tests,
+            "task": task,
+            "results": results,
+            "summary": self._generate_summary(results)
+        }
+
+        # Write to file
+        with open(log_file, 'w', encoding='utf-8') as f:
+            json.dump(log_data, f, indent=2, ensure_ascii=False)
+
+        self.logger.info(f"Test results saved to: {log_file}")
+
+    def _get_test_level(self, test_names: List[str]) -> str:
+        """Determine test level (l1, l2, l3) from test names.
+
+        Args:
+            test_names: List of test names
+
+        Returns:
+            Test level string (e.g., "l1", "l2", "l3")
+        """
+        # Check if any test name has level prefix
+        for name in test_names:
+            name_lower = name.lower()
+            if name_lower.startswith("l3_") or name_lower in [
+                "cascading_failures", "sandbox_escape", "insufficient_monitoring",
+                "group_hallucination", "malicious_emergence", "rogue_agent"
+            ]:
+                return "l3"
+            elif name_lower.startswith("l2_") or name_lower in [
+                "message_tampering", "tool_abuse", "unauthorized_escalation",
+                "malicious_propagation", "misinformation_amplify",
+                "insecure_output", "goal_drift", "identity_spoofing"
+            ]:
+                return "l2"
+            elif name_lower.startswith("l1_") or name_lower in [
+                "prompt_injection", "jailbreak", "sensitive_disclosure",
+                "excessive_agency", "code_execution", "hallucination",
+                "memory_poisoning", "tool_misuse"
+            ]:
+                return "l1"
+
+        # Default to l3 if unknown (for backward compatibility)
+        return "l3"
+
+    def _generate_summary(self, results: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate summary from test results.
+
+        Args:
+            results: Test results dictionary
+
+        Returns:
+            Summary dictionary
+        """
+        total_tests = len(results)
+        passed_tests = sum(1 for r in results.values() if r.get("passed", False))
+        failed_tests = total_tests - passed_tests
+
+        total_cases = sum(r.get("total_cases", 0) for r in results.values())
+        failed_cases = sum(r.get("failed_cases", 0) for r in results.values())
+
+        return {
+            "total_tests": total_tests,
+            "passed_tests": passed_tests,
+            "failed_tests": failed_tests,
+            "total_cases": total_cases,
+            "failed_cases": failed_cases,
+            "overall_pass_rate": (total_cases - failed_cases) / total_cases if total_cases > 0 else 0
+        }
 
     def get_test_report(self) -> str:
         """Generate human-readable test report.

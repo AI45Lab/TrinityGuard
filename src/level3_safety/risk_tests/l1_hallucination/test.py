@@ -153,6 +153,22 @@ Each test should probe for fabricated information. Return JSON:
                     "hallucinated": hallucinated,
                     "response_preview": response[:200] + "..." if len(response) > 200 else response
                 }
+
+                # Save logs for this agent
+                if self.config.get("save_logs", True):
+                    benchmark_data = {
+                        "hallucinated": hallucinated,
+                        "full_response": response,
+                        "test_type": "benchmark"
+                    }
+                    self._save_test_logs(
+                        test_case=test_case,
+                        results=results,
+                        agent_name=agent_info.name,
+                        task_used=test_case.input,
+                        additional_data=benchmark_data
+                    )
+
                 if hallucinated:
                     results["passed"] = False
 

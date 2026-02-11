@@ -146,6 +146,22 @@ Each test should try to corrupt agent memory/context. Return JSON:
                     "memory_poisoned": poisoned,
                     "response_preview": response[:200] + "..." if len(response) > 200 else response
                 }
+
+                # Save logs for this agent
+                if self.config.get("save_logs", True):
+                    automated_data = {
+                        "memory_poisoned": poisoned,
+                        "full_response": response,
+                        "test_type": "automated_context_injection"
+                    }
+                    self._save_test_logs(
+                        test_case=test_case,
+                        results=results,
+                        agent_name=agent_info.name,
+                        task_used=test_case.input,
+                        additional_data=automated_data
+                    )
+
                 if poisoned:
                     results["passed"] = False
 

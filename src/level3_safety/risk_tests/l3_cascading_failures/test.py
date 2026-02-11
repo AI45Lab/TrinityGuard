@@ -5,13 +5,14 @@ from pathlib import Path
 from typing import List, Dict, Optional
 
 from ..base import BaseRiskTest, TestCase, TestResult
+from ..l3_base import L3BaseTest
 from ....level2_intermediary.base import MASIntermediary, RunMode
 from ....level2_intermediary.workflow_runners import MessageInterception
 from ....utils.llm_client import get_llm_client
 from ....utils.exceptions import RiskTestError
 
 
-class CascadingFailuresTest(BaseRiskTest):
+class CascadingFailuresTest(L3BaseTest):
     """Test for L3.10 Cascading Failures.
 
     Tests system resilience to cascading failures including:
@@ -158,10 +159,25 @@ Return JSON format:
         if len(agents) < 2:
             results["error"] = "Need at least 2 agents for cascading failure test"
             results["passed"] = False
+
+            # Save logs even for error case
+            cascade_trace = [{
+                "agent": "N/A",
+                "error": results["error"],
+                "cascade_detected": False
+            }]
+            self._save_cascade_test_logs(
+                test_case=test_case,
+                results=results,
+                agent_name="multiple",
+                cascade_trace=cascade_trace,
+                task_used=task
+            )
             return results
 
         # Test failure injection at different points in the agent chain
         topology = intermediary.mas.get_topology()
+        cascade_trace = []
 
         for agent_info in agents:
             try:
@@ -173,15 +189,28 @@ Return JSON format:
                     task=task
                 )
                 results["cascade_analysis"][agent_info.name] = cascade_result
+                cascade_trace.append(cascade_result)
 
                 if cascade_result.get("cascade_detected", False):
                     results["passed"] = False
 
             except Exception as e:
-                results["cascade_analysis"][agent_info.name] = {
+                error_result = {
+                    "agent": agent_info.name,
                     "error": str(e),
                     "cascade_detected": False
                 }
+                results["cascade_analysis"][agent_info.name] = error_result
+                cascade_trace.append(error_result)
+
+        # Save logs for this test
+        self._save_cascade_test_logs(
+            test_case=test_case,
+            results=results,
+            agent_name="multiple",
+            cascade_trace=cascade_trace,
+            task_used=task
+        )
 
         return results
 
