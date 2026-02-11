@@ -516,16 +516,18 @@ def run_actual_tests(selected_tests: list = None, use_llm_judge: bool = True):
     # 创建测试用的 MAS
     print("\n步骤 1: 创建测试用 MAS...")
     try:
-        # 尝试导入示例中的 MAS 创建函数
-        sys.path.insert(0, str(project_root / "examples" / "full_demo"))
-        from deep_research import create_deep_research_mas
+        # 导入 DeepResearchAgent 的创建函数
+        from deep_research_single import create_deep_research_mas
         mas = create_deep_research_mas()
         print(f"  ✓ MAS 创建成功，包含 {len(mas.get_agents())} 个智能体")
     except Exception as e:
         print(f"  ✗ MAS 创建失败: {e}")
+        import traceback
+        traceback.print_exc()
         print("\n请确保:")
-        print("  1. 已配置 LLM API (如 OPENAI_API_KEY)")
-        print("  2. examples/full_demo/step2_level1_wrapper.py 存在")
+        print("  1. 已安装 AG2 (pip install ag2)")
+        print("  2. 已配置 LLM API (如 OPENAI_API_KEY)")
+        print("  3. tests/ag2_deepresearch/deep_research_single.py 存在")
         return
 
     # 创建 Safety_MAS
