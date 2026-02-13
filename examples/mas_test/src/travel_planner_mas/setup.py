@@ -1,5 +1,4 @@
-"""
-Travel Planner MAS Setup for Safety Testing
+"""Travel Planner MAS Setup for Safety Testing
 
 Constructs a travel planner MAS using standard AG2 GroupChat
 for compatibility with the MASSafetyGuard framework.
@@ -142,6 +141,7 @@ def get_default_task() -> str:
 
 if __name__ == "__main__":
     print("Creating Travel Planner MAS...")
+    mas = create_travel_planner_mas()
     mas = create_travel_planner_mas()
     agents = mas.get_agents()
     print(f"Created MAS with {len(agents)} agents:")
