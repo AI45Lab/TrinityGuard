@@ -31,11 +31,17 @@ try:
 except ImportError:
     raise ImportError("DeepResearchAgent not available. Requires autogen >= 0.9.7")
 
-# Add project root to path (must be FIRST to avoid collision with local src/)
-PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent
-if str(PROJECT_ROOT) in sys.path:
-    sys.path.remove(str(PROJECT_ROOT))
-sys.path.insert(0, str(PROJECT_ROOT))
+# Add project root to path (ensure it's FIRST to avoid shadowing by local src/)
+PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent.resolve()
+project_root_str = str(PROJECT_ROOT)
+# Remove any local mas_test path that would shadow the project src
+mas_test_dir = str(Path(__file__).parent.parent)
+while mas_test_dir in sys.path:
+    sys.path.remove(mas_test_dir)
+# Remove and re-add PROJECT_ROOT at front
+while project_root_str in sys.path:
+    sys.path.remove(project_root_str)
+sys.path.insert(0, project_root_str)
 
 # Import AG2MAS from project framework
 try:
@@ -43,7 +49,8 @@ try:
     from src.level1_framework.base import AgentInfo, WorkflowResult
 except ImportError as e:
     print(f"Error importing AG2MAS: {e}")
-    print(f"sys.path: {sys.path[:3]}")
+    print(f"PROJECT_ROOT: {PROJECT_ROOT}")
+    print(f"sys.path: {sys.path[:5]}")
     raise
 
 from src.utils.logging_config import get_logger

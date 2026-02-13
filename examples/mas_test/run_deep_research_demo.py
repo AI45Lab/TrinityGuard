@@ -24,14 +24,32 @@ import argparse
 import time
 from pathlib import Path
 
-# Path setup — SCRIPT_DIR first so local src/ is found for setup modules
+# Path setup - PROJECT_ROOT first, then SCRIPT_DIR for local src/
 SCRIPT_DIR = Path(__file__).parent.resolve()
 PROJECT_ROOT = SCRIPT_DIR.parent.parent  # MASSafetyGuard root
-if str(SCRIPT_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPT_DIR))
+project_root_str = str(PROJECT_ROOT)
+# Ensure PROJECT_ROOT is at the front of sys.path
+if project_root_str not in sys.path:
+    sys.path.insert(0, project_root_str)
+elif sys.path[0] != project_root_str:
+    # Move to front if it exists but is not first
+    sys.path.remove(project_root_str)
+    sys.path.insert(0, project_root_str)
+# Add SCRIPT_DIR for local imports
+script_dir_str = str(SCRIPT_DIR)
+if script_dir_str not in sys.path:
+    sys.path.insert(1, script_dir_str)
 
 
 def main():
+    # Set UTF-8 encoding for Windows console
+    import sys
+    import io
+    if hasattr(sys.stdout, 'buffer'):
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    if hasattr(sys.stderr, 'buffer'):
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
     parser = argparse.ArgumentParser(
         description="Deep Research Agent — Standalone Test",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -65,7 +83,7 @@ Examples:
     # Banner
     print()
     print("=" * 70)
-    print("   🔍 Deep Research Agent — Demo Run")
+    print("   [*] Deep Research Agent — Demo Run")
     print("=" * 70)
     print()
     print(f"  Topic:        {args.topic[:70]}{'...' if len(args.topic) > 70 else ''}")
@@ -75,7 +93,13 @@ Examples:
 
     # Create MAS
     print("[1/3] Creating Deep Research MAS...")
-    from src.deep_research_mas.setup import create_deep_research_mas
+    # Use absolute path import to avoid namespace conflicts
+    import importlib.util
+    setup_path = SCRIPT_DIR / "src" / "deep_research_mas" / "setup.py"
+    spec = importlib.util.spec_from_file_location("deep_research_mas_setup", str(setup_path))
+    setup_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(setup_module)
+    create_deep_research_mas = setup_module.create_deep_research_mas
     mas = create_deep_research_mas()
     agents = mas.get_agents()
     print(f"      Created MAS with {len(agents)} agents: {[a.name for a in agents]}")
@@ -103,7 +127,7 @@ Examples:
 
     if result.success:
         print("=" * 70)
-        print("   📋 Research Summary")
+        print("   [Summary] Research Summary")
         print("=" * 70)
         print()
 
@@ -122,13 +146,13 @@ Examples:
                 f.write(f"- Summary Method: {args.summary_method}\n\n")
                 f.write("---\n\n")
                 f.write(output)
-            print(f"\n💾 Saved to: {save_path}")
+            print(f"\n[Saved] Saved to: {save_path}")
 
         # Print metadata
         if result.metadata:
             print()
             print("=" * 70)
-            print("   📊 Metadata")
+            print("   [Metadata] Metadata")
             print("=" * 70)
             for key, value in result.metadata.items():
                 if key != "elapsed":
@@ -136,7 +160,7 @@ Examples:
             print("=" * 70)
 
     else:
-        print(f"❌ Research failed: {result.error}")
+        print(f"[X] Research failed: {result.error}")
         sys.exit(1)
 
     print()

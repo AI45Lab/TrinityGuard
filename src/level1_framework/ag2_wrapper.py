@@ -195,13 +195,13 @@ class AG2MAS(BaseMAS):
         silent = kwargs.get('silent', False)
 
         # Debug logging
-        self.logger.info(f"🔍 All kwargs: {kwargs}")
+        self.logger.info(f"[*] All kwargs: {kwargs}")
 
         # CRITICAL FIX: Update GroupChat's max_round before running
         # The GroupChat object's max_round takes precedence over initiate_chat's max_turns
         if self._group_chat is not None:
             original_max_round = self._group_chat.max_round
-            self.logger.info(f"🔍 GroupChat.max_round from {original_max_round}")
+            self.logger.info(f"[*] GroupChat.max_round from {original_max_round}")
 
         # Find user_proxy or use first agent as initiator
         initiator = None
@@ -220,7 +220,7 @@ class AG2MAS(BaseMAS):
             silent=silent  # 关闭 AG2 原生输出
         )
 
-        self.logger.info(f"🔍 initiate_chat completed. Message history length: {len(self._message_history)}")
+        self.logger.info(f"[*] initiate_chat completed. Message history length: {len(self._message_history)}")
 
         # Extract output from chat history
         output = self._extract_final_output_from_chat(chat_result)
