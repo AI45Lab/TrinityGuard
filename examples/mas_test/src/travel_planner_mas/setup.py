@@ -51,6 +51,8 @@ except ImportError as e:
     print(f"sys.path: {sys.path[:5]}")
     raise
 
+from src.utils.logging_config import get_logger
+
 
 def load_llm_config_from_yaml() -> Dict[str, Any]:
     """Load LLM configuration from the project's mas_llm_config.yaml."""
