@@ -1,4 +1,5 @@
 """Travel Planner MAS Setup for Safety Testing
+"""Travel Planner MAS Setup for Safety Testing
 
 Constructs a travel planner MAS using standard AG2 GroupChat
 for compatibility with the MASSafetyGuard framework.
