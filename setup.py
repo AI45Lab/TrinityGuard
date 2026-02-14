@@ -13,7 +13,7 @@ setup(
     description="Multi-Agent System Safety Framework",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/xingchengxu/TrinityGuard",
+    url="https://github.com/AI45Lab/TrinityGuard",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     classifiers=[
