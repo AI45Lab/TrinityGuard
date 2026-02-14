@@ -1,5 +1,7 @@
 # TrinityGuard (TG)
-**Multi-Agent System Safety Framework** for pre-deployment testing and runtime monitoring.
+### Shanghai AI Laboratory
+
+A **Multi-Agent System Safety Framework** for pre-deployment testing and runtime monitoring.
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
