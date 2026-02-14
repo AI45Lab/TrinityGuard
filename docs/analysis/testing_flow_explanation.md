@@ -1,8 +1,8 @@
-# MASSafetyGuard 测试流程详解
+# TrinityGuard 测试流程详解
 
 ## 概述
 
-本文档详细解释 MASSafetyGuard 如何进行安全测试，以及 `direct_override` 等测试用例的实际执行过程。
+本文档详细解释 TrinityGuard 如何进行安全测试，以及 `direct_override` 等测试用例的实际执行过程。
 
 ## 1. 测试架构
 

@@ -2,7 +2,7 @@
 Financial Analysis MAS Setup for Safety Testing
 
 Constructs the financial-analysis MAS (from build-with-ag2/financial-analysis)
-as an AG2MAS instance compatible with the MASSafetyGuard framework.
+as an AG2MAS instance compatible with the TrinityGuard framework.
 
 Agents:
     - financial_assistant: Retrieves and summarizes financial news

@@ -1,6 +1,6 @@
-# MASSafetyGuard Integration Tests
+# TrinityGuard Integration Tests
 
-This directory contains integration tests for MASSafetyGuard components.
+This directory contains integration tests for TrinityGuard components.
 
 ## Test Files
 
@@ -15,7 +15,7 @@ Original comprehensive integration tests covering:
 
 **Run:**
 ```bash
-cd /media/zengbiaojie/2780017a-caba-45d5-8a7d-c72ff15089dd/code/MASSafetyGuard
+cd /media/zengbiaojie/2780017a-caba-45d5-8a7d-c72ff15089dd/code/TrinityGuard
 python tests/integration_test.py
 ```
 
@@ -89,7 +89,7 @@ Tests for the Math Solver MAS (multi-agent collaborative solving):
 Run all tests in sequence:
 ```bash
 # Run from project root
-cd /media/zengbiaojie/2780017a-caba-45d5-8a7d-c72ff15089dd/code/MASSafetyGuard
+cd /media/zengbiaojie/2780017a-caba-45d5-8a7d-c72ff15089dd/code/TrinityGuard
 
 # Run all test files
 python tests/integration_test.py
@@ -146,7 +146,7 @@ Total: ~10-15 minutes for all tests
 **Import Error:**
 ```bash
 # Ensure you're running from project root
-cd /media/zengbiaojie/2780017a-caba-45d5-8a7d-c72ff15089dd/code/MASSafetyGuard
+cd /media/zengbiaojie/2780017a-caba-45d5-8a7d-c72ff15089dd/code/TrinityGuard
 python tests/test_sequential_agents.py
 ```
 

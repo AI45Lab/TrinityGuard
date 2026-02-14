@@ -1,4 +1,4 @@
-"""Configuration management for MASSafetyGuard."""
+"""Configuration management for TrinityGuard."""
 
 import os
 from dataclasses import dataclass, field
@@ -57,7 +57,7 @@ class MonitoringConfig:
 
 
 @dataclass
-class MASSafetyConfig:
+class TrinitySafetyConfig:
     """Main configuration class."""
     llm: LLMConfig = field(default_factory=LLMConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
@@ -67,7 +67,7 @@ class MASSafetyConfig:
     monitor_agents_enabled: List[str] = field(default_factory=list)
 
     @classmethod
-    def from_yaml(cls, path: str) -> 'MASSafetyConfig':
+    def from_yaml(cls, path: str) -> 'TrinitySafetyConfig':
         """Load configuration from YAML file."""
         path = Path(path)
         if not path.exists():
@@ -79,7 +79,7 @@ class MASSafetyConfig:
         return cls._from_dict(data)
 
     @classmethod
-    def from_env(cls) -> 'MASSafetyConfig':
+    def from_env(cls) -> 'TrinitySafetyConfig':
         """Load configuration from environment variables."""
         config = cls()
 
@@ -94,7 +94,7 @@ class MASSafetyConfig:
         return config
 
     @classmethod
-    def _from_dict(cls, data: dict) -> 'MASSafetyConfig':
+    def _from_dict(cls, data: dict) -> 'TrinitySafetyConfig':
         """Create config from dictionary."""
         llm_data = data.get('llm', {})
         logging_data = data.get('logging', {})
@@ -111,7 +111,7 @@ class MASSafetyConfig:
         )
 
     @classmethod
-    def default(cls) -> 'MASSafetyConfig':
+    def default(cls) -> 'TrinitySafetyConfig':
         """Get default configuration."""
         default_path = Path(__file__).parent.parent.parent / 'config' / 'default.yaml'
         if default_path.exists():
@@ -120,18 +120,18 @@ class MASSafetyConfig:
 
 
 # Global config instance
-_config: Optional[MASSafetyConfig] = None
+_config: Optional[TrinitySafetyConfig] = None
 
 
-def get_config() -> MASSafetyConfig:
+def get_config() -> TrinitySafetyConfig:
     """Get global configuration instance."""
     global _config
     if _config is None:
-        _config = MASSafetyConfig.default()
+        _config = TrinitySafetyConfig.default()
     return _config
 
 
-def set_config(config: MASSafetyConfig):
+def set_config(config: TrinitySafetyConfig):
     """Set global configuration instance."""
     global _config
     _config = config
@@ -140,4 +140,4 @@ def set_config(config: MASSafetyConfig):
 def load_config(path: str):
     """Load configuration from file and set as global."""
     global _config
-    _config = MASSafetyConfig.from_yaml(path)
+    _config = TrinitySafetyConfig.from_yaml(path)

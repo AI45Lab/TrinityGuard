@@ -1,4 +1,4 @@
-# MASSafetyGuard 真实 LLM 集成设计文档
+# TrinityGuard 真实 LLM 集成设计文档
 
 **日期**: 2026-01-23
 **状态**: 待实现
@@ -7,7 +7,7 @@
 
 ## 1. 目标
 
-使 MASSafetyGuard 框架能够：
+使 TrinityGuard 框架能够：
 1. 使用真实 OpenAI API 运行真实的 AG2 多智能体系统
 2. 完整支持三种风险的测试和监控：Jailbreak、Message Tampering、Cascading Failures
 3. 提供端到端可验证的示例

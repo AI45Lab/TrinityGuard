@@ -1,9 +1,9 @@
 # Level 1 Framework 层深度分析报告
 
 **分析日期**: 2026-01-28
-**分析范围**: MASSafetyGuard 项目 - level1_framework 层
+**分析范围**: TrinityGuard 项目 - level1_framework 层
 **文档版本**: 1.0
-**分析者**: MASSafetyGuard Team
+**分析者**: TrinityGuard Team
 
 ---
 
@@ -30,7 +30,7 @@
 
 ### 1.1 定位
 
-level1_framework 是 MASSafetyGuard 项目的核心 MAS（多智能体系统）框架层，位于项目的最底层。它提供了与 AG2（AutoGen 2.0）框架集成的统一接口，同时支持多种工作流模式和外部工作流适配器。
+level1_framework 是 TrinityGuard 项目的核心 MAS（多智能体系统）框架层，位于项目的最底层。它提供了与 AG2（AutoGen 2.0）框架集成的统一接口，同时支持多种工作流模式和外部工作流适配器。
 
 ### 1.2 核心职责
 
@@ -2844,7 +2844,7 @@ Executes the MAS workflow...
 ### A. 参考资料
 
 - AG2/AutoGen 官方文档: https://microsoft.github.io/autogen/
-- MASSafetyGuard 设计文档: `docs/plans/2026-01-23-mas-safety-framework-design.md`
+- TrinityGuard 设计文档: `docs/plans/2026-01-23-mas-safety-framework-design.md`
 - AG2 工作流指南: `src/level1_framework/AG2_WORKFLOW_GUIDE.md`
 - EvoAgentX 适配器设计: `docs/plans/2026-01-28-evoagentx-adapter-design.md`
 

@@ -23,7 +23,7 @@ from pathlib import Path
 
 # Path setup — SCRIPT_DIR first so local src/ is found for setup modules
 SCRIPT_DIR = Path(__file__).parent.resolve()
-PROJECT_ROOT = SCRIPT_DIR.parent.parent  # MASSafetyGuard root
+PROJECT_ROOT = SCRIPT_DIR.parent.parent  # TrinityGuard root
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 

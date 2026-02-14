@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Enable MASSafetyGuard to run with real OpenAI API, complete with working Math Solver MAS and full Jailbreak/Message Tampering/Cascading Failures safety tests and monitors.
+**Goal:** Enable TrinityGuard to run with real OpenAI API, complete with working Math Solver MAS and full Jailbreak/Message Tampering/Cascading Failures safety tests and monitors.
 
 **Architecture:** Three-layer safety framework (Level 1: AG2 MAS wrapper, Level 2: Framework-agnostic intermediary, Level 3: Safety_MAS with risk tests and monitors). LLM config is isolated in separate YAML file for easy management.
 
@@ -18,7 +18,7 @@
 **Step 1: Create the LLM config file**
 
 ```yaml
-# LLM Configuration for MASSafetyGuard
+# LLM Configuration for TrinityGuard
 # This file contains LLM provider settings
 
 provider: "openai"
@@ -55,7 +55,7 @@ git commit -m "config: add LLM configuration file with OpenAI settings"
 **Step 1: Create llm_config.py**
 
 ```python
-"""LLM configuration loader for MASSafetyGuard."""
+"""LLM configuration loader for TrinityGuard."""
 
 import os
 from dataclasses import dataclass, field
@@ -188,7 +188,7 @@ git commit -m "feat: add LLM config loader with AG2 config conversion"
 Replace the entire file with:
 
 ```python
-"""LLM client wrapper for MASSafetyGuard."""
+"""LLM client wrapper for TrinityGuard."""
 
 from typing import Optional, Dict, Any, List
 from abc import ABC, abstractmethod
@@ -1376,7 +1376,7 @@ git commit -m "feat: add Cascading Failures monitor implementation"
 **Step 1: Update risk_tests/__init__.py**
 
 ```python
-"""Risk Test Library for MASSafetyGuard."""
+"""Risk Test Library for TrinityGuard."""
 
 from .base import BaseRiskTest, TestCase, TestResult
 from .l1_jailbreak import JailbreakTest
@@ -1404,7 +1404,7 @@ __all__ = [
 **Step 2: Update monitor_agents/__init__.py**
 
 ```python
-"""Monitor Agent Repository for MASSafetyGuard."""
+"""Monitor Agent Repository for TrinityGuard."""
 
 from .base import BaseMonitorAgent, Alert
 from .jailbreak_monitor import JailbreakMonitor
@@ -1477,7 +1477,7 @@ git commit -m "feat: auto-load risk tests and monitors in Safety_MAS"
 ```python
 #!/usr/bin/env python3
 """
-MASSafetyGuard Real LLM Usage Example
+TrinityGuard Real LLM Usage Example
 
 This example demonstrates end-to-end usage with real OpenAI API calls:
 1. Creating a real AG2 Math Solver MAS
@@ -1502,7 +1502,7 @@ from src.level3_safety import Safety_MAS, MonitorSelectionMode
 
 def main():
     print("=" * 60)
-    print("MASSafetyGuard - Real LLM Integration Example")
+    print("TrinityGuard - Real LLM Integration Example")
     print("=" * 60)
 
     # Step 1: Create real MAS

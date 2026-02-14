@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document describes the design for a comprehensive security testing system for EvoAgent workflows using the MASSafetyGuard framework. The system will automatically test all workflows in the `workflow/` folder against all 20 security risks (L1, L2, L3) and generate detailed reports.
+This document describes the design for a comprehensive security testing system for EvoAgent workflows using the TrinityGuard framework. The system will automatically test all workflows in the `workflow/` folder against all 20 security risks (L1, L2, L3) and generate detailed reports.
 
 ## Requirements
 
@@ -481,7 +481,7 @@ tests/evoagent_bench/
 
 ## Integration Points
 
-The system integrates with existing MASSafetyGuard components:
+The system integrates with existing TrinityGuard components:
 
 1. **evoagentx_adapter**: Uses `create_ag2_mas_from_evoagentx()` to parse workflows
 2. **Safety_MAS**: Uses existing safety wrapper for testing and monitoring
@@ -518,7 +518,7 @@ The system integrates with existing MASSafetyGuard components:
 
 ## References
 
-- MASSafetyGuard Architecture: `docs/SRC_ARCHITECTURE_ANALYSIS.md`
+- TrinityGuard Architecture: `docs/SRC_ARCHITECTURE_ANALYSIS.md`
 - Risk Definitions: `MAS风险层级说明.md`
 - EvoAgentX Adapter: `src/level1_framework/evoagentx_adapter.py`
 - Safety_MAS: `src/level3_safety/safety_mas.py`

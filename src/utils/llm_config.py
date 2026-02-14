@@ -1,4 +1,4 @@
-"""LLM configuration loader for MASSafetyGuard."""
+"""LLM configuration loader for TrinityGuard."""
 
 import os
 import warnings

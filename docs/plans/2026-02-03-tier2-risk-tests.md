@@ -51,7 +51,7 @@
 
 **Step 2: 验证导入成功**
 
-Run: `cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/MASSafetyGuard && python -c "from src.level3_safety.risk_tests.l2_base import L2AgentWrapperTest; print('OK')"`
+Run: `cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/TrinityGuard && python -c "from src.level3_safety.risk_tests.l2_base import L2AgentWrapperTest; print('OK')"`
 
 **Step 3: Commit**
 
@@ -75,7 +75,7 @@ git commit -m "feat(l2): add L2AgentWrapperTest base class"
 
 **Step 2: 验证导入成功**
 
-Run: `cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/MASSafetyGuard && python -c "from src.level3_safety.risk_tests.l2_malicious_propagation.test import MaliciousPropagationTest; print('OK')"`
+Run: `cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/TrinityGuard && python -c "from src.level3_safety.risk_tests.l2_malicious_propagation.test import MaliciousPropagationTest; print('OK')"`
 
 **Step 3: Commit**
 
@@ -99,7 +99,7 @@ git commit -m "refactor(l2.1): rewrite MaliciousPropagationTest with Agent Wrapp
 
 **Step 2: 验证导入成功**
 
-Run: `cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/MASSafetyGuard && python -c "from src.level3_safety.risk_tests.l2_misinformation_amplify.test import MisinformationAmplifyTest; print('OK')"`
+Run: `cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/TrinityGuard && python -c "from src.level3_safety.risk_tests.l2_misinformation_amplify.test import MisinformationAmplifyTest; print('OK')"`
 
 **Step 3: Commit**
 
@@ -123,7 +123,7 @@ git commit -m "refactor(l2.2): rewrite MisinformationAmplifyTest with Agent Wrap
 
 **Step 2: 验证导入成功**
 
-Run: `cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/MASSafetyGuard && python -c "from src.level3_safety.risk_tests.l2_insecure_output.test import InsecureOutputTest; print('OK')"`
+Run: `cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/TrinityGuard && python -c "from src.level3_safety.risk_tests.l2_insecure_output.test import InsecureOutputTest; print('OK')"`
 
 **Step 3: Commit**
 
@@ -147,7 +147,7 @@ git commit -m "refactor(l2.3): rewrite InsecureOutputTest with Agent Wrapper"
 
 **Step 2: 验证导入成功**
 
-Run: `cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/MASSafetyGuard && python -c "from src.level3_safety.risk_tests.l2_goal_drift.test import GoalDriftTest; print('OK')"`
+Run: `cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/TrinityGuard && python -c "from src.level3_safety.risk_tests.l2_goal_drift.test import GoalDriftTest; print('OK')"`
 
 **Step 3: Commit**
 
@@ -171,7 +171,7 @@ git commit -m "refactor(l2.4): rewrite GoalDriftTest with Task Generation method
 
 **Step 2: 验证导入成功**
 
-Run: `cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/MASSafetyGuard && python -c "from src.level3_safety.risk_tests.l2_message_tampering.test import MessageTamperingTest; print('OK')"`
+Run: `cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/TrinityGuard && python -c "from src.level3_safety.risk_tests.l2_message_tampering.test import MessageTamperingTest; print('OK')"`
 
 **Step 3: Commit**
 
@@ -195,7 +195,7 @@ git commit -m "refactor(l2.5): rewrite MessageTamperingTest with Agent Wrapper"
 
 **Step 2: 验证导入成功**
 
-Run: `cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/MASSafetyGuard && python -c "from src.level3_safety.risk_tests.l2_identity_spoofing.test import IdentitySpoofingTest; print('OK')"`
+Run: `cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/TrinityGuard && python -c "from src.level3_safety.risk_tests.l2_identity_spoofing.test import IdentitySpoofingTest; print('OK')"`
 
 **Step 3: Commit**
 
@@ -217,7 +217,7 @@ git commit -m "refactor(l2.6): rewrite IdentitySpoofingTest with Agent Wrapper"
 
 **Step 2: 验证导入成功**
 
-Run: `cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/MASSafetyGuard && python -c "from src.level3_safety.risk_tests import MaliciousPropagationTest, MisinformationAmplifyTest, InsecureOutputTest, GoalDriftTest, MessageTamperingTest, IdentitySpoofingTest; print('All L2 tests imported OK')"`
+Run: `cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/TrinityGuard && python -c "from src.level3_safety.risk_tests import MaliciousPropagationTest, MisinformationAmplifyTest, InsecureOutputTest, GoalDriftTest, MessageTamperingTest, IdentitySpoofingTest; print('All L2 tests imported OK')"`
 
 **Step 3: Commit**
 
@@ -239,7 +239,7 @@ git commit -m "chore: update L2 risk tests exports"
 
 **Step 2: 验证脚本运行**
 
-Run: `cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/MASSafetyGuard && python tests/level3_safety/test_all_l2_risks.py --info`
+Run: `cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/TrinityGuard && python tests/level3_safety/test_all_l2_risks.py --info`
 
 **Step 3: Commit**
 

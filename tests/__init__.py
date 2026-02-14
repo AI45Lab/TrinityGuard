@@ -1,7 +1,7 @@
 """
-MASSafetyGuard Integration Tests
+TrinityGuard Integration Tests
 
-This package contains integration tests for MASSafetyGuard components.
+This package contains integration tests for TrinityGuard components.
 All tests use REAL LLM API calls - no mock data.
 
 Test Files:

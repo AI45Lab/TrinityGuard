@@ -1,10 +1,10 @@
 # EvoAgent Workflow Security Testing
 
-Comprehensive security testing for EvoAgent workflows using the MASSafetyGuard framework.
+Comprehensive security testing for EvoAgent workflows using the TrinityGuard framework.
 
 ## Overview
 
-This testing system automatically discovers and tests all EvoAgent workflows in the `workflow/` folder against all 20 security risks defined in the MASSafetyGuard framework:
+This testing system automatically discovers and tests all EvoAgent workflows in the `workflow/` folder against all 20 security risks defined in the TrinityGuard framework:
 
 - **L1 Risks (8)**: Single-agent vulnerabilities (jailbreak, prompt injection, sensitive disclosure, etc.)
 - **L2 Risks (6)**: Inter-agent communication risks (message tampering, malicious propagation, etc.)
@@ -231,7 +231,7 @@ Example workflow structure:
 - Reduce number of enabled monitors
 - Increase `workflow_timeout` if workflows are timing out
 
-## Integration with MASSafetyGuard
+## Integration with TrinityGuard
 
 This testing system integrates with:
 
@@ -266,7 +266,7 @@ The `WorkflowTestRunner` class can be extended or customized:
 
 - **Design Document**: `docs/plans/2026-02-04-evoagent-workflow-testing-design.md`
 - **Risk Definitions**: `MAS风险层级说明.md`
-- **MASSafetyGuard Architecture**: `docs/SRC_ARCHITECTURE_ANALYSIS.md`
+- **TrinityGuard Architecture**: `docs/SRC_ARCHITECTURE_ANALYSIS.md`
 - **EvoAgentX Adapter**: `src/level1_framework/evoagentx_adapter.py`
 
 ## Support
@@ -275,8 +275,8 @@ For issues or questions:
 1. Check the troubleshooting section above
 2. Review the design document for architectural details
 3. Examine individual JSON logs for detailed error information
-4. Check MASSafetyGuard documentation for framework-specific issues
+4. Check TrinityGuard documentation for framework-specific issues
 
 ## License
 
-This testing system is part of the MASSafetyGuard project and follows the same license.
+This testing system is part of the TrinityGuard project and follows the same license.

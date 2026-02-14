@@ -521,7 +521,7 @@ def main():
         print("- These interfaces enable security testing and monitoring at Level 3")
         print()
         print("Next Steps:")
-        print("- Proceed to Level 3 (MASSafetyGuard) for security monitoring")
+        print("- Proceed to Level 3 (TrinityGuard) for security monitoring")
         print("- Integrate with attack detection and prevention mechanisms")
         print("- Deploy in production with comprehensive safety guarantees")
         print()

@@ -1,4 +1,4 @@
-"""Structured logging for MASSafetyGuard."""
+"""Structured logging for TrinityGuard."""
 
 import logging
 import json
@@ -173,7 +173,7 @@ class StructuredLogger:
 _logger: Optional[StructuredLogger] = None
 
 
-def get_logger(name: str = "massafetyguard") -> StructuredLogger:
+def get_logger(name: str = "trinityguard") -> StructuredLogger:
     """Get logger instance."""
     global _logger
     if _logger is None:

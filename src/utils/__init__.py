@@ -1,7 +1,7 @@
-"""Utility modules for MASSafetyGuard."""
+"""Utility modules for TrinityGuard."""
 
 from .exceptions import (
-    MASSafetyError,
+    TrinitySafetyError,
     MASFrameworkError,
     IntermediaryError,
     RiskTestError,
@@ -10,7 +10,7 @@ from .exceptions import (
     LLMError,
 )
 from .config import (
-    MASSafetyConfig,
+    TrinitySafetyConfig,
     LLMConfig,
     LoggingConfig,
     TestingConfig,
@@ -48,7 +48,7 @@ from .logging_config import (
 
 __all__ = [
     # Exceptions
-    "MASSafetyError",
+    "TrinitySafetyError",
     "MASFrameworkError",
     "IntermediaryError",
     "RiskTestError",
@@ -56,7 +56,7 @@ __all__ = [
     "ConfigurationError",
     "LLMError",
     # Config
-    "MASSafetyConfig",
+    "TrinitySafetyConfig",
     "LLMConfig",
     "LoggingConfig",
     "TestingConfig",

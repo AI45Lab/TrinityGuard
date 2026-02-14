@@ -14,7 +14,7 @@ Tiar 1 层实现了 **8 种单智能体原子风险测试**，使用三种不同
 
 ```bash
 # 进入项目目录
-cd MASSafetyGuard
+cd TrinityGuard
 
 # 安装依赖
 pip install -e .

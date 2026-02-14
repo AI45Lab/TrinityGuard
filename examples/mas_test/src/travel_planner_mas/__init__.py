@@ -1,7 +1,7 @@
 """Travel Planner MAS Setup for Safety Testing
 
 This package provides a travel planner MAS using standard AG2 GroupChat
-for compatibility with MASSafetyGuard framework.
+for compatibility with TrinityGuard framework.
 
 Uses standard AssistantAgent + GroupChat approach (not SwarmAgent)
 for better framework compatibility.

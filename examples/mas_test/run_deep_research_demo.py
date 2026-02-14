@@ -26,7 +26,7 @@ from pathlib import Path
 
 # Path setup - PROJECT_ROOT first, then SCRIPT_DIR for local src/
 SCRIPT_DIR = Path(__file__).parent.resolve()
-PROJECT_ROOT = SCRIPT_DIR.parent.parent  # MASSafetyGuard root
+PROJECT_ROOT = SCRIPT_DIR.parent.parent  # TrinityGuard root
 project_root_str = str(PROJECT_ROOT)
 # Ensure PROJECT_ROOT is at the front of sys.path
 if project_root_str not in sys.path:

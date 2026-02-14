@@ -1,9 +1,9 @@
 # Level 2 Intermediary 层深度分析报告
 
 **分析日期**: 2026-01-28
-**分析范围**: MASSafetyGuard 项目 - level2_intermediary 层
+**分析范围**: TrinityGuard 项目 - level2_intermediary 层
 **文档版本**: 1.0
-**分析者**: MASSafetyGuard Team
+**分析者**: TrinityGuard Team
 
 ---
 
@@ -26,7 +26,7 @@
 
 ### 1.1 定位
 
-Level2 Intermediary 层是 MASSafetyGuard 的**中间适配层**，连接底层的 MAS 框架（Level1）和上层的安全测试与监控系统（Level3）。它提供了两大核心能力：
+Level2 Intermediary 层是 TrinityGuard 的**中间适配层**，连接底层的 MAS 框架（Level1）和上层的安全测试与监控系统（Level3）。它提供了两大核心能力：
 
 1. **预部署测试脚手架**: 7 个 API 用于在工作流执行前后注入测试用例
 2. **工作流执行管理**: 4 种执行模式支持消息拦截和实时监控

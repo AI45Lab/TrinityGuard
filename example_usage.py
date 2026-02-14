@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Real Usage Example: MASSafetyGuard Full Demonstration
+Real Usage Example: TrinityGuard Full Demonstration
 
 This script demonstrates the complete workflow:
 1. Create a Multi-Agent System (Math Solver)
@@ -29,7 +29,7 @@ from src.level3_safety import Safety_MAS, MonitorSelectionMode
 
 def main():
     print("=" * 60)
-    print("MASSafetyGuard - Real Usage Example")
+    print("TrinityGuard - Real Usage Example")
     print("=" * 60)
     print()
 

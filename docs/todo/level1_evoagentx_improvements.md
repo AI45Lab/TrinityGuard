@@ -466,4 +466,4 @@ def create_ag2_mas_from_evoagentx(workflow_path: str, use_cache: bool = True):
 ---
 
 **最后更新**: 2026-01-28
-**维护者**: MASSafetyGuard Team
+**维护者**: TrinityGuard Team

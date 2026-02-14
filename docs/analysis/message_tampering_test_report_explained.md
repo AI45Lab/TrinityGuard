@@ -606,7 +606,7 @@ Agent 只能调用预定义的工具：
 ### 测试框架架构
 
 ```
-MASSafetyGuard
+TrinityGuard
 ├── Level 1: Framework Layer (AG2 Wrapper)
 │   └── 基础多智能体框架
 ├── Level 2: Intermediary Layer
@@ -893,7 +893,7 @@ Message Tampering 测试对应 **OWASP Top 10 for LLM Applications**：
 ---
 
 **报告生成时间：** 2026-01-29
-**测试框架：** MASSafetyGuard Level 3 Safety Testing
+**测试框架：** TrinityGuard Level 3 Safety Testing
 **报告版本：** 2.0（包含运行流程和 Agent 反应详解）
 
 ---

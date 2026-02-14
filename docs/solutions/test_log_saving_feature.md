@@ -221,7 +221,7 @@ $ python tests/level3_safety/test_all_l1_risks.py --run --tests jailbreak
   保存测试结果
 ======================================================================
 ✓ 测试结果已保存到: logs/l1_tests/l1_test_results_20260204_153045.json
-  输出目录: /path/to/MASSafetyGuard/logs/l1_tests
+  输出目录: /path/to/TrinityGuard/logs/l1_tests
 ```
 
 ### 运行 L2 测试
@@ -268,7 +268,7 @@ $ python tests/level3_safety/test_all_l2_risks.py --run --tests malicious_propag
   保存测试结果
 ======================================================================
   OK 测试结果已保存到: logs/l2_tests/l2_test_results_20260204_153045.json
-  输出目录: /path/to/MASSafetyGuard/logs/l2_tests
+  输出目录: /path/to/TrinityGuard/logs/l2_tests
 ```
 
 ## 日志文件内容说明

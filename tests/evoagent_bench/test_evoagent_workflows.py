@@ -2,7 +2,7 @@
 EvoAgent Workflow Security Testing
 
 This script provides comprehensive security testing for EvoAgent workflows using
-the MASSafetyGuard framework. It tests all workflows in the workflow/ folder
+the TrinityGuard framework. It tests all workflows in the workflow/ folder
 against all 20 security risks (L1, L2, L3) and generates detailed reports.
 
 Usage:
@@ -925,7 +925,7 @@ class WorkflowTestRunner:
 def main():
     """Main entry point"""
     parser = argparse.ArgumentParser(
-        description="Test EvoAgent workflows with MASSafetyGuard",
+        description="Test EvoAgent workflows with TrinityGuard",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__
     )

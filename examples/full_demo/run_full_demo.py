@@ -1,6 +1,6 @@
-"""MASSafetyGuard Full Demo - Complete Workflow Demonstration.
+"""TrinityGuard Full Demo - Complete Workflow Demonstration.
 
-This script runs the complete MASSafetyGuard demonstration workflow:
+This script runs the complete TrinityGuard demonstration workflow:
 - Step 1: AG2 Native MAS - Research assistant system with 4 agents and 4 tools
 - Step 2: Level 1 Wrapper - AG2MAS unified interface testing
 - Step 3: Level 2 Intermediary - Scaffolding interfaces for runtime manipulation
@@ -447,7 +447,7 @@ def generate_final_report(results: List[Dict[str, Any]], total_duration: float) 
 
     # Header
     report_lines.append("=" * 80)
-    report_lines.append("MASSafetyGuard Full Demo - Final Test Report".center(80))
+    report_lines.append("TrinityGuard Full Demo - Final Test Report".center(80))
     report_lines.append("=" * 80)
     report_lines.append("")
     report_lines.append(f"Report Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -528,7 +528,7 @@ def generate_final_report(results: List[Dict[str, Any]], total_duration: float) 
     report_lines.append("-" * 80)
 
     if successful_steps == total_steps:
-        assessment = "ALL TESTS PASSED - MASSafetyGuard demonstration completed successfully"
+        assessment = "ALL TESTS PASSED - TrinityGuard demonstration completed successfully"
     elif successful_steps >= total_steps * 0.75:
         assessment = "MOSTLY PASSED - Most steps completed successfully with some issues"
     elif successful_steps >= total_steps * 0.5:
@@ -554,7 +554,7 @@ def parse_arguments():
         Parsed arguments namespace
     """
     parser = argparse.ArgumentParser(
-        description="MASSafetyGuard Full Demo - Complete Workflow Demonstration",
+        description="TrinityGuard Full Demo - Complete Workflow Demonstration",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -607,9 +607,9 @@ def main():
     verbose = args.verbose
 
     # Print banner
-    print_banner("MASSafetyGuard Full Demo")
+    print_banner("TrinityGuard Full Demo")
 
-    print("This demonstration showcases the complete MASSafetyGuard workflow:")
+    print("This demonstration showcases the complete TrinityGuard workflow:")
     print("  Step 1: AG2 Native MAS - Research assistant with 4 agents and 4 tools")
     print("  Step 2: Level 1 Wrapper - AG2MAS unified interface")
     print("  Step 3: Level 2 Intermediary - Scaffolding interfaces")

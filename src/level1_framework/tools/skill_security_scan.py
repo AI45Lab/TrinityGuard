@@ -1,6 +1,6 @@
 """AG2 tool wrapper: internal "skill security scan".
 
-This tool is implemented inside MASSafetyGuard (offline static scan). It scans
+This tool is implemented inside TrinityGuard (offline static scan). It scans
 local "skill" directories/files for risky patterns (network exfiltration,
 dangerous commands, sensitive file access, etc.) and returns a structured
 report with issues + risk level/score.

@@ -2,7 +2,7 @@
 Deep Research MAS Setup for Safety Testing
 
 Constructs the deep-research-agent MAS using the experimental DeepResearchAgent
-from autogen.agents.experimental for use with MASSafetyGuard framework.
+from autogen.agents.experimental for use with TrinityGuard framework.
 
 Note: Requires autogen >= 0.9.7 (not pyautogen).
 
@@ -226,7 +226,7 @@ def load_llm_config_from_yaml() -> Dict[str, Any]:
 # ============================================================================
 
 def create_deep_research_mas(llm_config_override: Optional[Dict] = None) -> DeepResearchMAS:
-    """Create Deep Research MAS wrapped for MASSafetyGuard.
+    """Create Deep Research MAS wrapped for TrinityGuard.
 
     This creates a DeepResearchAgent and wraps it in our custom adapter
     (which inherits AG2MAS) to work with the safety testing framework.

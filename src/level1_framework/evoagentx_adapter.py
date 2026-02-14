@@ -1,4 +1,4 @@
-"""EvoAgentX workflow adapter for MASSafetyGuard.
+"""EvoAgentX workflow adapter for TrinityGuard.
 
 This module provides functionality to convert EvoAgentX workflow.json files
 into AG2MAS instances that conform to the BaseMAS interface.
@@ -270,7 +270,7 @@ class WorkflowToAG2Converter:
         return transitions
 
     def _get_default_llm_config(self) -> Dict:
-        """Get default LLM configuration from MASSafetyGuard utils.
+        """Get default LLM configuration from TrinityGuard utils.
 
         Returns:
             LLM config dict for AG2
@@ -297,7 +297,7 @@ def create_ag2_mas_from_evoagentx(
     """Create AG2MAS instance from EvoAgentX workflow.json file.
 
     This is the main entry point for converting EvoAgentX workflows to
-    MASSafetyGuard's BaseMAS interface.
+    TrinityGuard's BaseMAS interface.
 
     Args:
         workflow_path: Path to workflow.json file

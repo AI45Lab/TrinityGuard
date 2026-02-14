@@ -14,7 +14,7 @@ from ..level2_intermediary.structured_logging import AgentStepLog
 from .risk_tests.base import BaseRiskTest, TestResult
 from .monitor_agents.base import BaseMonitorAgent, Alert
 from .monitoring import GlobalMonitorAgent, apply_monitor_decision
-from ..utils.exceptions import MASSafetyError
+from ..utils.exceptions import TrinitySafetyError
 from ..utils.logging_config import get_logger
 from ..utils.ag2_io_filter import suppress_ag2_tool_output
 
@@ -61,13 +61,13 @@ class Safety_MAS:
             Appropriate MASIntermediary instance
 
         Raises:
-            MASSafetyError: If MAS type is not supported
+            TrinitySafetyError: If MAS type is not supported
         """
         if isinstance(mas, AG2MAS):
             return AG2Intermediary(mas)
         # Future: elif isinstance(mas, LangGraphMAS): ...
         else:
-            raise MASSafetyError(f"Unsupported MAS type: {type(mas)}")
+            raise TrinitySafetyError(f"Unsupported MAS type: {type(mas)}")
 
     def _load_risk_tests(self):
         """Discover and load all risk test plugins."""

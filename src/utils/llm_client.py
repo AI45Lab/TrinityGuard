@@ -1,4 +1,4 @@
-"""LLM client wrapper for MASSafetyGuard."""
+"""LLM client wrapper for TrinityGuard."""
 
 import time
 from typing import Optional, Union

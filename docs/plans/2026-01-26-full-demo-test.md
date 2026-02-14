@@ -2,11 +2,11 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**目标:** 创建一个完整的演示测试，验证MASSafetyGuard框架从Level 1到Level 3的所有功能
+**目标:** 创建一个完整的演示测试，验证TrinityGuard框架从Level 1到Level 3的所有功能
 
 **架构:** 创建一个带工具调用的AG2 MAS（研究助手系统），然后逐层封装为Level 1、Level 2、Level 3，测试各层接口和功能
 
-**技术栈:** AG2/AutoGen, Python, MASSafetyGuard框架
+**技术栈:** AG2/AutoGen, Python, TrinityGuard框架
 
 ---
 

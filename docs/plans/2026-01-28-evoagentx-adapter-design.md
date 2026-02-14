@@ -1,16 +1,16 @@
 # EvoAgentX Adapter Design
 
 **Date**: 2026-01-28
-**Author**: MASSafetyGuard Team
+**Author**: TrinityGuard Team
 **Status**: Approved for Implementation
 
 ## Overview
 
-This design adds support for EvoAgentX workflow.json files to MASSafetyGuard's level1_framework layer, allowing workflows from EvoAgentX to be converted and executed through the existing AG2MAS infrastructure.
+This design adds support for EvoAgentX workflow.json files to TrinityGuard's level1_framework layer, allowing workflows from EvoAgentX to be converted and executed through the existing AG2MAS infrastructure.
 
 ## Goals
 
-1. Enable MASSafetyGuard to consume EvoAgentX workflow.json files
+1. Enable TrinityGuard to consume EvoAgentX workflow.json files
 2. Convert EvoAgentX workflows to AG2MAS instances (BaseMAS interface)
 3. Maintain clean separation of concerns with testable components
 4. Provide easy extension points for future features (DocAgent, complex transitions)
@@ -240,7 +240,7 @@ Converted to AG2 speaker_transitions:
 
 Execution flow: `pdf_text_extraction_agent → content_analysis_agent → summary_generation_agent`
 
-## Integration with MASSafetyGuard
+## Integration with TrinityGuard
 
 ### Module Exports
 
@@ -349,7 +349,7 @@ To support conditional transitions:
 1. **Separation of Concerns**: Parser and converter are independent, testable units
 2. **Minimal Code**: ~250 lines total, reuses existing AG2MAS infrastructure
 3. **Easy Extension**: Clear extension points for DocAgent and complex transitions
-4. **Consistent Style**: Matches existing MASSafetyGuard architecture patterns
+4. **Consistent Style**: Matches existing TrinityGuard architecture patterns
 5. **Type Safety**: Dataclasses provide clear contracts and IDE support
 
 ## Testing Strategy
@@ -367,7 +367,7 @@ To support conditional transitions:
 
 ## Dependencies
 
-**New Dependencies**: None (uses existing MASSafetyGuard dependencies)
+**New Dependencies**: None (uses existing TrinityGuard dependencies)
 
 **Existing Dependencies**:
 - `autogen` / `pyautogen`: For ConversableAgent, GroupChat, GroupChatManager
@@ -395,4 +395,4 @@ To support conditional transitions:
 
 ## Conclusion
 
-This design provides a clean, maintainable way to integrate EvoAgentX workflows into MASSafetyGuard. By using a layered conversion approach and reusing existing AG2MAS infrastructure, we achieve the goal with minimal code while maintaining extensibility for future enhancements like DocAgent support.
+This design provides a clean, maintainable way to integrate EvoAgentX workflows into TrinityGuard. By using a layered conversion approach and reusing existing AG2MAS infrastructure, we achieve the goal with minimal code while maintaining extensibility for future enhancements like DocAgent support.

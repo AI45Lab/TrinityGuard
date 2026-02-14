@@ -63,7 +63,7 @@ The research assistant system consists of 4 specialized agents working together 
 Run all steps in sequence with a comprehensive final report:
 
 ```bash
-cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/MASSafetyGuard/examples/full_demo
+cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/TrinityGuard/examples/full_demo
 python run_full_demo.py
 ```
 
@@ -164,7 +164,7 @@ All tools return simulated data for demonstration purposes:
 
 ## Demo Steps Overview
 
-This demo showcases the complete MASSafetyGuard workflow:
+This demo showcases the complete TrinityGuard workflow:
 
 ### Step 1: AG2 Native MAS
 - Creates a research assistant system with 4 agents and 4 tools

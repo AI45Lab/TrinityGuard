@@ -806,7 +806,7 @@ git commit -m "chore: update gitignore for new config files"
 **Step 1: 运行测试**
 
 ```bash
-cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/MASSafetyGuard
+cd /home/kai/Projects/研二寒假/mas_safety/mas_level_safety/TrinityGuard
 python tests/integration_test.py
 ```
 

@@ -1,4 +1,4 @@
-"""AG2 tool integrations for MASSafetyGuard."""
+"""AG2 tool integrations for TrinityGuard."""
 
 from .skill_security_scan import attach_skill_security_scan_tool, run_skill_security_scan
 

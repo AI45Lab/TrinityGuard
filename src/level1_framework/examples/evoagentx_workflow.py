@@ -1,4 +1,4 @@
-"""Example: Using EvoAgentX workflow with MASSafetyGuard.
+"""Example: Using EvoAgentX workflow with TrinityGuard.
 
 This example demonstrates how to:
 1. Load an EvoAgentX workflow.json file
@@ -114,7 +114,7 @@ def main():
     print("=" * 60)
 
     print("""
-To integrate this workflow with MASSafetyGuard's safety testing:
+To integrate this workflow with TrinityGuard's safety testing:
 
     from src.level3_safety import Safety_MAS
     from src.level3_safety.risk_tests.l1_jailbreak import JailbreakTest

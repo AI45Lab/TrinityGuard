@@ -1,4 +1,4 @@
-# MASSafetyGuard
+# TrinityGuard
 
 **Multi-Agent System Safety Framework** for pre-deployment testing and runtime monitoring.
 
@@ -7,7 +7,7 @@
 
 ## Overview
 
-MASSafetyGuard provides comprehensive safety testing and monitoring for multi-agent systems (MAS). It helps identify and mitigate **20 types of security risks** across three levels:
+TrinityGuard provides comprehensive safety testing and monitoring for multi-agent systems (MAS). It helps identify and mitigate **20 types of security risks** across three levels:
 
 - **L1: Single-Agent Risks** (8 types) - Jailbreak, Prompt Injection, Sensitive Data Disclosure, Excessive Agency, Code Execution, Hallucination, Memory Poisoning, Tool Misuse
 - **L2: Inter-Agent Communication Risks** (6 types) - Message Tampering, Malicious Propagation, Misinformation Amplification, Insecure Output, Goal Drift, Identity Spoofing
@@ -27,8 +27,8 @@ MASSafetyGuard provides comprehensive safety testing and monitoring for multi-ag
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/MASSafetyGuard.git
-cd MASSafetyGuard
+git clone https://github.com/yourusername/TrinityGuard.git
+cd TrinityGuard
 
 # Install in development mode
 pip install -e .
@@ -42,8 +42,8 @@ export MASSAFETY_LLM_API_KEY=your_openai_or_anthropic_key
 ### Basic Usage
 
 ```python
-from massafetyguard import Safety_MAS
-from massafetyguard.level1_framework import create_ag2_mas_from_config
+from trinityguard import Safety_MAS
+from trinityguard.level1_framework import create_ag2_mas_from_config
 
 # 1. Create your MAS (AG2 example)
 mas_config = {
@@ -67,8 +67,8 @@ mas = create_ag2_mas_from_config(mas_config)
 safety_mas = Safety_MAS(mas=mas)
 
 # 3. Register risk tests and monitors
-from massafetyguard.level3_safety.risk_tests.l1_jailbreak import JailbreakTest
-from massafetyguard.level3_safety.monitor_agents.jailbreak_monitor import JailbreakMonitor
+from trinityguard.level3_safety.risk_tests.l1_jailbreak import JailbreakTest
+from trinityguard.level3_safety.monitor_agents.jailbreak_monitor import JailbreakMonitor
 
 safety_mas.register_risk_test("jailbreak", JailbreakTest())
 safety_mas.register_monitor_agent("jailbreak", JailbreakMonitor())
@@ -78,7 +78,7 @@ results = safety_mas.run_manual_safety_tests(["jailbreak"])
 print(safety_mas.get_test_report())
 
 # 5. Start runtime monitoring
-from massafetyguard import MonitorSelectionMode
+from trinityguard import MonitorSelectionMode
 safety_mas.start_runtime_monitoring(
     mode=MonitorSelectionMode.MANUAL,
     selected_monitors=["jailbreak"]
@@ -99,7 +99,7 @@ Progressive monitoring uses a global coordinator to dynamically enable or disabl
 This mode uses an LLM (Global Monitor) to analyze a sliding window of events and decide which specific monitors should be active.
 
 ```python
-from massafetyguard import MonitorSelectionMode
+from trinityguard import MonitorSelectionMode
 
 safety_mas.start_runtime_monitoring(
     mode=MonitorSelectionMode.PROGRESSIVE,
@@ -170,7 +170,7 @@ python examples/basic_usage.py
 
 ## Architecture
 
-MASSafetyGuard uses a 3-layer architecture with a unified Judge system:
+TrinityGuard uses a 3-layer architecture with a unified Judge system:
 
 ```
 ┌─────────────────────────────────────────┐
@@ -298,7 +298,7 @@ monitoring:
 Load it in your code:
 
 ```python
-from massafetyguard import load_config
+from trinityguard import load_config
 load_config("config.yaml")
 ```
 
@@ -317,7 +317,7 @@ Both support `api_key` or `api_key_env` for credentials.
 ## Creating Custom Risk Tests
 
 ```python
-from massafetyguard.level3_safety.risk_tests.base import BaseRiskTest, TestCase
+from trinityguard.level3_safety.risk_tests.base import BaseRiskTest, TestCase
 
 class MyCustomTest(BaseRiskTest):
     def get_risk_info(self):
@@ -355,7 +355,7 @@ safety_mas.register_risk_test("my_custom_test", MyCustomTest())
 ## Creating Custom Monitors
 
 ```python
-from massafetyguard.level3_safety.monitor_agents.base import BaseMonitorAgent, Alert
+from trinityguard.level3_safety.monitor_agents.base import BaseMonitorAgent, Alert
 
 class MyCustomMonitor(BaseMonitorAgent):
     def get_monitor_info(self):
@@ -397,7 +397,7 @@ safety_mas.register_monitor_agent("my_custom_monitor", MyCustomMonitor())
 ## Project Structure
 
 ```
-MASSafetyGuard/
+TrinityGuard/
 ├── src/
 │   ├── level1_framework/      # MAS framework wrappers (AG2)
 │   ├── level2_intermediary/   # Framework-agnostic interface
@@ -459,14 +459,14 @@ MIT License - see LICENSE file for details
 
 ## Citation
 
-If you use MASSafetyGuard in your research, please cite:
+If you use TrinityGuard in your research, please cite:
 
 ```bibtex
-@software{massafetyguard2026,
-  title={MASSafetyGuard: A Safety Framework for Multi-Agent Systems},
+@software{trinityguard2026,
+  title={TrinityGuard: A Safety Framework for Multi-Agent Systems},
   author={Your Name},
   year={2026},
-  url={https://github.com/yourusername/MASSafetyGuard}
+  url={https://github.com/yourusername/TrinityGuard}
 }
 ```
 
@@ -478,7 +478,7 @@ If you use MASSafetyGuard in your research, please cite:
 
 ## Contact
 
-- Issues: https://github.com/yourusername/MASSafetyGuard/issues
+- Issues: https://github.com/yourusername/TrinityGuard/issues
 - Email: your.email@example.com
 
 ---

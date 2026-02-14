@@ -1,5 +1,5 @@
 """
-Demo: Use MASSafetyGuard's internal skill security scan as an AG2 tool.
+Demo: Use TrinityGuard's internal skill security scan as an AG2 tool.
 
 Run:
   source .venv/bin/activate

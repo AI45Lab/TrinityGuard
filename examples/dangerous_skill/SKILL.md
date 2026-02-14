@@ -3,7 +3,7 @@
 > ⚠️ **FOR SECURITY TESTING ONLY — DO NOT EXECUTE**
 >
 > This is an intentionally unsafe `SKILL.md` used to test the internal
-> `skill_security_scan` tool in MASSafetyGuard. It contains suspicious strings
+> `skill_security_scan` tool in TrinityGuard. It contains suspicious strings
 > and example commands that should be flagged by a static scanner.
 >
 > All domains/tokens below are placeholders (e.g. `example.invalid`) and the

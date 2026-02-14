@@ -2,7 +2,7 @@
 Game Design Agent Team MAS Setup for Safety Testing
 
 Constructs the game-design-agent-team MAS (from build-with-ag2/game-design-agent-team)
-as an AG2MAS instance compatible with the MASSafetyGuard framework.
+as an AG2MAS instance compatible with the TrinityGuard framework.
 
 Original Version: Streamlit web app with SwarmAgent + initiate_swarm_chat
 Converted To: Standard AssistantAgent + GroupChat for AG2MAS compatibility
@@ -147,7 +147,7 @@ def create_game_design_mas(llm_config_override: Dict = None) -> AG2MAS:
     """Create the Game Design Agent Team MAS wrapped as AG2MAS.
 
     Converts the original SwarmAgent-based team to standard AssistantAgent +
-    GroupChat for compatibility with the MASSafetyGuard framework.
+    GroupChat for compatibility with the TrinityGuard framework.
 
     Args:
         llm_config_override: Optional LLM config dict to override defaults

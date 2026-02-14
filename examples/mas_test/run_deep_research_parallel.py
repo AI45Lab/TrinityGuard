@@ -15,7 +15,7 @@ from pathlib import Path
 
 # Path setup
 SCRIPT_DIR = Path(__file__).parent.resolve()
-PROJECT_ROOT = SCRIPT_DIR.parent.parent  # MASSafetyGuard root
+PROJECT_ROOT = SCRIPT_DIR.parent.parent  # TrinityGuard root
 
 # Add SCRIPT_DIR first for local imports
 if str(SCRIPT_DIR) not in sys.path:

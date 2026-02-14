@@ -42,7 +42,7 @@ from datetime import datetime, timezone
 # =============================================================================
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
-PROJECT_ROOT = SCRIPT_DIR.parent.parent  # MASSafetyGuard root
+PROJECT_ROOT = SCRIPT_DIR.parent.parent  # TrinityGuard root
 # SCRIPT_DIR must be FIRST so local src/ (game_design_mas, financial_mas) is found.
 # The setup.py files internally handle importing from PROJECT_ROOT's src/ package.
 if str(SCRIPT_DIR) not in sys.path:
@@ -269,7 +269,7 @@ def print_banner(mas_name: str):
     print()
     print("=" * 70)
     print(f"   {mas_name} Pre-Attack Safety Testing")
-    print("   MASSafetyGuard Framework")
+    print("   TrinityGuard Framework")
     print("=" * 70)
     print()
 

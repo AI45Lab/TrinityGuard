@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Final Integration Test for MASSafetyGuard
+Final Integration Test for TrinityGuard
 
 Tests all components working together with REAL LLM calls.
 No mock data - all tests use actual LLM API responses.
@@ -706,7 +706,7 @@ def test_quick_security_scan():
 
 def main():
     print("=" * 70)
-    print("MASSafetyGuard - Comprehensive Integration Test")
+    print("TrinityGuard - Comprehensive Integration Test")
     print("All tests use REAL LLM API calls - no mock data")
     print("=" * 70)
     print()

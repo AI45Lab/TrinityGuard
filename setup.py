@@ -7,13 +7,13 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
     requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
 
 setup(
-    name="massafetyguard",
+    name="trinityguard",
     version="0.1.0",
-    author="MASSafety Team",
+    author="TrinitySafety Team",
     description="Multi-Agent System Safety Framework",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/MASSafetyGuard",
+    url="https://github.com/xingchengxu/TrinityGuard",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     classifiers=[

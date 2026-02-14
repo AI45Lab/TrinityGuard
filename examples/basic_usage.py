@@ -1,7 +1,7 @@
 """
-MASSafetyGuard Usage Example (AG2 + Real LLM)
+TrinityGuard Usage Example (AG2 + Real LLM)
 
-This example demonstrates how to use the MASSafetyGuard framework with:
+This example demonstrates how to use the TrinityGuard framework with:
 1. A real AG2 multi-agent system
 2. Safety_MAS pre-deployment testing
 3. Runtime monitoring
@@ -168,7 +168,7 @@ def example_message_interception(safety_mas):
 
 
 def main():
-    _print_section("MASSafetyGuard Framework - AG2 Examples")
+    _print_section("TrinityGuard Framework - AG2 Examples")
 
     try:
         safety_mas = example_basic_usage()

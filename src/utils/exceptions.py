@@ -1,36 +1,36 @@
-"""Custom exceptions for MASSafetyGuard."""
+"""Custom exceptions for TrinityGuard."""
 
 
-class MASSafetyError(Exception):
-    """Base exception for MASSafetyGuard."""
+class TrinitySafetyError(Exception):
+    """Base exception for TrinityGuard."""
     pass
 
 
-class MASFrameworkError(MASSafetyError):
+class MASFrameworkError(TrinitySafetyError):
     """Errors from Level 1 MAS framework."""
     pass
 
 
-class IntermediaryError(MASSafetyError):
+class IntermediaryError(TrinitySafetyError):
     """Errors from Level 2 intermediary operations."""
     pass
 
 
-class RiskTestError(MASSafetyError):
+class RiskTestError(TrinitySafetyError):
     """Errors during risk testing."""
     pass
 
 
-class MonitorError(MASSafetyError):
+class MonitorError(TrinitySafetyError):
     """Errors from monitor agents."""
     pass
 
 
-class ConfigurationError(MASSafetyError):
+class ConfigurationError(TrinitySafetyError):
     """Errors in configuration."""
     pass
 
 
-class LLMError(MASSafetyError):
+class LLMError(TrinitySafetyError):
     """Errors from LLM API calls."""
     pass

@@ -29,7 +29,7 @@ if sys.platform == 'win32':
 
 # Path setup - SCRIPT_DIR first for local src/, then PROJECT_ROOT
 SCRIPT_DIR = Path(__file__).parent.resolve()
-PROJECT_ROOT = SCRIPT_DIR.parent.parent  # MASSafetyGuard root
+PROJECT_ROOT = SCRIPT_DIR.parent.parent  # TrinityGuard root
 script_dir_str = str(SCRIPT_DIR)
 project_root_str = str(PROJECT_ROOT)
 # Add SCRIPT_DIR first (for local src.travel_planner_mas)

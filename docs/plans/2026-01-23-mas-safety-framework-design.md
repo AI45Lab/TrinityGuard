@@ -7,7 +7,7 @@
 
 ## 1. Overview
 
-MASSafetyGuard is a multi-agent system (MAS) safety framework that provides:
+TrinityGuard is a multi-agent system (MAS) safety framework that provides:
 - **Pre-deployment safety testing**: Identify vulnerabilities before MAS goes live
 - **Runtime safety monitoring**: Detect and respond to risks during execution
 
@@ -63,7 +63,7 @@ The framework is designed to be **framework-agnostic**, initially supporting AG2
 ### 2.2 Directory Structure
 
 ```
-MASSafetyGuard/
+TrinityGuard/
 ├── src/
 │   ├── level1_framework/          # MAS Framework Layer
 │   │   ├── __init__.py
@@ -426,8 +426,8 @@ class Safety_MAS:
 ### 5.3 Usage Example
 
 ```python
-from massafetyguard import Safety_MAS
-from massafetyguard.level1_framework import AG2MAS
+from trinityguard import Safety_MAS
+from trinityguard.level1_framework import AG2MAS
 
 # Create MAS instance
 math_solver = AG2MAS(config="math_solver_config.yaml")
@@ -581,19 +581,19 @@ class BaseMonitorAgent(ABC):
 ### 7.1 Exception Hierarchy
 
 ```python
-class MASSafetyError(Exception):
-    """Base exception for MASSafetyGuard."""
+class TrinitySafetyError(Exception):
+    """Base exception for TrinityGuard."""
 
-class MASFrameworkError(MASSafetyError):
+class MASFrameworkError(TrinitySafetyError):
     """Errors from Level 1 MAS framework."""
 
-class IntermediaryError(MASSafetyError):
+class IntermediaryError(TrinitySafetyError):
     """Errors from Level 2 intermediary operations."""
 
-class RiskTestError(MASSafetyError):
+class RiskTestError(TrinitySafetyError):
     """Errors during risk testing."""
 
-class MonitorError(MASSafetyError):
+class MonitorError(TrinitySafetyError):
     """Errors from monitor agents."""
 ```
 

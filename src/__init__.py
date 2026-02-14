@@ -1,4 +1,4 @@
-"""MASSafetyGuard - Multi-Agent System Safety Framework.
+"""TrinityGuard - Multi-Agent System Safety Framework.
 
 This package provides pre-deployment safety testing and runtime monitoring
 for multi-agent systems.
@@ -40,7 +40,7 @@ from .level3_safety import (
 
 # Utils
 from .utils import (
-    MASSafetyConfig,
+    TrinitySafetyConfig,
     get_config,
     set_config,
     load_config,
@@ -75,7 +75,7 @@ __all__ = [
     "BaseMonitorAgent",
     "Alert",
     # Utils
-    "MASSafetyConfig",
+    "TrinitySafetyConfig",
     "get_config",
     "set_config",
     "load_config",

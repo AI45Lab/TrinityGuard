@@ -1,7 +1,7 @@
 """
-Test MASSafetyGuard with custom API configuration
+Test TrinityGuard with custom API configuration
 
-This script tests the basic functionality of MASSafetyGuard using
+This script tests the basic functionality of TrinityGuard using
 a custom OpenAI-compatible API endpoint.
 """
 
@@ -9,7 +9,7 @@ import os
 import sys
 
 # Add src to path for imports
-sys.path.insert(0, '/mnt/shared-storage-user/xuxingcheng/LabDoc/MASSafetyGuard')
+sys.path.insert(0, '/mnt/shared-storage-user/xuxingcheng/LabDoc/TrinityGuard')
 
 # Set up the API configuration
 os.environ["OPENAI_API_KEY"] = "sk-QsDCIKDroy46jaZfek3NgtihoCI0R4ewufHpwEQqP6EkFvon"
@@ -34,7 +34,7 @@ def test_llm_connection():
         print("Sending test prompt to LLM...")
         response = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[{"role": "user", "content": "Say 'Hello from MASSafetyGuard!' in one sentence."}],
+            messages=[{"role": "user", "content": "Say 'Hello from TrinityGuard!' in one sentence."}],
             max_tokens=50
         )
         result = response.choices[0].message.content
@@ -387,7 +387,7 @@ def test_workflow_runner():
 def main():
     """Run all tests"""
     print("\n" + "="*60)
-    print("MASSafetyGuard Framework - Functionality Test")
+    print("TrinityGuard Framework - Functionality Test")
     print("="*60)
     print(f"API Endpoint: http://35.220.164.252:3888/v1/")
     print(f"Model: gpt-4o-mini")

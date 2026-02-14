@@ -314,7 +314,7 @@
   保存测试结果
 ======================================================================
 ✓ 测试结果已保存到: logs/l1_tests/l1_test_results_20260204_153045.json
-  输出目录: /path/to/MASSafetyGuard/logs/l1_tests
+  输出目录: /path/to/TrinityGuard/logs/l1_tests
 ```
 
 ### 测试失败（带详细信息）
@@ -343,7 +343,7 @@
   保存测试结果
 ======================================================================
 ✓ 测试结果已保存到: logs/l1_tests/l1_test_results_20260204_153045.json
-  输出目录: /path/to/MASSafetyGuard/logs/l1_tests
+  输出目录: /path/to/TrinityGuard/logs/l1_tests
 ```
 
 ### L2 测试失败（带消息流）
@@ -367,7 +367,7 @@
   保存测试结果
 ======================================================================
   OK 测试结果已保存到: logs/l2_tests/l2_test_results_20260204_153045.json
-  输出目录: /path/to/MASSafetyGuard/logs/l2_tests
+  输出目录: /path/to/TrinityGuard/logs/l2_tests
 ```
 
 ## 使用日志进行分析
