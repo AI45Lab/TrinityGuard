@@ -15,12 +15,19 @@ TrinityGuard provides comprehensive safety testing and monitoring for multi-agen
 
 ### Key Features
 
+
 ✅ **All 20 Risks Implemented** - Complete test and monitor coverage for all risk types
+
 ✅ **LLM-Powered Intelligent Analysis** - Unified Judge system with pattern fallback
+
 ✅ **Framework-Agnostic Design** - Supports AG2/AutoGen (fixed workflow & group chat)
+
 ✅ **Pre-Deployment Testing** - Identify vulnerabilities before deployment
+
 ✅ **Runtime Monitoring** - Real-time risk detection during execution
+
 ✅ **Progressive Runtime Monitoring** - Global monitor with windowed summaries and dynamic sub-monitor activation
+
 ✅ **Extensible Plugin System** - Easy to add new risk tests, monitors, and judge types
 
 ## Installation
