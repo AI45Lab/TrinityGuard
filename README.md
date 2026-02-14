@@ -27,7 +27,7 @@ TrinityGuard provides comprehensive safety testing and monitoring for multi-agen
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/TrinityGuard.git
+git clone https://github.com/AI45Lab/TrinityGuard.git
 cd TrinityGuard
 
 # Install in development mode
@@ -466,7 +466,7 @@ If you use TrinityGuard in your research, please cite:
   title={TrinityGuard: A Safety Framework for Multi-Agent Systems},
   author={Your Name},
   year={2026},
-  url={https://github.com/yourusername/TrinityGuard}
+  url={https://github.com/AI45Lab/TrinityGuard}
 }
 ```
 
@@ -478,7 +478,7 @@ If you use TrinityGuard in your research, please cite:
 
 ## Contact
 
-- Issues: https://github.com/yourusername/TrinityGuard/issues
+- Issues: https://github.com/AI45Lab/TrinityGuard/issues
 - Email: your.email@example.com
 
 ---
