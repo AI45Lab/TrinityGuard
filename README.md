@@ -1,5 +1,4 @@
-# TrinityGuard
-
+# TrinityGuard (TG)
 **Multi-Agent System Safety Framework** for pre-deployment testing and runtime monitoring.
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
@@ -470,8 +469,8 @@ If you use TrinityGuard in your research, please cite:
 
 ```bibtex
 @software{trinityguard2026,
-  title={TrinityGuard: A Safety Framework for Multi-Agent Systems},
-  author={Your Name},
+  title={TrinityGuard: A Unified Framework for Safeguarding Multi-Agent System Safety},
+  author={Shanghai AI Laboratory},
   year={2026},
   url={https://github.com/AI45Lab/TrinityGuard}
 }
@@ -486,10 +485,10 @@ If you use TrinityGuard in your research, please cite:
 ## Contact
 
 - Issues: https://github.com/AI45Lab/TrinityGuard/issues
-- Email: your.email@example.com
+- Email: xuxingcheng@pjlab.org.cn
 
 ---
 
 **Status**: Alpha - All 20 Risks Implemented
+
 **Version**: 0.1.0
-**Last Updated**: 2026-02-10
