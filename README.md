@@ -1,13 +1,12 @@
 <p align="center">
-  <img src="assets/logo_TG.png" alt="TrinityGuard Logo" width="120">
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <strong style="font-size: 24px;">TrinityGuard: A Unified Framework for Safeguarding Multi-Agent System Safety</strong>
+  <img src="assets/logo_TG.png" alt="TrinityGuard Logo" width="200">
 </p>
+
+<h2 align="center">TrinityGuard: A Unified Framework for Safeguarding Multi-Agent System Safety</h2>
 
 <p align="center">
   📄 <a href="Technical_Report_TrinityGuard_260215.pdf">Technical Report</a> |
-  🏠 <a href="https://github.com/AI45Lab/TrinityGuard">Project Page</a> |
-  📖 <a href="docs/">Documentation</a>
+  🏠 <a href="https://github.com/AI45Lab/TrinityGuard">Project Page</a>
 </p>
 
 <p align="center">
