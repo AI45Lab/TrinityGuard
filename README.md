@@ -1,15 +1,27 @@
-# TrinityGuard (TG)
+<p align="center">
+  <img src="assets/logo_TG.png" alt="TrinityGuard Logo" width="120">
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <strong style="font-size: 24px;">TrinityGuard: A Unified Framework for Safeguarding Multi-Agent System Safety</strong>
+</p>
 
 <p align="center">
-  <img src="assets/logo_TG.png" alt="TrinityGuard Logo" width="200">
+  📄 <a href="Technical_Report_TrinityGuard_260215.pdf">Technical Report</a> |
+  🏠 <a href="https://github.com/AI45Lab/TrinityGuard">Project Page</a> |
+  📖 <a href="docs/">Documentation</a>
 </p>
+
+<p align="center">
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.9+-blue.svg" alt="Python 3.9+"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+</p>
+
+---
+
+# TrinityGuard
 
 ### Shanghai AI Laboratory
 
 A **Multi-Agent System Safety Framework** for pre-deployment testing and runtime monitoring.
-
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Overview
 
