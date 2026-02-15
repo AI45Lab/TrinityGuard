@@ -470,11 +470,11 @@ MIT License - see LICENSE file for details
 If you use TrinityGuard in your research, please cite:
 
 ```bibtex
-@software{trinityguard2026,
-  title={TrinityGuard: A Unified Framework for Safeguarding Multi-Agent System Safety},
-  author={Shanghai AI Laboratory},
-  year={2026},
-  url={https://github.com/AI45Lab/TrinityGuard}
+@misc{trinityguard2026,
+  title = {TrinityGuard: A Unified Framework for Safeguarding Multi-Agent System Safety},
+  author = {Wang, Kai and Zeng, Biaojie and Wei, Zeming and Wang, Zhongan and Zhou, Hefeng and Yang, Chao and Qu, Jingjing and Xu, Xingcheng and Hu, Xia},
+  year = {2026},
+  url = {https://github.com/AI45Lab/TrinityGuard}
 }
 ```
 
