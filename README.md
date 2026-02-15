@@ -1,4 +1,9 @@
 # TrinityGuard (TG)
+
+<p align="center">
+  <img src="assets/logo_TG.png" alt="TrinityGuard Logo" width="200">
+</p>
+
 ### Shanghai AI Laboratory
 
 A **Multi-Agent System Safety Framework** for pre-deployment testing and runtime monitoring.
