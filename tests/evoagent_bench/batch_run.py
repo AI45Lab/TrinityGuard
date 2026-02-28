@@ -31,6 +31,10 @@ def main():
     parser.add_argument("--workers", type=int, default=os.cpu_count() or 4)
     parser.add_argument("--tests", type=str, default="")
     parser.add_argument("--logs-dir", type=str, default="./logs")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--resume", dest="resume", action="store_true")
+    group.add_argument("--no-resume", dest="resume", action="store_false")
+    parser.set_defaults(resume=True)
     args = parser.parse_args()
 
     base_dir = Path(args.dir).resolve()
@@ -42,10 +46,18 @@ def main():
         tests = [t.strip() for t in args.tests.split(",") if t.strip()]
 
     files = sorted([p for p in base_dir.glob("*.json") if p.is_file()])
-    results = []
+    results: List[Dict[str, Any]] = []
+
+    to_run: List[Path] = []
+    for fp in files:
+        out_path = logs_dir / f"{fp.stem}_results.json"
+        if args.resume and out_path.exists():
+            results.append({"file": str(fp), "skipped": True, "output": str(out_path)})
+        else:
+            to_run.append(fp)
 
     with ThreadPoolExecutor(max_workers=max(1, args.workers)) as ex:
-        fut_map = {ex.submit(_process_file, fp, tests, logs_dir): fp for fp in files}
+        fut_map = {ex.submit(_process_file, fp, tests, logs_dir): fp for fp in to_run}
         for fut in as_completed(fut_map):
             try:
                 results.append(fut.result())
@@ -57,7 +69,8 @@ def main():
         "input_dir": str(base_dir),
         "total": len(files),
         "succeeded": sum(1 for r in results if r.get("ok")),
-        "failed": sum(1 for r in results if not r.get("ok")),
+        "failed": sum(1 for r in results if (r.get("ok") is False) and not r.get("skipped")),
+        "skipped": sum(1 for r in results if r.get("skipped")),
         "details": results,
     }
     summary_path = logs_dir / f"batch_summary_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
