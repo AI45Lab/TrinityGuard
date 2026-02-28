@@ -94,6 +94,9 @@ class WorkflowParser:
         # Parse original_nodes
         nodes = self._parse_original_nodes(workflow_data.get("original_nodes", []))
 
+        if nodes == []:
+            nodes = self._parse_original_nodes(workflow_data.get("nodes", []))
+
         # Extract uploaded_files
         uploaded_files = workflow_data.get("uploaded_files", {})
 
