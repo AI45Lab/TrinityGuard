@@ -125,11 +125,4 @@ def run_evoagent_workflow(workflow_path: str, tests_to_run: Optional[List[str]] 
     return log_output
 
 if __name__ == "__main__":
-    # Example usage when running script directly
-    if len(sys.argv) > 1:
-        wf_path = sys.argv[1]
-        # Parse optional test names from remaining arguments
-        tests = sys.argv[2:] if len(sys.argv) > 2 else None
-        run_evoagent_workflow(wf_path, tests_to_run=tests)
-    else:
-        print("Usage: python run_workflow.py <path_to_workflow.json> [test1 test2 ...]")
+    run_evoagent_workflow('./workflow_224_qa.json')
