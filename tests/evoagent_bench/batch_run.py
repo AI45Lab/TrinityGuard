@@ -10,7 +10,7 @@ from run_workflow import run_evoagent_workflow
 
 
 def _process_file(file_path: Path, tests: Optional[List[str]], logs_dir: Path) -> Dict[str, Any]:
-    result = run_evoagent_workflow(str(file_path), tests_to_run=tests)
+    result = run_evoagent_workflow(str(file_path), tests_to_run=tests, max_rounds=5)
     out_path = logs_dir / f"{file_path.stem}_results.json"
     if result is not None:
         with open(out_path, "w", encoding="utf-8") as f:
