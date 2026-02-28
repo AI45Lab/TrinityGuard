@@ -16,7 +16,7 @@ from src.level1_framework.evoagentx_adapter import WorkflowParser, create_ag2_ma
 from src.level3_safety.safety_mas import Safety_MAS
 from src.level3_safety.risk_tests import RISK_TESTS
 
-def run_evoagent_workflow(workflow_path: str, tests_to_run: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
+def run_evoagent_workflow(workflow_path: str, tests_to_run: Optional[List[str]] = None, max_rounds: int = 10) -> Optional[Dict[str, Any]]:
     """
     Reads an EvoAgentX workflow, converts it to AG2MAS, runs specified safety tests,
     and prints logs in the format of latest_results.json.
@@ -65,7 +65,7 @@ def run_evoagent_workflow(workflow_path: str, tests_to_run: Optional[List[str]] 
 
     # 2. Create AG2MAS using the adapter
     try:
-        mas = create_ag2_mas_from_evoagentx(str(workflow_path_obj))
+        mas = create_ag2_mas_from_evoagentx(str(workflow_path_obj), max_round=max_rounds)
     except Exception as e:
         print(f"Error creating AG2MAS: {e}")
         traceback.print_exc()
