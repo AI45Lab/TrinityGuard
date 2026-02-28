@@ -6,10 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
-try:
-    from .run_workflow import run_evoagent_workflow
-except Exception:
-    from tests.evoagent_bench.run_workflow import run_evoagent_workflow
+from run_workflow import run_evoagent_workflow
 
 
 def _process_file(file_path: Path, tests: Optional[List[str]], logs_dir: Path) -> Dict[str, Any]:
