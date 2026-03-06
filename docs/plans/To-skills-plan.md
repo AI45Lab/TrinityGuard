@@ -1,4 +1,4 @@
-﻿# TrinityGuard Skills 化方案（独立 Skills 版，任务清单）
+﻿# TrinityGuard Skills 化方案
 
 ## 1. 目标与边界
 
@@ -13,32 +13,39 @@
 ## 2. 需要构建的技能
 
 1. `trinityguard-self-guard-orchestrator`
+
 - 主编排技能，负责整轮任务安全流程
 
 2. `trinityguard-preflight-selfcheck`
+
 - 执行前风险识别（输入攻击、越权意图、敏感上下文标记）
 
 3. `trinityguard-runtime-selfmonitor`
+
 - 执行中监控（命令、工具调用、文件访问、行为漂移）
 
 4. `trinityguard-output-privacy-guard`
+
 - 输出安全守门（尤其是解释性回答中的隐私/敏感泄露）
 
 ## 3. 风险覆盖要求（映射 TrinityGuard 思想）
 
 1. L1（单体风险）
+
 - prompt injection / jailbreak
 - sensitive disclosure
 - code execution / tool misuse
 - hallucination / memory poisoning
 
 2. L2（交互风险）
+
 - message tampering（输入上下文污染）
 - insecure output（输出含危险信息）
 - goal drift（目标偏移）
 - identity spoofing（来源伪装）
 
 3. L3（系统风险）
+
 - cascading failures（错误连锁）
 - insufficient monitoring（监控覆盖不足）
 - rogue behavior（执行轨迹异常）
@@ -56,11 +63,13 @@
 任一满足即触发技能链：
 
 1. 高风险动作
+
 - 执行命令
 - 修改文件/代码
 - 外部工具或网络调用
 
 2. 敏感上下文
+
 - 本轮读取过隐私/密钥/凭证/个人信息
 - 历史上下文已有敏感标记
 - 用户问题虽是解释性，但引用了敏感上下文
@@ -76,20 +85,24 @@
 ## 6. 单轮流程（技能行为规范）
 
 1. Preflight
+
 - 风险识别
 - 上下文敏感度打标（`normal/sensitive/highly_sensitive`）
 - 生成允许动作边界与阻断条件
 
 2. Runtime
+
 - 监控关键工具调用与行为轨迹
 - 异常时告警、降级或建议中止
 
 3. Output Guard
+
 - 每次输出前做隐私与敏感信息检测
 - 解释性回答同样执行
 - 命中策略时脱敏、摘要替换或拒答
 
 4. Post-run Audit
+
 - 记录证据链与判定依据
 - 输出整改建议
 
@@ -102,10 +115,13 @@
 3. `trinityguard-runtime-selfmonitor/SKILL.md`
 4. `trinityguard-output-privacy-guard/SKILL.md`
 5. `shared/references/`
+
 - 风险分类映射
 - 告警等级规范
 - 审计模板
+
 6. `shared/scripts/`
+
 - 日志归一化
 - 风险分级统计
 - 报告汇总
