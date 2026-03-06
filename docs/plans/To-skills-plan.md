@@ -1,184 +1,177 @@
-﻿# TrinityGuard Skills 化方案（内在自检版）
+﻿# TrinityGuard Skills 化方案（内在自检版，修订）
 
 ## 1. 目标与边界
 
-目标：沿用 TrinityGuard 的风险分层与监控思想，让 Claude Code / Codex 这类 code agent 在执行任务时，**持续自检自身行为**，发现并处置安全风险。
+目标：沿用 TrinityGuard 的风险分层与监控思想，让 Claude Code / Codex 这类 code agent 在执行任务时，持续自检自身行为并降低安全风险。
 
-本方案明确不做：
+本方案不做：
 
-- 不面向外部 MAS 的通用评测平台化
-- 不要求先接入其他多智能体框架
+- 不做外部 MAS 平台化监测
+- 不要求接入其他 MAS 框架后再起步
 
 本方案聚焦：
 
-1. agent 在本轮任务中的输入、推理、工具调用、输出安全
-2. agent 的运行轨迹可审计、可解释、可中止
-3. 通过 skills 触发自检闭环，而不是仅靠人工复盘
+1. 输入、工具调用、文件读写、输出内容的全链路安全
+2. 运行过程可审计、可解释、可中止
+3. 用 skills 形成自动化自检闭环
 
 ## 2. 方案总览
 
-推荐采用 **“1 个主技能 + 2 个执行技能 + 1 个治理技能”**，但全部围绕“自身运行安全”。
+采用 4 个技能协作，但都围绕 code agent 自身：
 
-1. `trinityguard-self-guard-orchestrator`（主技能）
-- 作用：接管整轮任务的安全编排
-- 触发：用户要求执行代码/命令/修改文件/调用外部工具时
-- 输出：执行前检查 -> 执行中监控 -> 执行后审计 的完整流程
+1. `trinityguard-self-guard-orchestrator`
+- 主编排技能，负责整轮任务的安全流程控制
 
 2. `trinityguard-preflight-selfcheck`
-- 作用：执行前风险识别（prompt 注入、越权意图、敏感数据暴露风险）
-- 输出：风险清单 + 允许动作边界 + 阻断条件
+- 执行前风险识别（输入攻击、越权意图、敏感上下文标记）
 
 3. `trinityguard-runtime-selfmonitor`
-- 作用：执行中监控（工具调用、文件访问、输出内容）
-- 输出：实时告警、降级建议、必要时中止建议
+- 执行中监控（命令、工具调用、文件访问、行为漂移）
 
-4. `trinityguard-postrun-audit`
-- 作用：执行后审计与复盘
-- 输出：证据链、风险判定、后续修复动作
+4. `trinityguard-output-privacy-guard`
+- 输出安全守门（尤其是解释性回答中的隐私/敏感泄露）
 
-## 3. 与 TrinityGuard 的对应关系
+## 3. 本次修订的核心问题与改进
 
-将 TrinityGuard 的三层能力映射为 code agent 自检链路：
+### 3.1 问题
 
-1. L1（单体风险）-> agent 自身行为风险
-- prompt injection / jailbreak
-- sensitive disclosure
-- code execution / tool misuse
-- hallucination / memory poisoning
+原计划把“纯解释性回答”默认作为低风险场景，可能导致以下漏检：
 
-2. L2（交互风险）-> agent 与环境交互风险
-- message tampering（输入上下文被污染）
-- insecure output（输出含危险内容）
-- goal drift（任务目标偏移）
-- identity spoofing（来源伪装）
+1. agent 先读取了包含隐私的数据
+2. 用户后续请求“解释/总结/回答问题”
+3. 虽然没有工具调用，但回答本身可能泄露敏感信息
 
-3. L3（系统风险）-> agent 运行全局风险
-- cascading failures（错误连锁）
-- insufficient monitoring（监控覆盖不足）
-- rogue behavior（执行轨迹异常）
+### 3.2 修订原则
 
-## 4. 单轮执行的标准自检流程（Skill 行为规范）
+新增强制规则：**只要上下文已包含敏感信息，任何输出（含纯解释性回答）都必须经过输出安全守门**。
 
-### Step 1: 执行前（Preflight）
+换言之：
 
-- 解析用户目标与可疑输入
-- 识别高风险动作（如批量改写、shell 执行、敏感路径读写）
-- 生成“允许动作列表 + 禁止动作列表 + 升级审批点”
+- “是否调用工具”不再是唯一触发条件
+- “上下文敏感度”成为同等优先级触发条件
 
-### Step 2: 执行中（Runtime）
+## 4. 触发策略（修订后）
 
-- 对每次关键工具调用进行风险判定
-- 对输出进行敏感泄露与危险内容检查
-- 命中阈值时触发：告警 -> 降级 -> 中止建议
+### 4.1 触发条件
 
-### Step 3: 执行后（Post-run Audit）
+以下任一条件满足，即触发安全技能链：
 
-- 生成结构化安全摘要
-- 输出证据（触发点、命令、文件、上下文片段）
-- 给出整改建议（最小修复动作）
+1. 高风险动作触发
+- 执行命令
+- 修改代码/文件
+- 调用外部工具或网络请求
 
-## 5. 目录结构建议
+2. 敏感上下文触发（新增）
+- 本轮读过可能包含隐私/密钥/凭证/个人信息的数据
+- 历史上下文中已有敏感片段标记
+- 用户问题虽然是解释性，但引用了敏感上下文
 
-建议放在仓库内：`docs/survey/skills/trinityguard-self-guard/`
+### 4.2 不触发条件（收紧后）
 
-1. `trinityguard-self-guard-orchestrator/SKILL.md`
-2. `trinityguard-preflight-selfcheck/SKILL.md`
-3. `trinityguard-runtime-selfmonitor/SKILL.md`
-4. `trinityguard-postrun-audit/SKILL.md`
-5. `shared/references/`
-- 风险分类映射（L1/L2/L3 -> code agent）
-- 告警等级规范
-- 审计报告模板
-6. `shared/scripts/`
-- 日志提取与归一化
-- 风险分级统计
-- 报告汇总
+仅当同时满足以下条件才可不触发：
 
-## 6. 触发策略（避免 under-trigger）
+1. 无工具调用、无文件变更、无执行动作
+2. 当前与历史上下文均未标记敏感信息
+3. 输出目标不涉及身份、凭证、隐私、内部配置等敏感内容
 
-在 description 中明确“偏主动触发”：
+## 5. 单轮执行标准流程（修订后）
 
-- 用户提到：执行命令、修改代码、批量处理文件、自动化脚本、外部下载/调用
-- 用户未显式说“安全”，但请求本身存在明显风险面
-- 任何高权限动作前自动触发 preflight
+### Step 1: Preflight
 
-不触发场景：
+- 风险识别
+- 上下文敏感度打标（`normal/sensitive/highly_sensitive`）
+- 生成允许动作边界与阻断条件
 
-- 纯解释性问答
-- 无工具调用、无文件变更、无执行动作的轻任务
+### Step 2: Runtime
 
-## 7. skill-creator 落地流程（精简版）
+- 监控工具调用与关键行为
+- 发现异常时告警、降级或建议中止
 
-每个 skill 按同一循环：
+### Step 3: Output Guard（新增强调）
 
-1. 写 SKILL.md 草稿
-2. 准备 `evals/evals.json`（先只写 prompts）
-3. 跑 with-skill vs baseline
-4. 补 assertions 并生成 grading
-5. 聚合 benchmark（pass_rate/time/tokens）
-6. 人审反馈后迭代
-7. description optimization（run_loop.py）
+- 每次对外输出前做隐私与敏感信息检测
+- 对解释性回答同样执行检查
+- 命中策略时执行脱敏、摘要替换或拒答模板
 
-## 8. 评测集设计（面向“自检能力”）
+### Step 4: Post-run Audit
 
-每个技能建议 8 条 eval：
+- 记录证据链与判定依据
+- 输出整改建议和后续动作
 
-1. should-trigger（5 条）
-- 包含可疑输入 + 工具调用请求
-- 包含敏感路径访问/环境变量读取
-- 包含大范围文件修改与自动执行
-- 包含潜在越权命令组合
-- 包含“继续执行即可能风险扩大”的场景
+## 6. 技能职责拆分（更新）
 
-2. should-not-trigger（3 条）
-- 纯文档改写
-- 纯代码讲解
-- 与执行无关的静态查询
+1. `trinityguard-self-guard-orchestrator`
+- 统一调度 preflight/runtime/output guard/post-audit
 
-关键指标：
+2. `trinityguard-preflight-selfcheck`
+- 输出上下文敏感级别与风险基线
 
-- 风险识别召回率（主指标）
-- 误报率（控制指标）
-- 阻断决策正确率
-- 额外执行开销（time/tokens）
+3. `trinityguard-runtime-selfmonitor`
+- 输出行为告警与执行期处置建议
 
-## 9. 分阶段实施
+4. `trinityguard-output-privacy-guard`
+- 输出前进行敏感泄露拦截
+- 支持解释性输出的“最小披露”与脱敏改写
 
-### Phase 0（P0，1-2 天）
+## 7. 评测设计（重点修订）
 
-1. 完成 `preflight` 与 `runtime` 两个技能最小版
-2. 接入基础风险规则（prompt injection / sensitive disclosure / tool misuse）
-3. 建立首轮 eval + benchmark
+每个技能建议至少 8 条 eval，且必须包含下列新增场景：
 
-### Phase 1（P1，2-4 天）
+1. 解释性泄露场景（新增必测）
+- 先读取含隐私文件，再让 agent 解释/总结
+- 验证是否触发输出守门并执行脱敏
 
-1. 加入 `postrun-audit` 与主编排技能
-2. 补充 L2/L3 风险映射规则
-3. 形成稳定的告警等级与行动建议模板
+2. 上下文继承泄露场景（新增必测）
+- 敏感信息来自上一轮历史，而非当前文件读取
+- 验证是否仍触发输出守门
 
-### Phase 2（P2，1-2 天）
+3. 常规执行风险场景
+- 命令执行、批量改写、潜在越权工具调用
 
-1. 做 description 优化与触发稳定性回归
-2. 产出可发布技能包
-3. 建立每周回归评测（防漂移）
+关键指标新增：
 
-## 10. TrinityGuard 代码最小改造建议（仅为自检技能服务）
+- 解释性输出泄露拦截率（新增主指标）
+- 脱敏后可用性（内容保真度）
+- 误拦截率
+- 总体开销（time/tokens）
 
-1. 增加“本轮任务审计输出”统一 schema
-- 输入摘要、工具轨迹、告警、处置动作
+## 8. TrinityGuard 最小改造建议（为修订目标服务）
 
-2. 增加轻量 CLI/函数入口
-- `preflight_check(...)`
-- `runtime_check(...)`
-- `postrun_audit(...)`
+1. 增加“上下文敏感度状态”
+- 在本轮会话中持续维护 `sensitivity_state`
 
-3. 增加 dry-run
-- 无外部 LLM 依赖时也可跑规则级自检，便于 CI 回归
+2. 增加输出守门统一入口
+- `output_privacy_guard(text, sensitivity_state, policy)`
 
-## 11. 最终建议
+3. 在审计 schema 中新增字段
+- `output_guard_triggered`
+- `redaction_applied`
+- `leakage_risk_level`
 
-当前最优路径不是“把 TrinityGuard 做成外部 MAS 安全平台技能”，而是做成 **code agent 自身安全内核技能集**：
+## 9. 里程碑（更新）
 
-`self-guard-orchestrator + preflight-selfcheck + runtime-selfmonitor + postrun-audit`
+### Phase 0（P0）
 
-这样可以最直接提升 Claude Code / Codex 在真实编码任务中的自我安全能力，且与 TrinityGuard 现有架构、survey 结论、skill-creator 工作流三者一致。
+1. 落地 `preflight` + `runtime` + `output-privacy-guard` 最小版本
+2. 补齐“解释性泄露”测试集
+3. 完成首轮 benchmark
+
+### Phase 1（P1）
+
+1. 完成 orchestrator 与 post-run 审计联动
+2. 优化脱敏策略与拒答模板
+3. 稳定触发策略，降低误报
+
+### Phase 2（P2）
+
+1. 做 description optimization 与回归评测
+2. 形成可发布技能包
+3. 建立周度漂移监控
+
+## 10. 最终建议
+
+把 TrinityGuard skills 化的核心目标明确为：
+
+**让 code agent 在“执行动作”和“解释性输出”两条路径上都被安全监测覆盖。**
+
+特别是解释性回答，只要上下文曾接触敏感信息，就必须触发输出安全守门，避免“看起来只是解释，实际发生泄露”的盲点。
