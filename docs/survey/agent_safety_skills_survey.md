@@ -71,6 +71,49 @@
   - https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization
   - https://modelcontextprotocol.info/specification/draft/
 
+## 现成 Safety Skills 调研补充（2026-03-06）
+
+以下为“可直接拿来用”或“已有公开实现”的 safety skills 方向，优先列出可核验的一手仓库条目。
+
+### A. OpenAI 官方 curated skills（可直接安装思路参考）
+
+1. `security-best-practices`
+- 能力：对生成代码执行安全最佳实践检查，并结合 Semgrep 等规则做漏洞扫描。
+- 适配场景：代码生成后自动安全审查、PR 前置安全门禁。
+- 链接：https://github.com/openai/skills/tree/main/skills/.curated/security-best-practices
+
+2. `security-ownership-map`
+- 能力：将代码区域映射到 owner、风险分层与安全热点。
+- 适配场景：安全事件分派、风险代码归口治理、自监控告警路由。
+- 链接：https://github.com/openai/skills/tree/main/skills/.curated/security-ownership-map
+
+3. `security-threat-model`
+- 能力：基于架构与数据流生成轻量威胁模型（含 STRIDE/LINDDUN 视角）。
+- 适配场景：需求评审前 threat modeling、agent 执行前风险预估。
+- 链接：https://github.com/openai/skills/tree/main/skills/.curated/security-threat-model
+
+### B. 社区可见的现成安全技能目录（建议二次审计后再接入）
+
+1. `security-threat-model`（社区镜像条目）
+- 说明：目录中标注来源为 `lyndonkl/claude-code-language-skills`，定位为威胁建模能力。
+- 链接：https://agent-skills.com/skills/security-threat-model
+
+2. `threat-model`（社区镜像条目）
+- 说明：目录中标注来源为 `cosmix/claude-loom`，同样聚焦威胁建模。
+- 链接：https://agent-skills.com/skills/threat-model
+
+3. `performing-security-audits` / `performing-penetration-testing`（社区技能目录）
+- 说明：偏“安全审计与渗透测试流程化”技能，可作为外层审计 skill 的模板来源。
+- 链接：
+  - https://claude-plugins.dev/skills/performing-security-audits/
+  - https://claude-plugins.dev/skills/performing-penetration-testing/
+
+### C. 接入建议
+
+- 对官方 curated skills：可优先纳入 P0，作为“代码安全扫描 + 威胁建模 + 风险归属”三件套。
+- 对社区技能：先做供应链与内容审计（来源、更新频率、提示词安全性、外部依赖）再接入。
+- 对自监控目标：建议把 `security-threat-model` 放在任务开始前，把 `security-best-practices` 放在代码产出后，形成前后双闸门。
+
 ## 面向 Skills 的落地映射建议
 
 可将上述相关工作拆分为以下技能方向：
