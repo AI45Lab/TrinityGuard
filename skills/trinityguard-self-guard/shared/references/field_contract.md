@@ -1,52 +1,41 @@
 ﻿# 字段契约（Field Contract）
 
-本文件定义四个 self-guard skills 的统一字段，供 orchestrator 聚合。
+本文件定义 TrinityGuard self-guard 的核心字段契约。
 
-## 1. Preflight 输出字段
+## 1. 事件日志主契约（推荐）
+主输出是 JSONL，每行一个事件，参考：`guard_event.schema.json`。
 
-1. `risk_summary`: `string[]`
-2. `sensitivity_state`: `normal|sensitive|highly_sensitive`
-3. `allowed_actions`: `string[]`
-4. `blocked_actions`: `string[]`
-5. `verification_requirements`: `string[]`
-6. `preflight_decision`: `allow|downgrade|block`
+每条事件至少包含：
+1. `ts`
+2. `trace_id`
+3. `session_id`
+4. `turn_id`
+5. `policy_profile`
+6. `event_type`
+7. `risk_level`
+8. `decision`
+9. `reason_codes`
+10. `matched_rules`
 
-## 2. Runtime 输出字段
+`event_type` 取值：
+1. `hook_start`
+2. `preflight_result`
+3. `runtime_result`
+4. `output_guard_result`
+5. `final_decision`
+6. `hook_end`
+7. `hook_error`
 
-1. `runtime_events`: `object[]`
-2. `alerts`: `object[]`
-3. `suggested_actions`: `string[]`
-4. `trust_annotations`: `object[]`
-5. `runtime_decision`: `continue|downgrade|stop`
+## 2. final_decision 事件扩展字段
+1. `final_action`: `allow|downgrade|block`
+2. `retention`: 分级留存摘要
+3. `residual_risks`: `string[]`
+4. `audit_notes`: `string[]`
 
-`trust_annotations[]` 建议字段：
-1. `source_id`: `string`
-2. `source_type`: `internal_verified|internal_unverified|tool_single_source|tool_multi_source_unverified|multi_source_verified`
-3. `confidence`: `low|medium|high`
-4. `reason`: `string`
+## 3. 关键一致性规则
+1. 若 `runtime_result.decision = stop`，则最终 `final_action` 不能为 `allow`。
+2. 若检测到泄露且为高敏会话，最终动作应为 `block` 或更严格策略。
+3. 对单一工具来源结论，至少应触发降级或不确定性提示。
 
-## 3. Output Guard 输出字段
-
-1. `leakage_detected`: `boolean`
-2. `redaction_applied`: `boolean`
-3. `confidence_level`: `low|medium|high`
-4. `safe_response`: `string`
-5. `output_decision`: `allow|downgrade|block`
-
-## 4. Orchestrator 聚合字段
-
-1. `session_id`: `string`
-2. `trigger_reasons`: `string[]`
-3. `preflight`: `object`
-4. `runtime`: `object`
-5. `output_guard`: `object`
-6. `final_action`: `allow|downgrade|block`
-7. `residual_risks`: `string[]`
-8. `audit_notes`: `string[]`
-
-## 5. 关键一致性规则
-
-1. 若 `sensitivity_state` 为 `sensitive/highly_sensitive`，则 `output_guard` 必须出现。
-2. 若 `trust_annotations` 仅有单工具来源，不得输出高置信结论。
-3. 若 `output_guard.leakage_detected = true`，`safe_response` 不得包含原始敏感值。
-4. 若 `runtime_decision = stop`，`final_action` 不能为 `allow`。
+## 4. 兼容说明
+历史单轮审计 JSON 仍可通过 `--out` 生成摘要；完整契约以 JSONL 事件为准。

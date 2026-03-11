@@ -1,0 +1,42 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "trinityguard-self-guard/guard_event.schema.json",
+  "title": "Self Guard Event",
+  "type": "object",
+  "required": [
+    "ts",
+    "trace_id",
+    "session_id",
+    "turn_id",
+    "policy_profile",
+    "event_type",
+    "risk_level",
+    "decision",
+    "reason_codes",
+    "matched_rules"
+  ],
+  "properties": {
+    "ts": {"type": "string"},
+    "trace_id": {"type": "string"},
+    "session_id": {"type": "string"},
+    "turn_id": {"type": "string"},
+    "policy_profile": {"type": "string"},
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "hook_start",
+        "preflight_result",
+        "runtime_result",
+        "output_guard_result",
+        "final_decision",
+        "hook_end",
+        "hook_error"
+      ]
+    },
+    "risk_level": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
+    "decision": {"type": "string"},
+    "reason_codes": {"type": "array", "items": {"type": "string"}},
+    "matched_rules": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": true
+}

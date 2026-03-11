@@ -1,13 +1,8 @@
 ﻿#!/usr/bin/env python3
-"""Normalize self-guard step outputs into one audit record.
+"""Normalize preflight/runtime/output results into one legacy audit record.
 
-Inputs:
-- preflight JSON
-- runtime JSON
-- output_guard JSON
-
-Output:
-- unified audit JSON aligned with shared/references/audit_record.schema.json
+Legacy helper only. New integrations should prefer JSONL events:
+shared/references/guard_event.schema.json.
 """
 
 from __future__ import annotations
@@ -24,53 +19,34 @@ def load_json(path: Path) -> Dict[str, Any]:
 
 
 def save_json(path: Path, data: Dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
-def as_list(value: Any) -> List[Any]:
-    if isinstance(value, list):
-        return value
-    if value is None:
+def as_list(v: Any) -> List[Any]:
+    if isinstance(v, list):
+        return v
+    if v is None:
         return []
-    return [value]
+    return [v]
 
 
 def decide_final_action(preflight_decision: str, runtime_decision: str, output_decision: str) -> str:
-    if "block" in {preflight_decision, output_decision}:
+    if preflight_decision == "block" or output_decision == "block":
         return "block"
     if runtime_decision == "stop":
         return "block"
-    if "downgrade" in {preflight_decision, output_decision} or runtime_decision == "downgrade":
+    if preflight_decision == "downgrade" or runtime_decision == "downgrade" or output_decision == "downgrade":
         return "downgrade"
     return "allow"
 
 
-def derive_residual_risks(preflight: Dict[str, Any], runtime: Dict[str, Any], output_guard: Dict[str, Any]) -> List[str]:
-    risks: List[str] = []
-
-    if output_guard.get("leakage_detected", False):
-        risks.append("sensitive leakage risk observed")
-
-    trust_annotations = as_list(runtime.get("trust_annotations", []))
-    for item in trust_annotations:
-        source_type = str(item.get("source_type", "")).strip().lower()
-        if source_type in {"tool_single_source", "tool_multi_source_unverified"}:
-            risks.append("tool-derived conclusion not fully verified")
-            break
-
-    if str(preflight.get("sensitivity_state", "normal")) in {"sensitive", "highly_sensitive"}:
-        risks.append("session contains sensitive context")
-
-    return sorted(set(risks))
-
-
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Normalize self-guard outputs into audit record")
-    parser.add_argument("--session-id", required=True, help="Session id")
-    parser.add_argument("--trigger-reason", action="append", default=[], help="Trigger reason, can repeat")
-    parser.add_argument("--preflight", required=True, help="Preflight JSON path")
-    parser.add_argument("--runtime", required=True, help="Runtime JSON path")
-    parser.add_argument("--output-guard", required=True, help="Output guard JSON path")
+    parser = argparse.ArgumentParser(description="Normalize self-guard outputs into legacy audit record")
+    parser.add_argument("--session-id", required=True)
+    parser.add_argument("--preflight", required=True)
+    parser.add_argument("--runtime", required=True)
+    parser.add_argument("--output-guard", required=True)
     parser.add_argument("--out", default="audit_record.json", help="Output file path")
     args = parser.parse_args()
 
@@ -81,12 +57,19 @@ def main() -> None:
     preflight_decision = str(preflight.get("preflight_decision", "allow"))
     runtime_decision = str(runtime.get("runtime_decision", "continue"))
     output_decision = str(output_guard.get("output_decision", "allow"))
-
     final_action = decide_final_action(preflight_decision, runtime_decision, output_decision)
 
+    residual_risks: List[str] = []
+    if bool(output_guard.get("leakage_detected", False)):
+        residual_risks.append("privacy leakage risk observed")
+    if any(str(x.get("source_type", "")).startswith("tool_") for x in as_list(runtime.get("trust_annotations", []))):
+        residual_risks.append("tool-derived conclusion may be uncertain")
+    if str(preflight.get("sensitivity_state", "normal")) in {"sensitive", "highly_sensitive"}:
+        residual_risks.append("sensitive-context output requires strict guard")
+
     audit_record = {
-        "session_id": args.session_id,
-        "trigger_reasons": args.trigger_reason,
+        "session_id": str(args.session_id),
+        "trigger_reasons": ["orchestrator_pipeline"],
         "preflight": {
             "risk_summary": as_list(preflight.get("risk_summary", [])),
             "sensitivity_state": str(preflight.get("sensitivity_state", "normal")),
@@ -105,17 +88,16 @@ def main() -> None:
         "output_guard": {
             "leakage_detected": bool(output_guard.get("leakage_detected", False)),
             "redaction_applied": bool(output_guard.get("redaction_applied", False)),
-            "confidence_level": str(output_guard.get("confidence_level", "low")),
+            "confidence_level": str(output_guard.get("confidence_level", "medium")),
             "safe_response": str(output_guard.get("safe_response", "")),
             "output_decision": output_decision,
         },
         "final_action": final_action,
-        "residual_risks": derive_residual_risks(preflight, runtime, output_guard),
+        "residual_risks": sorted(set(residual_risks)),
         "audit_notes": as_list(output_guard.get("audit_notes", [])),
     }
 
     save_json(Path(args.out).resolve(), audit_record)
-    print(f"Saved: {Path(args.out).resolve()}")
 
 
 if __name__ == "__main__":

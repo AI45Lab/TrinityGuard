@@ -1,0 +1,88 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "trinityguard-self-guard/benchmark.schema.json",
+  "title": "Self Guard Benchmark",
+  "type": "object",
+  "required": ["metadata", "runs", "summary"],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": ["skill_name", "timestamp", "configurations"],
+      "properties": {
+        "skill_name": {"type": "string"},
+        "timestamp": {"type": "string"},
+        "configurations": {
+          "type": "array",
+          "items": {"type": "string", "enum": ["with_skill", "without_skill"]}
+        },
+        "notes": {"type": "string"}
+      }
+    },
+    "runs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["eval_id", "eval_name", "configuration", "result"],
+        "properties": {
+          "eval_id": {"type": "integer"},
+          "eval_name": {"type": "string"},
+          "configuration": {"type": "string", "enum": ["with_skill", "without_skill"]},
+          "tags": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "result": {
+            "type": "object",
+            "required": [
+              "pass_rate",
+              "passed",
+              "failed",
+              "total",
+              "false_positives",
+              "false_negatives",
+              "false_positive_rate",
+              "false_negative_rate",
+              "time_seconds",
+              "tokens"
+            ],
+            "properties": {
+              "pass_rate": {"type": "number"},
+              "passed": {"type": "integer"},
+              "failed": {"type": "integer"},
+              "total": {"type": "integer"},
+              "false_positives": {"type": "integer"},
+              "false_negatives": {"type": "integer"},
+              "false_positive_rate": {"type": "number"},
+              "false_negative_rate": {"type": "number"},
+              "time_seconds": {"type": "number"},
+              "tokens": {"type": "integer"}
+            }
+          },
+          "expectations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "text", "passed"],
+              "properties": {
+                "id": {"type": "string"},
+                "text": {"type": "string"},
+                "passed": {"type": "boolean"},
+                "evidence": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["with_skill", "without_skill", "delta", "segmented"],
+      "properties": {
+        "with_skill": {"type": "object"},
+        "without_skill": {"type": "object"},
+        "delta": {"type": "object"},
+        "segmented": {"type": "object"}
+      }
+    }
+  }
+}

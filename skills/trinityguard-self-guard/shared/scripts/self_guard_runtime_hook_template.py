@@ -1,19 +1,17 @@
 ﻿#!/usr/bin/env python3
-"""Minimal runtime hook for self-guard orchestration.
+"""Runtime hook for TrinityGuard self-guard orchestration.
 
-This script is a practical bridge from skill specs to executable flow:
-1. Preflight self-check
-2. Runtime self-monitor
-3. Output privacy guard
-4. Audit record generation
-5. Session sensitivity state persistence
+Primary output is JSONL event stream. Optional summary JSON can be written via --out.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Pattern
 
@@ -21,22 +19,39 @@ DEFAULT_POLICY: Dict[str, Any] = {
     "sensitive_event_types": ["read_secret", "read_credential", "read_private_pii", "read_key_material"],
     "sensitive_keywords": ["token", "password", "secret", "api_key", "credential", "private key", "身份证", "手机号"],
     "explicit_disclosure_phrases": ["输出 token", "输出密码", "print token", "print password"],
+    "implicit_disclosure_phrases": [
+        "把关键字段和值解释",
+        "完整复述配置",
+        "原样写出",
+        "show me the value",
+        "include actual values",
+    ],
+    "explanation_leakage_phrases": ["解释用途并给出值", "解释时列出示例值", "for explanation include exact values"],
     "high_risk_actions": ["execute_command", "write_file", "batch_modify", "network_call"],
     "retry_threshold_downgrade": 3,
     "single_source_types": ["tool_single_source"],
     "leak_patterns": [
-        r"(?i)(api[_-]?key|token|password|secret)\\s*[:=]\\s*[^\\s,;]+",
+        r"(?i)(api[_-]?key|token|password|secret)\s*[:=]\s*[^\s,;]+",
         r"(?i)-----BEGIN (RSA|EC|DSA|OPENSSH) PRIVATE KEY-----",
-        r"\\b\\d{17}[0-9Xx]\\b",
+        r"\b\d{17}[0-9Xx]\b",
     ],
-    "force_uncertainty_prefix": "基于单一工具来源，结论存在不确定性。",
+    "residual_leak_patterns": [
+        r"(?i)(api[_-]?key|token|password|secret)\s*[:=]\s*(?!\[REDACTED\])[^\s,;]+",
+        r"(?i)-----BEGIN (RSA|EC|DSA|OPENSSH) PRIVATE KEY-----",
+        r"\b\d{17}[0-9Xx]\b",
+    ],
+    "force_uncertainty_prefix": "基于单一工具来源，结论存在不确定性：",
     "block_on_highly_sensitive_leak": True,
     "redaction_replacements": {
-        "credential": r"(?i)(api[_-]?key|token|password|secret)\\s*[:=]\\s*([^\\s,;]+)",
-        "id": r"\\b\\d{17}[0-9Xx]\\b",
+        "credential": r"(?i)(api[_-]?key|token|password|secret)\s*[:=]\s*([^\s,;]+)",
+        "id": r"\b\d{17}[0-9Xx]\b",
         "private_key": r"-----BEGIN (RSA|EC|DSA|OPENSSH) PRIVATE KEY-----",
     },
 }
+
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 def load_json(path: Path) -> Dict[str, Any]:
@@ -47,6 +62,12 @@ def load_json(path: Path) -> Dict[str, Any]:
 def save_json(path: Path, data: Dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def append_jsonl(path: Path, record: Dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
 def merge_policy(default: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
@@ -65,6 +86,15 @@ def compile_patterns(patterns: List[str]) -> List[Pattern[str]]:
     return [re.compile(p) for p in patterns]
 
 
+def get_match_hits(text: str, phrases: List[str]) -> List[str]:
+    low_text = text.lower()
+    hits: List[str] = []
+    for phrase in phrases:
+        if str(phrase).lower() in low_text:
+            hits.append(str(phrase))
+    return sorted(set(hits))
+
+
 def normalize_state(state: str) -> str:
     if state in {"normal", "sensitive", "highly_sensitive"}:
         return state
@@ -77,6 +107,72 @@ def state_rank(state: str) -> int:
 
 def max_state(a: str, b: str) -> str:
     return a if state_rank(a) >= state_rank(b) else b
+
+
+def event_risk_level(decision: str) -> str:
+    mapping = {
+        "allow": "low",
+        "continue": "low",
+        "downgrade": "medium",
+        "block": "high",
+        "stop": "high",
+        "error": "critical",
+    }
+    return mapping.get(decision, "low")
+
+
+def hash_text(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def excerpt(text: str, limit: int) -> str:
+    if len(text) <= limit:
+        return text
+    return text[:limit] + "...[truncated]"
+
+
+def redact_text(text: str, replacements: Dict[str, str]) -> Dict[str, Any]:
+    redacted = text
+    redaction_summary: List[Dict[str, Any]] = []
+    credential_pattern = replacements.get("credential", r"(?i)(api[_-]?key|token|password|secret)\s*[:=]\s*([^\s,;]+)")
+    id_pattern = replacements.get("id", r"\b\d{17}[0-9Xx]\b")
+    private_key_pattern = replacements.get("private_key", r"-----BEGIN (RSA|EC|DSA|OPENSSH) PRIVATE KEY-----")
+
+    redacted, credential_count = re.subn(credential_pattern, r"\1=[REDACTED]", redacted)
+    redacted, id_count = re.subn(id_pattern, "[REDACTED_ID]", redacted)
+    redacted, key_count = re.subn(private_key_pattern, "[REDACTED_PRIVATE_KEY]", redacted)
+
+    if credential_count:
+        redaction_summary.append({"type": "credential", "count": credential_count})
+    if id_count:
+        redaction_summary.append({"type": "id", "count": id_count})
+    if key_count:
+        redaction_summary.append({"type": "private_key", "count": key_count})
+    return {"text": redacted, "summary": redaction_summary}
+
+
+def build_retention_snapshot(policy: Dict[str, Any], final_action: str, user_prompt: str, safe_response: str) -> Dict[str, Any]:
+    user_redacted = redact_text(user_prompt, policy.get("redaction_replacements", {}))["text"]
+    resp_redacted = redact_text(safe_response, policy.get("redaction_replacements", {}))["text"]
+    base = {
+        "user_prompt_hash": hash_text(user_prompt),
+        "safe_response_hash": hash_text(safe_response),
+        "user_prompt_length": len(user_prompt),
+        "safe_response_length": len(safe_response),
+    }
+    if final_action == "allow":
+        base["retention_level"] = "summary_only"
+        base["user_prompt_preview"] = excerpt(user_redacted, 120)
+        base["safe_response_preview"] = excerpt(resp_redacted, 120)
+    elif final_action == "downgrade":
+        base["retention_level"] = "evidence_compact"
+        base["user_prompt_preview"] = excerpt(user_redacted, 300)
+        base["safe_response_preview"] = excerpt(resp_redacted, 300)
+    else:
+        base["retention_level"] = "evidence_full_redacted"
+        base["user_prompt_preview"] = excerpt(user_redacted, 800)
+        base["safe_response_preview"] = excerpt(resp_redacted, 800)
+    return base
 
 
 def infer_sensitivity(prompt: str, events: List[Dict[str, Any]], previous_state: str, policy: Dict[str, Any]) -> Dict[str, Any]:
@@ -103,25 +199,51 @@ def infer_sensitivity(prompt: str, events: List[Dict[str, Any]], previous_state:
     return {"sensitivity_state": state, "reasons": reasons}
 
 
-def preflight_decision(user_prompt: str, planned_actions: List[str], sensitivity_state: str, policy: Dict[str, Any]) -> Dict[str, Any]:
+def preflight_decision(
+    user_prompt: str,
+    planned_actions: List[str],
+    intent_tags: List[str],
+    sensitivity_state: str,
+    policy: Dict[str, Any],
+) -> Dict[str, Any]:
     prompt_low = user_prompt.lower()
     high_risk_actions = {str(x) for x in policy.get("high_risk_actions", [])}
-    disclosure_phrases = [str(x).lower() for x in policy.get("explicit_disclosure_phrases", [])]
+    explicit_phrases = [str(x).lower() for x in policy.get("explicit_disclosure_phrases", [])]
+    implicit_phrases = [str(x).lower() for x in policy.get("implicit_disclosure_phrases", [])]
+    explanation_phrases = [str(x).lower() for x in policy.get("explanation_leakage_phrases", [])]
     has_high_risk_action = any(a in high_risk_actions for a in planned_actions)
 
     risk_summary: List[str] = []
     blocked_actions: List[str] = []
     verification_requirements: List[str] = []
+    decision_reason_codes: List[str] = []
+    matched_rules: List[str] = []
     decision = "allow"
 
-    if any(x in prompt_low for x in disclosure_phrases):
+    explicit_hits = get_match_hits(prompt_low, explicit_phrases)
+    implicit_hits = get_match_hits(prompt_low, implicit_phrases)
+    explanation_hits = get_match_hits(prompt_low, explanation_phrases)
+
+    if explicit_hits:
         decision = "block"
         risk_summary.append("explicit sensitive disclosure request")
         blocked_actions.append("disclose_raw_secret")
+        decision_reason_codes.append("PF_EXPLICIT_DISCLOSURE")
+        matched_rules.extend(explicit_hits)
+
+    if implicit_hits or explanation_hits or "summary_from_sensitive_context" in intent_tags:
+        risk_summary.append("implicit disclosure risk in explanation/summarization")
+        verification_requirements.append("enforce output leakage check")
+        decision_reason_codes.append("PF_IMPLICIT_DISCLOSURE_RISK")
+        matched_rules.extend(implicit_hits)
+        matched_rules.extend(explanation_hits)
+        if decision != "block":
+            decision = "downgrade"
 
     if has_high_risk_action:
         risk_summary.append("high-risk action planned")
         verification_requirements.append("require confirmation for high-risk actions")
+        decision_reason_codes.append("PF_HIGH_RISK_ACTION")
         if decision != "block":
             decision = "downgrade"
 
@@ -133,7 +255,9 @@ def preflight_decision(user_prompt: str, planned_actions: List[str], sensitivity
         "sensitivity_state": sensitivity_state,
         "allowed_actions": ["read_only", "summarize", "explain"],
         "blocked_actions": blocked_actions,
-        "verification_requirements": verification_requirements,
+        "verification_requirements": sorted(set(verification_requirements)),
+        "decision_reason_codes": sorted(set(decision_reason_codes)),
+        "matched_rules": sorted(set(matched_rules)),
         "preflight_decision": decision,
     }
 
@@ -142,16 +266,20 @@ def runtime_decision(runtime_events: List[Dict[str, Any]], sources: List[Dict[st
     alerts: List[Dict[str, str]] = []
     suggested_actions: List[str] = []
     trust_annotations: List[Dict[str, str]] = []
+    decision_reason_codes: List[str] = []
+    matched_rules: List[str] = []
 
     decision = "continue"
     retry_threshold = int(policy.get("retry_threshold_downgrade", 3))
     single_source_types = {str(x) for x in policy.get("single_source_types", ["tool_single_source"])}
 
-    retry_count = sum(1 for e in runtime_events if str(e.get("type", "")) == "retry")
+    retry_count = sum(1 for e in runtime_events if str(e.get("type", "")).strip().lower() == "retry")
     if retry_count >= retry_threshold:
         alerts.append({"severity": "warning", "message": "repeated retries observed"})
         suggested_actions.append("pause and inspect root cause")
         decision = "downgrade"
+        decision_reason_codes.append("RT_RETRY_THRESHOLD")
+        matched_rules.append(f"retry_count>={retry_threshold}")
 
     for s in sources:
         source_type = str(s.get("source_type", "tool_single_source"))
@@ -171,33 +299,26 @@ def runtime_decision(runtime_events: List[Dict[str, Any]], sources: List[Dict[st
         suggested_actions.append("collect independent corroboration source")
         if decision == "continue":
             decision = "downgrade"
+        decision_reason_codes.append("RT_SINGLE_SOURCE_ONLY")
+        matched_rules.extend(sorted(source_types))
 
     if any(a.get("severity") == "critical" for a in alerts):
         decision = "stop"
+        decision_reason_codes.append("RT_CRITICAL_ALERT_STOP")
 
     return {
         "runtime_events": runtime_events,
         "alerts": alerts,
         "suggested_actions": sorted(set(suggested_actions)),
         "trust_annotations": trust_annotations,
+        "decision_reason_codes": sorted(set(decision_reason_codes)),
+        "matched_rules": sorted(set(matched_rules)),
         "runtime_decision": decision,
     }
 
 
 def detect_leakage(text: str, leak_patterns: List[Pattern[str]]) -> bool:
     return any(p.search(text) for p in leak_patterns)
-
-
-def redact_text(text: str, replacements: Dict[str, str]) -> str:
-    redacted = text
-    credential_pattern = replacements.get("credential", r"(?i)(api[_-]?key|token|password|secret)\\s*[:=]\\s*([^\\s,;]+)")
-    id_pattern = replacements.get("id", r"\\b\\d{17}[0-9Xx]\\b")
-    private_key_pattern = replacements.get("private_key", r"-----BEGIN (RSA|EC|DSA|OPENSSH) PRIVATE KEY-----")
-
-    redacted = re.sub(credential_pattern, r"\1=[REDACTED]", redacted)
-    redacted = re.sub(id_pattern, "[REDACTED_ID]", redacted)
-    redacted = re.sub(private_key_pattern, "[REDACTED_PRIVATE_KEY]", redacted)
-    return redacted
 
 
 def output_guard(
@@ -217,20 +338,38 @@ def output_guard(
     confidence = "high"
     safe_response = candidate_response
     redaction_applied = False
+    residual_leakage_detected = False
+    redaction_summary: List[Dict[str, Any]] = []
+    decision_reason_codes: List[str] = []
+    matched_rules: List[str] = []
 
     if leakage:
-        safe_response = redact_text(candidate_response, policy.get("redaction_replacements", {}))
+        redaction_result = redact_text(candidate_response, policy.get("redaction_replacements", {}))
+        safe_response = str(redaction_result["text"])
+        redaction_summary = list(redaction_result["summary"])
         redaction_applied = safe_response != candidate_response
+        decision_reason_codes.append("OG_LEAK_PATTERN_HIT")
+        matched_rules.append("leak_patterns")
         if bool(policy.get("block_on_highly_sensitive_leak", True)) and sensitivity_state == "highly_sensitive":
             decision = "block"
+            decision_reason_codes.append("OG_HIGHLY_SENSITIVE_BLOCK")
         else:
             decision = "downgrade"
+            decision_reason_codes.append("OG_REDACT_AND_DOWNGRADE")
         confidence = "low"
+
+        residual_patterns = compile_patterns([str(x) for x in policy.get("residual_leak_patterns", [])])
+        residual_leakage_detected = detect_leakage(safe_response, residual_patterns or leak_patterns)
+        if residual_leakage_detected:
+            decision = "block"
+            decision_reason_codes.append("OG_RESIDUAL_LEAK_BLOCK")
 
     if has_single_tool_only and decision == "allow":
         decision = "downgrade"
         confidence = "low"
-        prefix = str(policy.get("force_uncertainty_prefix", "基于单一工具来源，结论存在不确定性。"))
+        decision_reason_codes.append("OG_SINGLE_SOURCE_DOWNGRADE")
+        matched_rules.extend(sorted(single_source_types))
+        prefix = str(policy.get("force_uncertainty_prefix", "基于单一工具来源，结论存在不确定性："))
         safe_response = f"{prefix}{safe_response}"
 
     if sensitivity_state in {"sensitive", "highly_sensitive"} and decision == "allow":
@@ -238,7 +377,11 @@ def output_guard(
 
     return {
         "leakage_detected": leakage,
+        "residual_leakage_detected": residual_leakage_detected,
         "redaction_applied": redaction_applied,
+        "redaction_summary": redaction_summary,
+        "decision_reason_codes": sorted(set(decision_reason_codes)),
+        "matched_rules": sorted(set(matched_rules)),
         "confidence_level": confidence,
         "safe_response": safe_response,
         "output_decision": decision,
@@ -259,68 +402,235 @@ def decide_final_action(preflight: Dict[str, Any], runtime: Dict[str, Any], outp
     return "allow"
 
 
+def emit_event(
+    events_log: Path,
+    trace_id: str,
+    session_id: str,
+    turn_id: str,
+    policy_profile: str,
+    event_type: str,
+    decision: str,
+    reason_codes: List[str],
+    matched_rules: List[str],
+    extra: Dict[str, Any],
+) -> None:
+    event = {
+        "ts": now_iso(),
+        "trace_id": trace_id,
+        "session_id": session_id,
+        "turn_id": turn_id,
+        "policy_profile": policy_profile,
+        "event_type": event_type,
+        "risk_level": event_risk_level(decision),
+        "decision": decision,
+        "reason_codes": sorted(set(reason_codes)),
+        "matched_rules": sorted(set(matched_rules)),
+    }
+    event.update(extra)
+    append_jsonl(events_log, event)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Self-guard runtime hook template")
     parser.add_argument("input_json", help="Input JSON path")
-    parser.add_argument("--out", default="safety-guard-log/self_guard_audit.json", help="Audit output path")
+    parser.add_argument("--out", default="", help="Optional summary JSON output path")
+    parser.add_argument("--events-log", default="safety-guard-log/events/self_guard_events.jsonl", help="JSONL event log path")
     parser.add_argument("--state-dir", default="safety-guard-log/.self_guard_state", help="Session state directory")
     parser.add_argument("--policy", default=None, help="Optional runtime policy JSON path")
+    parser.add_argument("--policy-profile", default="balanced", help="Policy profile tag for audit")
     args = parser.parse_args()
 
-    policy = dict(DEFAULT_POLICY)
-    if args.policy:
-        policy = merge_policy(policy, load_json(Path(args.policy).resolve()))
-
-    leak_patterns = compile_patterns([str(x) for x in policy.get("leak_patterns", [])])
-
     input_path = Path(args.input_json).resolve()
+    events_log = Path(args.events_log).resolve()
+
     payload = load_json(input_path)
-
     session_id = str(payload.get("session_id", "default-session"))
-    state_dir = Path(args.state_dir).resolve()
-    state_path = state_dir / f"{session_id}.json"
-    prev_state = "normal"
-    if state_path.exists():
-        prev_state = normalize_state(str(load_json(state_path).get("sensitivity_state", "normal")))
+    turn_id = str(payload.get("turn_id", payload.get("request_id", "unknown-turn")))
+    trace_id = f"{session_id}:{turn_id}:{uuid.uuid4().hex[:8]}"
 
-    user_prompt = str(payload.get("user_prompt", ""))
-    planned_actions = [str(x) for x in payload.get("planned_actions", [])]
-    runtime_events = payload.get("runtime_events", [])
-    sources = payload.get("sources", [])
-    candidate_response = str(payload.get("candidate_response", ""))
+    emit_event(
+        events_log=events_log,
+        trace_id=trace_id,
+        session_id=session_id,
+        turn_id=turn_id,
+        policy_profile=str(args.policy_profile),
+        event_type="hook_start",
+        decision="allow",
+        reason_codes=[],
+        matched_rules=[],
+        extra={"input_json": str(input_path)},
+    )
 
-    runtime_events_list = runtime_events if isinstance(runtime_events, list) else []
-    sources_list = sources if isinstance(sources, list) else []
+    try:
+        policy = dict(DEFAULT_POLICY)
+        if args.policy:
+            policy = merge_policy(policy, load_json(Path(args.policy).resolve()))
 
-    sens = infer_sensitivity(user_prompt, runtime_events_list, prev_state, policy)
-    preflight = preflight_decision(user_prompt, planned_actions, sens["sensitivity_state"], policy)
-    runtime = runtime_decision(runtime_events_list, sources_list, policy)
-    output = output_guard(candidate_response, preflight["sensitivity_state"], runtime["trust_annotations"], policy, leak_patterns)
+        leak_patterns = compile_patterns([str(x) for x in policy.get("leak_patterns", [])])
 
-    final_action = decide_final_action(preflight, runtime, output)
+        state_dir = Path(args.state_dir).resolve()
+        state_path = state_dir / f"{session_id}.json"
+        prev_state = "normal"
+        if state_path.exists():
+            prev_state = normalize_state(str(load_json(state_path).get("sensitivity_state", "normal")))
 
-    residual_risks: List[str] = []
-    if output["leakage_detected"]:
-        residual_risks.append("privacy leakage risk observed")
-    if any(a["source_type"] in set(policy.get("single_source_types", [])) for a in runtime["trust_annotations"]):
-        residual_risks.append("single-source reliability risk")
+        user_prompt = str(payload.get("user_prompt", payload.get("user_request", "")))
+        planned_actions = [str(x) for x in payload.get("planned_actions", [])]
+        runtime_events = payload.get("runtime_events", [])
+        sources = payload.get("sources", [])
+        intent_tags = [str(x) for x in payload.get("intent_tags", [])]
+        candidate_response = str(payload.get("candidate_response", ""))
 
-    audit = {
-        "session_id": session_id,
-        "trigger_reasons": ["runtime_hook", "self_guard"],
-        "preflight": preflight,
-        "runtime": runtime,
-        "output_guard": output,
-        "final_action": final_action,
-        "residual_risks": sorted(set(residual_risks)),
-        "audit_notes": sens["reasons"],
-    }
+        runtime_events_list = runtime_events if isinstance(runtime_events, list) else []
+        sources_list = sources if isinstance(sources, list) else []
 
-    save_json(Path(args.out).resolve(), audit)
-    save_json(state_path, {"session_id": session_id, "sensitivity_state": preflight["sensitivity_state"]})
+        sens = infer_sensitivity(user_prompt, runtime_events_list, prev_state, policy)
+        preflight = preflight_decision(user_prompt, planned_actions, intent_tags, sens["sensitivity_state"], policy)
+        runtime = runtime_decision(runtime_events_list, sources_list, policy)
+        output = output_guard(candidate_response, preflight["sensitivity_state"], runtime["trust_annotations"], policy, leak_patterns)
 
-    print(f"Saved audit: {Path(args.out).resolve()}")
-    print(f"Updated session state: {state_path}")
+        final_action = decide_final_action(preflight, runtime, output)
+
+        residual_risks: List[str] = []
+        if output["leakage_detected"]:
+            residual_risks.append("privacy leakage risk observed")
+        if any(a["source_type"] in set(policy.get("single_source_types", [])) for a in runtime["trust_annotations"]):
+            residual_risks.append("single-source reliability risk")
+
+        decision_reason_codes = sorted(
+            set(preflight.get("decision_reason_codes", []))
+            | set(runtime.get("decision_reason_codes", []))
+            | set(output.get("decision_reason_codes", []))
+        )
+        matched_rules = sorted(
+            set(preflight.get("matched_rules", []))
+            | set(runtime.get("matched_rules", []))
+            | set(output.get("matched_rules", []))
+        )
+
+        retention = build_retention_snapshot(policy, final_action, user_prompt, output["safe_response"])
+
+        emit_event(
+            events_log,
+            trace_id,
+            session_id,
+            turn_id,
+            str(args.policy_profile),
+            "preflight_result",
+            preflight["preflight_decision"],
+            preflight.get("decision_reason_codes", []),
+            preflight.get("matched_rules", []),
+            {
+                "sensitivity_state": preflight["sensitivity_state"],
+                "risk_summary": preflight["risk_summary"],
+                "verification_requirements": preflight["verification_requirements"],
+            },
+        )
+
+        emit_event(
+            events_log,
+            trace_id,
+            session_id,
+            turn_id,
+            str(args.policy_profile),
+            "runtime_result",
+            runtime["runtime_decision"],
+            runtime.get("decision_reason_codes", []),
+            runtime.get("matched_rules", []),
+            {
+                "alerts": runtime["alerts"],
+                "suggested_actions": runtime["suggested_actions"],
+                "trust_annotations": runtime["trust_annotations"],
+            },
+        )
+
+        emit_event(
+            events_log,
+            trace_id,
+            session_id,
+            turn_id,
+            str(args.policy_profile),
+            "output_guard_result",
+            output["output_decision"],
+            output.get("decision_reason_codes", []),
+            output.get("matched_rules", []),
+            {
+                "leakage_detected": output["leakage_detected"],
+                "residual_leakage_detected": output["residual_leakage_detected"],
+                "redaction_applied": output["redaction_applied"],
+                "redaction_summary": output["redaction_summary"],
+                "confidence_level": output["confidence_level"],
+            },
+        )
+
+        emit_event(
+            events_log,
+            trace_id,
+            session_id,
+            turn_id,
+            str(args.policy_profile),
+            "final_decision",
+            final_action,
+            decision_reason_codes,
+            matched_rules,
+            {
+                "final_action": final_action,
+                "residual_risks": sorted(set(residual_risks)),
+                "audit_notes": sens["reasons"],
+                "retention": retention,
+            },
+        )
+
+        emit_event(
+            events_log,
+            trace_id,
+            session_id,
+            turn_id,
+            str(args.policy_profile),
+            "hook_end",
+            final_action,
+            decision_reason_codes,
+            matched_rules,
+            {},
+        )
+
+        save_json(state_path, {"session_id": session_id, "sensitivity_state": preflight["sensitivity_state"]})
+
+        summary = {
+            "session_id": session_id,
+            "turn_id": turn_id,
+            "trace_id": trace_id,
+            "policy_profile": str(args.policy_profile),
+            "final_action": final_action,
+            "decision_reason_codes": decision_reason_codes,
+            "matched_rules": matched_rules,
+            "output_guard": {
+                "output_decision": output["output_decision"],
+                "redaction_summary": output["redaction_summary"],
+                "safe_response": output["safe_response"],
+            },
+        }
+
+        if args.out:
+            save_json(Path(args.out).resolve(), summary)
+            print(f"Saved summary: {Path(args.out).resolve()}")
+
+        print(f"Appended events: {events_log}")
+        print(f"Updated session state: {state_path}")
+    except Exception as exc:  # pragma: no cover - defensive logging
+        emit_event(
+            events_log,
+            trace_id,
+            session_id,
+            turn_id,
+            str(args.policy_profile),
+            "hook_error",
+            "error",
+            ["HOOK_RUNTIME_ERROR"],
+            [],
+            {"error": str(exc)},
+        )
+        raise
 
 
 if __name__ == "__main__":
