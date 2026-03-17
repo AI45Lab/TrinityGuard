@@ -1,5 +1,5 @@
-﻿#!/usr/bin/env python3
-"""Cross-platform verification for TrinityGuard self-guard install."""
+#!/usr/bin/env python3
+"""Verification for TrinityGuard self-guard install (Codex only)."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ REQUIRED_EVENT_TYPES = [
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Verify installed trinityguard-self-guard skill")
-    parser.add_argument("--target", choices=["codex", "claude"], default="codex")
+    parser.add_argument("--target", choices=["codex"], default="codex")
     parser.add_argument("--base-dir", default="")
     parser.add_argument("--skill-dir", default="")
     parser.add_argument("--policy-profile", default="balanced")
@@ -32,15 +32,22 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def resolve_codex_home(base_hint: str) -> Path:
+    if not base_hint:
+        return Path.home() / ".codex"
+
+    base = Path(base_hint).expanduser().resolve()
+    if base.name.lower() == ".codex":
+        return base
+    return base / ".codex"
+
+
 def resolve_skill_dir(args: argparse.Namespace) -> Path:
     if args.skill_dir:
         return Path(args.skill_dir).expanduser().resolve()
 
-    if args.base_dir:
-        base_dir = Path(args.base_dir).expanduser().resolve()
-    else:
-        base_dir = Path.home() / (".codex" if args.target == "codex" else ".claude")
-    return (base_dir / "skills" / "trinityguard-self-guard").resolve()
+    codex_home = resolve_codex_home(args.base_dir)
+    return (codex_home / "skills" / "trinityguard-self-guard").resolve()
 
 
 def ensure_required_files(skill_dir: Path) -> None:
@@ -76,16 +83,24 @@ def run_eval_consistency(skill_dir: Path) -> None:
     subprocess.run([sys.executable, str(script), str(skill_dir), "--strict"], check=True)
 
 
-def run_runtime_smoke(skill_dir: Path, policy_file: Path, policy_profile: str) -> Path:
-    log_root = skill_dir / "safety-guard-log"
-    verify_dir = log_root / "verify"
-    verify_dir.mkdir(parents=True, exist_ok=True)
+def write_json(path: Path, data: Dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    input_json = skill_dir / "shared" / "scripts" / "runtime_hook_input_example.json"
+
+def run_runtime_smoke(skill_dir: Path, policy_file: Path, policy_profile: str) -> Path:
+    verify_project = skill_dir / ".verify_project"
+    verify_dir = verify_project / ".codex" / "logs"
+    verify_project.mkdir(parents=True, exist_ok=True)
+
+    input_template = skill_dir / "shared" / "scripts" / "runtime_hook_input_example.json"
     hook = skill_dir / "shared" / "scripts" / "self_guard_runtime_hook_template.py"
-    summary_json = verify_dir / "runtime_hook_summary.json"
-    events_jsonl = verify_dir / "self_guard_events.jsonl"
-    state_dir = verify_dir / ".self_guard_state"
+    input_json = verify_project / "runtime_hook_input_verify.json"
+    summary_json = ".codex/logs/runtime_hook_summary.json"
+
+    payload = json.loads(input_template.read_text(encoding="utf-8-sig"))
+    payload["project_path"] = str(verify_project.resolve())
+    write_json(input_json, payload)
 
     subprocess.run(
         [
@@ -97,11 +112,7 @@ def run_runtime_smoke(skill_dir: Path, policy_file: Path, policy_profile: str) -
             "--policy-profile",
             policy_profile,
             "--out",
-            str(summary_json),
-            "--events-log",
-            str(events_jsonl),
-            "--state-dir",
-            str(state_dir),
+            summary_json,
         ],
         check=True,
     )
@@ -157,7 +168,7 @@ def main() -> None:
     run_eval_consistency(skill_dir)
     verify_dir = run_runtime_smoke(skill_dir, pick_policy_file(skill_dir, args.policy_file), args.policy_profile)
     verify_events_fields(verify_dir)
-    shutil.rmtree(verify_dir, ignore_errors=True)
+    shutil.rmtree(verify_dir.parent.parent, ignore_errors=True)
     print("[OK] runtime hook JSONL smoke test passed")
 
 

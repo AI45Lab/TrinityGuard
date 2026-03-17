@@ -27,15 +27,16 @@
 python shared/scripts/self_guard_runtime_hook_template.py \
   shared/scripts/runtime_hook_input_example.json \
   --policy shared/references/runtime_policy.balanced.json \
-  --events-log ../../safety-guard-log/events/self_guard_events.jsonl
+  --events-log ../../.codex/logs/self_guard_events.jsonl
 ```
 
 ```bash
 python shared/scripts/query_guard_events.py \
-  ../../safety-guard-log/events/self_guard_events.jsonl \
+  ../../.codex/logs/self_guard_events.jsonl \
   --event-type final_decision --limit 20
 ```
 
 ```bash
 python shared/scripts/validate_eval_assets_consistency.py . --strict
 ```
+

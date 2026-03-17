@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """Runtime hook for TrinityGuard self-guard orchestration.
 
 Primary output is JSONL event stream. Optional summary JSON can be written via --out.
@@ -13,6 +13,7 @@ import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from time import perf_counter
 from typing import Any, Dict, List, Pattern
 
 DEFAULT_POLICY: Dict[str, Any] = {
@@ -93,6 +94,60 @@ def get_match_hits(text: str, phrases: List[str]) -> List[str]:
         if str(phrase).lower() in low_text:
             hits.append(str(phrase))
     return sorted(set(hits))
+
+
+def is_credential_exfil_request(prompt_low: str) -> bool:
+    target_terms = [
+        "api_key",
+        "apikey",
+        "access_token",
+        "token",
+        "password",
+        "secret",
+        "密钥",
+        "令牌",
+        "凭据",
+        "口令",
+        "密码",
+    ]
+    action_terms = [
+        "找出",
+        "提取",
+        "给我",
+        "输出",
+        "列出",
+        "打印",
+        "返回",
+        "read",
+        "extract",
+        "show",
+        "print",
+        "list",
+        "dump",
+        "find",
+        "give me",
+    ]
+    has_target = any(t in prompt_low for t in target_terms)
+    has_action = any(a in prompt_low for a in action_terms)
+    return has_target and has_action
+
+
+def is_refusal_response(text: str) -> bool:
+    text_low = text.lower()
+    refusal_markers = [
+        "我不能帮助",
+        "我不能协助",
+        "不能提供",
+        "无法提供",
+        "不能帮忙",
+        "i can't help",
+        "i cannot help",
+        "can't assist",
+        "cannot assist",
+        "won't help",
+        "cannot provide",
+    ]
+    return any(m in text_low for m in refusal_markers)
 
 
 def normalize_state(state: str) -> str:
@@ -223,13 +278,18 @@ def preflight_decision(
     explicit_hits = get_match_hits(prompt_low, explicit_phrases)
     implicit_hits = get_match_hits(prompt_low, implicit_phrases)
     explanation_hits = get_match_hits(prompt_low, explanation_phrases)
+    credential_exfil = is_credential_exfil_request(prompt_low)
 
-    if explicit_hits:
+    if explicit_hits or credential_exfil:
         decision = "block"
         risk_summary.append("explicit sensitive disclosure request")
         blocked_actions.append("disclose_raw_secret")
         decision_reason_codes.append("PF_EXPLICIT_DISCLOSURE")
         matched_rules.extend(explicit_hits)
+        if credential_exfil:
+            risk_summary.append("credential exfiltration intent detected")
+            decision_reason_codes.append("PF_CREDENTIAL_EXFIL_REQUEST")
+            matched_rules.append("credential_exfil_intent")
 
     if implicit_hits or explanation_hits or "summary_from_sensitive_context" in intent_tags:
         risk_summary.append("implicit disclosure risk in explanation/summarization")
@@ -364,7 +424,7 @@ def output_guard(
             decision = "block"
             decision_reason_codes.append("OG_RESIDUAL_LEAK_BLOCK")
 
-    if has_single_tool_only and decision == "allow":
+    if has_single_tool_only and decision == "allow" and not is_refusal_response(safe_response):
         decision = "downgrade"
         confidence = "low"
         decision_reason_codes.append("OG_SINGLE_SOURCE_DOWNGRADE")
@@ -430,23 +490,48 @@ def emit_event(
     append_jsonl(events_log, event)
 
 
+
+def resolve_project_root(payload: Dict[str, Any], input_path: Path) -> Path:
+    for key in ["project_path", "project_root", "workspace_root", "repo_root"]:
+        val = payload.get(key)
+        if isinstance(val, str) and val.strip():
+            return Path(val).expanduser().resolve()
+    return Path.cwd().resolve()
+
+
+def resolve_path_in_project(path_str: str, project_root: Path) -> Path:
+    p = Path(path_str)
+    if p.is_absolute():
+        return p.resolve()
+    return (project_root / p).resolve()
 def main() -> None:
     parser = argparse.ArgumentParser(description="Self-guard runtime hook template")
     parser.add_argument("input_json", help="Input JSON path")
     parser.add_argument("--out", default="", help="Optional summary JSON output path")
-    parser.add_argument("--events-log", default="safety-guard-log/events/self_guard_events.jsonl", help="JSONL event log path")
-    parser.add_argument("--state-dir", default="safety-guard-log/.self_guard_state", help="Session state directory")
+    parser.add_argument("--events-log", default=".codex/logs/self_guard_events.jsonl", help="JSONL event log path")
+    parser.add_argument("--state-dir", default=".codex/logs/.self_guard_state", help="Session state directory")
     parser.add_argument("--policy", default=None, help="Optional runtime policy JSON path")
     parser.add_argument("--policy-profile", default="balanced", help="Policy profile tag for audit")
     args = parser.parse_args()
 
     input_path = Path(args.input_json).resolve()
-    events_log = Path(args.events_log).resolve()
-
+    hook_start = perf_counter()
     payload = load_json(input_path)
+    project_root = resolve_project_root(payload, input_path)
+    events_log = resolve_path_in_project(args.events_log, project_root)
+    state_dir = resolve_path_in_project(args.state_dir, project_root)
+    out_path = resolve_path_in_project(args.out, project_root) if args.out else None
     session_id = str(payload.get("session_id", "default-session"))
     turn_id = str(payload.get("turn_id", payload.get("request_id", "unknown-turn")))
     trace_id = f"{session_id}:{turn_id}:{uuid.uuid4().hex[:8]}"
+    user_prompt = str(payload.get("user_prompt", payload.get("user_request", "")))
+    planned_actions = [str(x) for x in payload.get("planned_actions", [])]
+    runtime_events = payload.get("runtime_events", [])
+    sources = payload.get("sources", [])
+    intent_tags = [str(x) for x in payload.get("intent_tags", [])]
+    candidate_response = str(payload.get("candidate_response", ""))
+    runtime_events_list = runtime_events if isinstance(runtime_events, list) else []
+    sources_list = sources if isinstance(sources, list) else []
 
     emit_event(
         events_log=events_log,
@@ -458,7 +543,18 @@ def main() -> None:
         decision="allow",
         reason_codes=[],
         matched_rules=[],
-        extra={"input_json": str(input_path)},
+        extra={
+            "input_json": str(input_path),
+            "project_root": str(project_root),
+            "input_summary": {
+                "user_prompt_length": len(user_prompt),
+                "candidate_response_length": len(candidate_response),
+                "planned_actions": planned_actions,
+                "intent_tags": intent_tags,
+                "runtime_event_count": len(runtime_events_list),
+                "source_count": len(sources_list),
+            },
+        },
     )
 
     try:
@@ -468,21 +564,11 @@ def main() -> None:
 
         leak_patterns = compile_patterns([str(x) for x in policy.get("leak_patterns", [])])
 
-        state_dir = Path(args.state_dir).resolve()
         state_path = state_dir / f"{session_id}.json"
         prev_state = "normal"
         if state_path.exists():
             prev_state = normalize_state(str(load_json(state_path).get("sensitivity_state", "normal")))
 
-        user_prompt = str(payload.get("user_prompt", payload.get("user_request", "")))
-        planned_actions = [str(x) for x in payload.get("planned_actions", [])]
-        runtime_events = payload.get("runtime_events", [])
-        sources = payload.get("sources", [])
-        intent_tags = [str(x) for x in payload.get("intent_tags", [])]
-        candidate_response = str(payload.get("candidate_response", ""))
-
-        runtime_events_list = runtime_events if isinstance(runtime_events, list) else []
-        sources_list = sources if isinstance(sources, list) else []
 
         sens = infer_sensitivity(user_prompt, runtime_events_list, prev_state, policy)
         preflight = preflight_decision(user_prompt, planned_actions, intent_tags, sens["sensitivity_state"], policy)
@@ -524,6 +610,9 @@ def main() -> None:
                 "sensitivity_state": preflight["sensitivity_state"],
                 "risk_summary": preflight["risk_summary"],
                 "verification_requirements": preflight["verification_requirements"],
+                "allowed_actions": preflight["allowed_actions"],
+                "blocked_actions": preflight["blocked_actions"],
+                "planned_actions": planned_actions,
             },
         )
 
@@ -538,6 +627,11 @@ def main() -> None:
             runtime.get("decision_reason_codes", []),
             runtime.get("matched_rules", []),
             {
+                "runtime_event_count": len(runtime_events_list),
+                "runtime_event_types": sorted(
+                    set(str(e.get("type", "unknown")).strip().lower() for e in runtime_events_list)
+                ),
+                "source_types": sorted(set(str(s.get("source_type", "unknown")) for s in sources_list)),
                 "alerts": runtime["alerts"],
                 "suggested_actions": runtime["suggested_actions"],
                 "trust_annotations": runtime["trust_annotations"],
@@ -560,8 +654,12 @@ def main() -> None:
                 "redaction_applied": output["redaction_applied"],
                 "redaction_summary": output["redaction_summary"],
                 "confidence_level": output["confidence_level"],
+                "safe_response_length": len(output["safe_response"]),
+                "safe_response_preview": excerpt(output["safe_response"], 160),
             },
         )
+
+        duration_ms = int((perf_counter() - hook_start) * 1000)
 
         emit_event(
             events_log,
@@ -578,6 +676,12 @@ def main() -> None:
                 "residual_risks": sorted(set(residual_risks)),
                 "audit_notes": sens["reasons"],
                 "retention": retention,
+                "decision_chain": {
+                    "preflight_decision": preflight["preflight_decision"],
+                    "runtime_decision": runtime["runtime_decision"],
+                    "output_decision": output["output_decision"],
+                },
+                "duration_ms": duration_ms,
             },
         )
 
@@ -591,7 +695,7 @@ def main() -> None:
             final_action,
             decision_reason_codes,
             matched_rules,
-            {},
+            {"duration_ms": duration_ms},
         )
 
         save_json(state_path, {"session_id": session_id, "sensitivity_state": preflight["sensitivity_state"]})
@@ -604,6 +708,12 @@ def main() -> None:
             "final_action": final_action,
             "decision_reason_codes": decision_reason_codes,
             "matched_rules": matched_rules,
+            "duration_ms": duration_ms,
+            "decision_chain": {
+                "preflight_decision": preflight["preflight_decision"],
+                "runtime_decision": runtime["runtime_decision"],
+                "output_decision": output["output_decision"],
+            },
             "output_guard": {
                 "output_decision": output["output_decision"],
                 "redaction_summary": output["redaction_summary"],
@@ -611,9 +721,9 @@ def main() -> None:
             },
         }
 
-        if args.out:
-            save_json(Path(args.out).resolve(), summary)
-            print(f"Saved summary: {Path(args.out).resolve()}")
+        if out_path:
+            save_json(out_path, summary)
+            print(f"Saved summary: {out_path}")
 
         print(f"Appended events: {events_log}")
         print(f"Updated session state: {state_path}")
@@ -628,7 +738,10 @@ def main() -> None:
             "error",
             ["HOOK_RUNTIME_ERROR"],
             [],
-            {"error": str(exc)},
+            {
+                "error": str(exc),
+                "duration_ms": int((perf_counter() - hook_start) * 1000),
+            },
         )
         raise
 

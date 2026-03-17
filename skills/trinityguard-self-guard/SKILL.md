@@ -1,4 +1,4 @@
-﻿---
+---
 name: trinityguard-self-guard
 description: TrinityGuard 自监控安全总入口。用于让 code agent 在每轮任务中执行 preflight、runtime、output guard，并输出可追踪审计事件。
 ---
@@ -24,7 +24,7 @@ description: TrinityGuard 自监控安全总入口。用于让 code agent 在每
 python shared/scripts/self_guard_runtime_hook_template.py \
   shared/scripts/runtime_hook_input_example.json \
   --policy shared/references/runtime_policy.template.json \
-  --events-log ./safety-guard-log/events/self_guard_events.jsonl
+  --events-log ./.codex/logs/self_guard_events.jsonl
 ```
 
 可选：输出单轮摘要 JSON。
@@ -32,5 +32,27 @@ python shared/scripts/self_guard_runtime_hook_template.py \
 ```bash
 python shared/scripts/self_guard_runtime_hook_template.py \
   shared/scripts/runtime_hook_input_example.json \
-  --out ./safety-guard-log/runtime_hook_summary.json
+  --out ./.codex/logs/runtime_hook_summary.json
 ```
+
+
+
+## ?????????????
+1. ?????????????????????????? runtime hook?
+2. ???????????????
+   - `./.codex/logs/self_guard_events.jsonl`
+   - `./.codex/logs/.self_guard_state/`
+   - `./.codex/logs/runtime_hook_summary.json`
+3. ??????????????
+
+```bash
+python shared/scripts/self_guard_runtime_hook_template.py   ./.codex/logs/self_guard_input_<turn>.json   --policy shared/references/runtime_policy.template.json   --policy-profile balanced   --events-log ./.codex/logs/self_guard_events.jsonl   --state-dir ./.codex/logs/.self_guard_state   --out ./.codex/logs/runtime_hook_summary.json
+```
+
+4. ?? JSON ???? `project_path`???????????????????????????
+5. ?????????????
+   - `self_guard_final_action`
+   - `self_guard_trace_id`
+   - `self_guard_events_log`????????
+6. ????????????????????????????????????/?????
+

@@ -1,6 +1,6 @@
 ﻿# TrinityGuard Self-Guard 安装与测试
 
-## 1. 跨平台安装
+## 1. 安装
 
 前置条件：
 1. Python 3.9+
@@ -12,22 +12,10 @@
 python skills/trinityguard-self-guard/install/install_skill_local.py --target codex
 ```
 
-```bash
-python skills/trinityguard-self-guard/install/install_skill_local.py --target claude
-```
-
-```bash
-python skills/trinityguard-self-guard/install/install_skill_local.py --target both
-```
-
 ## 2. 验收命令
 
 ```bash
 python skills/trinityguard-self-guard/install/verify_install.py --target codex --policy-profile balanced
-```
-
-```bash
-python skills/trinityguard-self-guard/install/verify_install.py --target claude --policy-profile balanced
 ```
 
 验收通过标准：
@@ -38,7 +26,7 @@ python skills/trinityguard-self-guard/install/verify_install.py --target claude 
 ## 3. 手工排查命令
 
 ```bash
-python skills/trinityguard-self-guard/shared/scripts/query_guard_events.py safety-guard-log/events/self_guard_events.jsonl --event-type final_decision --limit 20
+python skills/trinityguard-self-guard/shared/scripts/query_guard_events.py .codex/logs/self_guard_events.jsonl --event-type final_decision --limit 20
 ```
 
 ## 4. 回归剧本
@@ -53,3 +41,4 @@ python skills/trinityguard-self-guard/shared/scripts/query_guard_events.py safet
 ```bash
 python skills/trinityguard-self-guard/shared/scripts/validate_eval_assets_consistency.py skills/trinityguard-self-guard --strict
 ```
+

@@ -23,8 +23,8 @@
 5. `decide_final_action`
 
 输出产物：
-1. 主日志（JSONL）：`safety-guard-log/events/self_guard_events.jsonl`
-2. 会话状态：`safety-guard-log/.self_guard_state/<session>.json`
+1. 主日志（JSONL）：`.codex/logs/self_guard_events.jsonl`
+2. 会话状态：`.codex/logs/.self_guard_state/<session>.json`
 3. 可选摘要：通过 `--out` 输出单轮 summary JSON
 
 ## 3. final_action 状态机
@@ -59,3 +59,4 @@ stateDiagram-v2
 2. `retention`
 3. `residual_risks`
 4. `audit_notes`
+

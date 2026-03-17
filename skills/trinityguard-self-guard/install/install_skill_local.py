@@ -1,5 +1,5 @@
-#!/usr/bin/env python3
-"""Cross-platform installer for TrinityGuard self-guard skill."""
+﻿#!/usr/bin/env python3
+"""Cross-platform installer for TrinityGuard self-guard skill (Codex only)."""
 
 from __future__ import annotations
 
@@ -13,11 +13,10 @@ from typing import Dict, List
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Install trinityguard-self-guard skill")
-    parser.add_argument("--target", choices=["codex", "claude", "both"], default="both")
+    parser.add_argument("--target", choices=["codex"], default="codex")
     parser.add_argument("--mode", choices=["copy", "link"], default="copy")
     parser.add_argument("--source-skill-dir", default="")
     parser.add_argument("--codex-base-dir", default="")
-    parser.add_argument("--claude-base-dir", default="")
     parser.add_argument("--skip-verify", action="store_true")
     return parser.parse_args()
 
@@ -31,9 +30,18 @@ def resolve_source(source_skill_dir: str) -> Path:
     return source
 
 
+def resolve_codex_home(base_hint: str) -> Path:
+    if not base_hint:
+        return Path.home() / ".codex"
+
+    base = Path(base_hint).expanduser().resolve()
+    if base.name.lower() == ".codex":
+        return base
+    return base / ".codex"
+
+
 def default_base_dirs() -> Dict[str, Path]:
-    home = Path.home()
-    return {"codex": home / ".codex", "claude": home / ".claude"}
+    return {"codex": resolve_codex_home("")}
 
 
 def remove_existing(path: Path) -> None:
@@ -45,8 +53,8 @@ def remove_existing(path: Path) -> None:
     shutil.rmtree(path)
 
 
-def install_one(client_name: str, base_dir: Path, mode: str, source: Path) -> Path:
-    dest_root = base_dir / "skills"
+def install_one(client_name: str, codex_home: Path, mode: str, source: Path) -> Path:
+    dest_root = codex_home / "skills"
     dest = dest_root / "trinityguard-self-guard"
     dest_root.mkdir(parents=True, exist_ok=True)
     remove_existing(dest)
@@ -68,14 +76,8 @@ def install_one(client_name: str, base_dir: Path, mode: str, source: Path) -> Pa
 
 def build_targets(args: argparse.Namespace) -> List[Dict[str, Path]]:
     defaults = default_base_dirs()
-    codex_base = Path(args.codex_base_dir).expanduser().resolve() if args.codex_base_dir else defaults["codex"]
-    claude_base = Path(args.claude_base_dir).expanduser().resolve() if args.claude_base_dir else defaults["claude"]
-
-    if args.target == "both":
-        return [{"name": "codex", "base": codex_base}, {"name": "claude", "base": claude_base}]
-    if args.target == "codex":
-        return [{"name": "codex", "base": codex_base}]
-    return [{"name": "claude", "base": claude_base}]
+    codex_home = resolve_codex_home(args.codex_base_dir) if args.codex_base_dir else defaults["codex"]
+    return [{"name": "codex", "base": codex_home}]
 
 
 def run_verify(target_name: str, skill_dir: Path) -> None:
@@ -99,7 +101,7 @@ def main() -> None:
         for item in installed:
             run_verify(item["name"], item["dest"])
 
-    print("Install complete. Restart target client(s) to load new skills.")
+    print("Install complete. Restart Codex to load new skills.")
 
 
 if __name__ == "__main__":
