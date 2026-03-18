@@ -25,9 +25,23 @@ python skills/trinityguard-self-guard/install/install_skill_local.py --target co
 python skills/trinityguard-self-guard/install/verify_install.py --target codex --policy-profile balanced
 ```
 
-## Primary log contract
+## Primary log contract (default: turn_dir)
 
-- Main output is JSONL events: `.codex/logs/self_guard_events.jsonl`
-- Optional summary JSON can be generated with `--out`
-- Session state remains in `.codex/logs/.self_guard_state/`
+默认输出按“每轮目录”组织：
+- `.codex/logs/turns/<timestamp_turn_id>/input.json`
+- `.codex/logs/turns/<timestamp_turn_id>/result.json`
+- `.codex/logs/index.jsonl`（轻量全局索引）
 
+会话状态：
+- `.codex/logs/.self_guard_state/`
+
+## Legacy compatibility
+
+如需历史全量事件流，使用：
+
+```bash
+python skills/trinityguard-self-guard/shared/scripts/self_guard_runtime_hook_template.py \
+  <input_json> \
+  --log-layout legacy \
+  --events-log .codex/logs/self_guard_events.jsonl
+```

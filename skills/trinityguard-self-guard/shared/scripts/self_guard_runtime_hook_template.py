@@ -14,7 +14,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
-from typing import Any, Dict, List, Pattern
+from typing import Any, Dict, List, Optional, Pattern
 
 DEFAULT_POLICY: Dict[str, Any] = {
     "sensitive_event_types": ["read_secret", "read_credential", "read_private_pii", "read_key_material"],
@@ -463,7 +463,7 @@ def decide_final_action(preflight: Dict[str, Any], runtime: Dict[str, Any], outp
 
 
 def emit_event(
-    events_log: Path,
+    events_log: Optional[Path],
     trace_id: str,
     session_id: str,
     turn_id: str,
@@ -487,7 +487,8 @@ def emit_event(
         "matched_rules": sorted(set(matched_rules)),
     }
     event.update(extra)
-    append_jsonl(events_log, event)
+    if events_log is not None:
+        append_jsonl(events_log, event)
 
 
 
@@ -504,12 +505,26 @@ def resolve_path_in_project(path_str: str, project_root: Path) -> Path:
     if p.is_absolute():
         return p.resolve()
     return (project_root / p).resolve()
+
+def sanitize_turn_id(turn_id: str) -> str:
+    cleaned = re.sub(r"[^a-zA-Z0-9._-]+", "_", turn_id.strip())
+    cleaned = cleaned.strip("._-")
+    return cleaned or "unknown-turn"
+
+
+def make_turn_dir_name(turn_id: str) -> str:
+    return f"{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{sanitize_turn_id(turn_id)}"
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Self-guard runtime hook template")
     parser.add_argument("input_json", help="Input JSON path")
     parser.add_argument("--out", default="", help="Optional summary JSON output path")
-    parser.add_argument("--events-log", default=".codex/logs/self_guard_events.jsonl", help="JSONL event log path")
+    parser.add_argument("--events-log", default=".codex/logs/self_guard_events.jsonl", help="JSONL event log path (legacy mode)")
     parser.add_argument("--state-dir", default=".codex/logs/.self_guard_state", help="Session state directory")
+    parser.add_argument("--log-layout", choices=["legacy", "turn_dir"], default="turn_dir", help="Log layout strategy")
+    parser.add_argument("--turns-dir", default=".codex/logs/turns", help="Per-turn log root directory")
+    parser.add_argument("--index-log", default=".codex/logs/index.jsonl", help="Lightweight per-turn index JSONL")
     parser.add_argument("--policy", default=None, help="Optional runtime policy JSON path")
     parser.add_argument("--policy-profile", default="balanced", help="Policy profile tag for audit")
     args = parser.parse_args()
@@ -521,6 +536,8 @@ def main() -> None:
     events_log = resolve_path_in_project(args.events_log, project_root)
     state_dir = resolve_path_in_project(args.state_dir, project_root)
     out_path = resolve_path_in_project(args.out, project_root) if args.out else None
+    turns_dir = resolve_path_in_project(args.turns_dir, project_root)
+    index_log = resolve_path_in_project(args.index_log, project_root)
     session_id = str(payload.get("session_id", "default-session"))
     turn_id = str(payload.get("turn_id", payload.get("request_id", "unknown-turn")))
     trace_id = f"{session_id}:{turn_id}:{uuid.uuid4().hex[:8]}"
@@ -533,8 +550,27 @@ def main() -> None:
     runtime_events_list = runtime_events if isinstance(runtime_events, list) else []
     sources_list = sources if isinstance(sources, list) else []
 
+    events_sink: Optional[Path] = events_log if args.log_layout == "legacy" else None
+    turn_dir = turns_dir / make_turn_dir_name(turn_id)
+    turn_input_path = turn_dir / "input.json"
+    turn_result_path = turn_dir / "result.json"
+
+    if args.log_layout == "turn_dir":
+        save_json(
+            turn_input_path,
+            {
+                "ts": now_iso(),
+                "session_id": session_id,
+                "turn_id": turn_id,
+                "trace_id": trace_id,
+                "project_root": str(project_root),
+                "input_path": str(input_path),
+                "payload": payload,
+            },
+        )
+
     emit_event(
-        events_log=events_log,
+        events_log=events_sink,
         trace_id=trace_id,
         session_id=session_id,
         turn_id=turn_id,
@@ -597,7 +633,7 @@ def main() -> None:
         retention = build_retention_snapshot(policy, final_action, user_prompt, output["safe_response"])
 
         emit_event(
-            events_log,
+            events_sink,
             trace_id,
             session_id,
             turn_id,
@@ -617,7 +653,7 @@ def main() -> None:
         )
 
         emit_event(
-            events_log,
+            events_sink,
             trace_id,
             session_id,
             turn_id,
@@ -639,7 +675,7 @@ def main() -> None:
         )
 
         emit_event(
-            events_log,
+            events_sink,
             trace_id,
             session_id,
             turn_id,
@@ -662,7 +698,7 @@ def main() -> None:
         duration_ms = int((perf_counter() - hook_start) * 1000)
 
         emit_event(
-            events_log,
+            events_sink,
             trace_id,
             session_id,
             turn_id,
@@ -686,7 +722,7 @@ def main() -> None:
         )
 
         emit_event(
-            events_log,
+            events_sink,
             trace_id,
             session_id,
             turn_id,
@@ -721,15 +757,63 @@ def main() -> None:
             },
         }
 
-        if out_path:
-            save_json(out_path, summary)
-            print(f"Saved summary: {out_path}")
-
-        print(f"Appended events: {events_log}")
-        print(f"Updated session state: {state_path}")
+        if args.log_layout == "turn_dir":
+            result_record = {
+                "ts": now_iso(),
+                "session_id": session_id,
+                "turn_id": turn_id,
+                "trace_id": trace_id,
+                "policy_profile": str(args.policy_profile),
+                "final_action": final_action,
+                "duration_ms": duration_ms,
+                "decision_chain": summary["decision_chain"],
+                "decision_reason_codes": decision_reason_codes,
+                "matched_rules": matched_rules,
+                "residual_risks": sorted(set(residual_risks)),
+                "sensitivity_state": preflight["sensitivity_state"],
+                "safe_response_preview": excerpt(output["safe_response"], 200),
+                "redaction_summary": output["redaction_summary"],
+                "retention": retention,
+                "input_path": str(turn_input_path),
+                "turn_dir": str(turn_dir),
+            }
+            save_json(turn_result_path, result_record)
+            append_jsonl(
+                index_log,
+                {
+                    "ts": now_iso(),
+                    "session_id": session_id,
+                    "turn_id": turn_id,
+                    "trace_id": trace_id,
+                    "policy_profile": str(args.policy_profile),
+                    "final_action": final_action,
+                    "reason_codes": decision_reason_codes,
+                    "matched_rules": matched_rules,
+                    "duration_ms": duration_ms,
+                    "turn_dir": str(turn_dir),
+                    "input_path": str(turn_input_path),
+                    "result_path": str(turn_result_path),
+                },
+            )
+            if out_path:
+                save_json(out_path, summary)
+                print(f"Saved summary: {out_path}")
+            print(f"Turn dir: {turn_dir}")
+            print(f"Result path: {turn_result_path}")
+            print(f"Index log path: {index_log}")
+            print(f"Updated session state: {state_path}")
+        else:
+            if out_path:
+                save_json(out_path, summary)
+                print(f"Saved summary: {out_path}")
+            print(f"Appended events: {events_log}")
+            print("Turn dir: legacy-mode-disabled")
+            print(f"Result path: {out_path if out_path else 'legacy-summary-disabled'}")
+            print(f"Index log path: {index_log} (not written in legacy mode)")
+            print(f"Updated session state: {state_path}")
     except Exception as exc:  # pragma: no cover - defensive logging
         emit_event(
-            events_log,
+            events_sink,
             trace_id,
             session_id,
             turn_id,

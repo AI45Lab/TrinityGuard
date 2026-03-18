@@ -18,16 +18,29 @@ description: TrinityGuard 自监控安全总入口。用于让 code agent 在每
 4. 若结果为 `downgrade`：必须降级表达并声明不确定性。
 5. 解释型回答也必须经过 output guard。
 
-## 推荐脚本
+## 默认日志布局（turn_dir）
+默认日志根目录为 `./.codex/logs/`。
+
+每轮会生成独立目录：
+- `./.codex/logs/turns/YYYYMMDD_HHMMSS_<turn_id>/input.json`
+- `./.codex/logs/turns/YYYYMMDD_HHMMSS_<turn_id>/result.json`
+
+全局轻量索引：
+- `./.codex/logs/index.jsonl`
+
+会话状态仍单独存储：
+- `./.codex/logs/.self_guard_state/`
+
+## 推荐脚本（默认 turn_dir）
 
 ```bash
 python shared/scripts/self_guard_runtime_hook_template.py \
   shared/scripts/runtime_hook_input_example.json \
   --policy shared/references/runtime_policy.template.json \
-  --events-log ./.codex/logs/self_guard_events.jsonl
+  --policy-profile balanced
 ```
 
-可选：输出单轮摘要 JSON。
+可选：额外输出兼容 summary JSON。
 
 ```bash
 python shared/scripts/self_guard_runtime_hook_template.py \
@@ -35,24 +48,21 @@ python shared/scripts/self_guard_runtime_hook_template.py \
   --out ./.codex/logs/runtime_hook_summary.json
 ```
 
-
-
-## ?????????????
-1. ?????????????????????????? runtime hook?
-2. ???????????????
-   - `./.codex/logs/self_guard_events.jsonl`
-   - `./.codex/logs/.self_guard_state/`
-   - `./.codex/logs/runtime_hook_summary.json`
-3. ??????????????
+## legacy 兼容模式
+如需历史全量事件流 JSONL：
 
 ```bash
-python shared/scripts/self_guard_runtime_hook_template.py   ./.codex/logs/self_guard_input_<turn>.json   --policy shared/references/runtime_policy.template.json   --policy-profile balanced   --events-log ./.codex/logs/self_guard_events.jsonl   --state-dir ./.codex/logs/.self_guard_state   --out ./.codex/logs/runtime_hook_summary.json
+python shared/scripts/self_guard_runtime_hook_template.py \
+  shared/scripts/runtime_hook_input_example.json \
+  --log-layout legacy \
+  --events-log ./.codex/logs/self_guard_events.jsonl
 ```
 
-4. ?? JSON ???? `project_path`???????????????????????????
-5. ?????????????
+## 强制落日志协议（必须执行）
+1. 不允许只做文本判定而不运行脚本；每轮必须实际运行 runtime hook。
+2. 输入 JSON 必须包含 `project_path`（当前项目绝对路径），避免路径漂移。
+3. 最终回复必须给出最小证据：
    - `self_guard_final_action`
    - `self_guard_trace_id`
-   - `self_guard_events_log`????????
-6. ????????????????????????????????????/?????
-
+   - `self_guard_events_log`（可填 index 或 legacy events 实际路径）
+4. 如果脚本执行失败或不可用，必须明确声明“未完成安全自检”，并采用保守输出策略。

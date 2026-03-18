@@ -19,26 +19,28 @@ Default mode is `copy`, and verify runs automatically.
 python skills/trinityguard-self-guard/install/verify_install.py --target codex --policy-profile balanced
 ```
 
-Verify checks JSONL event chain, including:
+Verify now includes:
+1. `turn_dir` 主流程校验：`turns/*/input.json + result.json + index.jsonl`
+2. `legacy` 兼容校验：`self_guard_events_legacy_verify.jsonl` 事件链完整
 
-- `hook_start`
-- `preflight_result`
-- `runtime_result`
-- `output_guard_result`
-- `final_decision`
-- `hook_end`
+## Log outputs (default: turn_dir)
 
-## Log outputs
+Primary outputs:
+- `.codex/logs/turns/<timestamp_turn_id>/input.json`
+- `.codex/logs/turns/<timestamp_turn_id>/result.json`
+- `.codex/logs/index.jsonl`
+- `.codex/logs/.self_guard_state/`
 
-Primary log:
-- `.codex/logs/self_guard_events.jsonl`
-
-Optional summary JSON (only when passing `--out`):
+Optional compatibility summary (`--out`):
 - `.codex/logs/<custom>.json`
 
-## Query logs
+## Legacy events mode
+
+If you need full per-event JSONL stream:
 
 ```bash
-python skills/trinityguard-self-guard/shared/scripts/query_guard_events.py .codex/logs/self_guard_events.jsonl --event-type final_decision --limit 10
+python skills/trinityguard-self-guard/shared/scripts/self_guard_runtime_hook_template.py \
+  <input_json> \
+  --log-layout legacy \
+  --events-log .codex/logs/self_guard_events.jsonl
 ```
-

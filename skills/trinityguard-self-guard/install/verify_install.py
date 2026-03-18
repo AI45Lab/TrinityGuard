@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """Verification for TrinityGuard self-guard install (Codex only)."""
 
 from __future__ import annotations
@@ -35,7 +35,6 @@ def parse_args() -> argparse.Namespace:
 def resolve_codex_home(base_hint: str) -> Path:
     if not base_hint:
         return Path.home() / ".codex"
-
     base = Path(base_hint).expanduser().resolve()
     if base.name.lower() == ".codex":
         return base
@@ -45,7 +44,6 @@ def resolve_codex_home(base_hint: str) -> Path:
 def resolve_skill_dir(args: argparse.Namespace) -> Path:
     if args.skill_dir:
         return Path(args.skill_dir).expanduser().resolve()
-
     codex_home = resolve_codex_home(args.base_dir)
     return (codex_home / "skills" / "trinityguard-self-guard").resolve()
 
@@ -90,13 +88,12 @@ def write_json(path: Path, data: Dict[str, Any]) -> None:
 
 def run_runtime_smoke(skill_dir: Path, policy_file: Path, policy_profile: str) -> Path:
     verify_project = skill_dir / ".verify_project"
-    verify_dir = verify_project / ".codex" / "logs"
+    verify_logs = verify_project / ".codex" / "logs"
     verify_project.mkdir(parents=True, exist_ok=True)
 
     input_template = skill_dir / "shared" / "scripts" / "runtime_hook_input_example.json"
     hook = skill_dir / "shared" / "scripts" / "self_guard_runtime_hook_template.py"
     input_json = verify_project / "runtime_hook_input_verify.json"
-    summary_json = ".codex/logs/runtime_hook_summary.json"
 
     payload = json.loads(input_template.read_text(encoding="utf-8-sig"))
     payload["project_path"] = str(verify_project.resolve())
@@ -111,12 +108,31 @@ def run_runtime_smoke(skill_dir: Path, policy_file: Path, policy_profile: str) -
             str(policy_file),
             "--policy-profile",
             policy_profile,
-            "--out",
-            summary_json,
+            "--log-layout",
+            "turn_dir",
         ],
         check=True,
     )
-    return verify_dir
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(hook),
+            str(input_json),
+            "--policy",
+            str(policy_file),
+            "--policy-profile",
+            policy_profile,
+            "--log-layout",
+            "legacy",
+            "--events-log",
+            ".codex/logs/self_guard_events_legacy_verify.jsonl",
+            "--out",
+            ".codex/logs/runtime_hook_summary_legacy_verify.json",
+        ],
+        check=True,
+    )
+    return verify_logs
 
 
 def read_jsonl(path: Path) -> List[Dict[str, Any]]:
@@ -130,32 +146,81 @@ def read_jsonl(path: Path) -> List[Dict[str, Any]]:
     return rows
 
 
-def verify_events_fields(verify_dir: Path) -> None:
-    events_jsonl = verify_dir / "self_guard_events.jsonl"
+def verify_turn_dir_outputs(verify_logs: Path) -> None:
+    turns_root = verify_logs / "turns"
+    if not turns_root.exists():
+        raise FileNotFoundError(f"Missing turns directory: {turns_root}")
+
+    turn_dirs = [p for p in turns_root.iterdir() if p.is_dir()]
+    if not turn_dirs:
+        raise ValueError("No per-turn directory generated")
+
+    latest_turn = sorted(turn_dirs, key=lambda p: p.name)[-1]
+    input_path = latest_turn / "input.json"
+    result_path = latest_turn / "result.json"
+    index_path = verify_logs / "index.jsonl"
+
+    if not input_path.exists() or not result_path.exists():
+        raise FileNotFoundError(f"Turn directory missing input/result: {latest_turn}")
+    if not index_path.exists():
+        raise FileNotFoundError(f"Missing index log: {index_path}")
+
+    result_data = json.loads(result_path.read_text(encoding="utf-8-sig"))
+    required_result = [
+        "session_id",
+        "turn_id",
+        "trace_id",
+        "policy_profile",
+        "final_action",
+        "duration_ms",
+        "decision_chain",
+        "decision_reason_codes",
+        "matched_rules",
+        "residual_risks",
+        "sensitivity_state",
+        "safe_response_preview",
+        "redaction_summary",
+        "input_path",
+        "turn_dir",
+    ]
+    for key in required_result:
+        if key not in result_data:
+            raise ValueError(f"Missing result field: {key}")
+
+    index_rows = read_jsonl(index_path)
+    if not index_rows:
+        raise ValueError("index.jsonl is empty")
+
+    latest_idx = index_rows[-1]
+    required_index = ["trace_id", "turn_dir", "input_path", "result_path", "final_action", "reason_codes", "duration_ms"]
+    for key in required_index:
+        if key not in latest_idx:
+            raise ValueError(f"Missing index field: {key}")
+
+    print(f"[OK] turn_dir output: {latest_turn}")
+    print(f"[OK] index_log: {index_path}")
+
+
+def verify_legacy_outputs(verify_logs: Path) -> None:
+    events_jsonl = verify_logs / "self_guard_events_legacy_verify.jsonl"
     if not events_jsonl.exists():
-        raise FileNotFoundError(f"Missing events log: {events_jsonl}")
+        raise FileNotFoundError(f"Missing legacy events log: {events_jsonl}")
 
     rows = read_jsonl(events_jsonl)
     if not rows:
-        raise ValueError("Events log is empty")
+        raise ValueError("Legacy events log is empty")
 
     for required in REQUIRED_EVENT_TYPES:
         if not any(str(r.get("event_type", "")) == required for r in rows):
-            raise ValueError(f"Missing required event type: {required}")
+            raise ValueError(f"Missing required legacy event type: {required}")
 
     final_events = [r for r in rows if str(r.get("event_type", "")) == "final_decision"]
-    if not final_events:
-        raise ValueError("Missing final_decision event")
-
     final_event = final_events[-1]
-    required_top = ["final_action", "policy_profile", "reason_codes", "matched_rules", "retention"]
-    for key in required_top:
+    for key in ["final_action", "policy_profile", "reason_codes", "matched_rules", "retention"]:
         if key not in final_event:
-            raise ValueError(f"Missing final_decision field: {key}")
+            raise ValueError(f"Missing final_decision field in legacy mode: {key}")
 
-    print(f"[OK] final_action= {final_event['final_action']}")
-    print(f"[OK] policy_profile= {final_event['policy_profile']}")
-    print(f"[OK] reason_codes_count= {len(final_event.get('reason_codes', []))}")
+    print(f"[OK] legacy final_action= {final_event['final_action']}")
 
 
 def main() -> None:
@@ -166,10 +231,11 @@ def main() -> None:
 
     ensure_required_files(skill_dir)
     run_eval_consistency(skill_dir)
-    verify_dir = run_runtime_smoke(skill_dir, pick_policy_file(skill_dir, args.policy_file), args.policy_profile)
-    verify_events_fields(verify_dir)
-    shutil.rmtree(verify_dir.parent.parent, ignore_errors=True)
-    print("[OK] runtime hook JSONL smoke test passed")
+    verify_logs = run_runtime_smoke(skill_dir, pick_policy_file(skill_dir, args.policy_file), args.policy_profile)
+    verify_turn_dir_outputs(verify_logs)
+    verify_legacy_outputs(verify_logs)
+    shutil.rmtree(verify_logs.parent.parent, ignore_errors=True)
+    print("[OK] runtime hook turn_dir + legacy smoke tests passed")
 
 
 if __name__ == "__main__":
