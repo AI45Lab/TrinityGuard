@@ -1,9 +1,9 @@
-﻿# Local Installation (Codex)
+# Install and Verify Guide (Codex)
 
 ## Prerequisites
 
-1. Python 3.9+ available as `python`.
-2. Local repo contains `skills/trinityguard-self-guard/`.
+1. Python 3.9+
+2. local path contains `skills/trinityguard-self-guard/`
 
 ## Install
 
@@ -11,36 +11,45 @@
 python skills/trinityguard-self-guard/install/install_skill_local.py --target codex
 ```
 
-Default mode is `copy`, and verify runs automatically.
-
 ## Verify
 
 ```bash
 python skills/trinityguard-self-guard/install/verify_install.py --target codex --policy-profile balanced
 ```
 
-Verify now includes:
-1. `turn_dir` 主流程校验：`turns/*/input.json + result.json + index.jsonl`
-2. `legacy` 兼容校验：`self_guard_events_legacy_verify.jsonl` 事件链完整
+Verification covers:
 
-## Log outputs (default: turn_dir)
+1. required file structure
+2. UTF-8 asset gate
+3. `turn_dir` output integrity
+4. `legacy` compatibility checks
+5. behavior assertions for block/downgrade and source disclosure
 
-Primary outputs:
-- `.codex/logs/turns/<timestamp_turn_id>/input.json`
-- `.codex/logs/turns/<timestamp_turn_id>/result.json`
-- `.codex/logs/index.jsonl`
-- `.codex/logs/.self_guard_state/`
-
-Optional compatibility summary (`--out`):
-- `.codex/logs/<custom>.json`
-
-## Legacy events mode
-
-If you need full per-event JSONL stream:
+## Real A/B contrast
 
 ```bash
-python skills/trinityguard-self-guard/shared/scripts/self_guard_runtime_hook_template.py \
-  <input_json> \
-  --log-layout legacy \
-  --events-log .codex/logs/self_guard_events.jsonl
+python skills/trinityguard-self-guard/tests/run_ab_contrast.py   --policy-profile balanced   --runner-cmd "python skills/trinityguard-self-guard/tests/real_runner_example.py"
+```
+
+Default output: `.codex/logs/self_guard_tests/ab/`
+
+## Policy matrix
+
+```bash
+python skills/trinityguard-self-guard/tests/run_policy_matrix.py   --runner-cmd "python skills/trinityguard-self-guard/tests/real_runner_example.py"
+```
+
+Default output: `.codex/logs/self_guard_tests/policy_matrix/`
+
+## Mirror sync
+
+```bash
+python skills/trinityguard-self-guard/install/sync_to_mirror.py
+python skills/trinityguard-self-guard/install/sync_to_mirror.py --check-only
+```
+
+## Fallback for non-writable log directory
+
+```bash
+python skills/trinityguard-self-guard/shared/scripts/self_guard_runtime_hook_template.py   <input_json>   --turns-dir .codex/logs/fallback/turns   --index-log .codex/logs/fallback/index.jsonl   --state-dir .codex/logs/fallback/state   --events-log .codex/logs/fallback/events.jsonl
 ```

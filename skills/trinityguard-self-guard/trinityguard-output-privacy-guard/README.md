@@ -1,6 +1,23 @@
-﻿# trinityguard-output-privacy-guard
+# trinityguard-output-privacy-guard
 
-输出前安全守门技能。
+Output-stage privacy guard.
 
-- 重点覆盖解释性回答的隐私泄露风险
-- 默认对单工具来源结论做可信度降级
+## Purpose
+
+- detect leakage in candidate output
+- redact or block unsafe responses
+- downgrade single-source conclusions and attach source disclosure
+
+## Inputs
+
+- candidate response text
+- sensitivity state
+- trust annotations
+
+## Outputs
+
+- `output_decision`
+- `safe_response`
+- `redaction_summary`
+- `source_disclosure`
+- `source_items`

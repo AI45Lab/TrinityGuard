@@ -1,6 +1,16 @@
-﻿# trinityguard-preflight-selfcheck
+# trinityguard-preflight-selfcheck
 
-执行前安全边界设定技能。
+Pre-execution boundary and risk setup.
 
-- 产出可执行的允许/禁止动作清单
-- 为后续 runtime 与 output guard 提供基线
+## Purpose
+
+- classify prompt/action risk before execution
+- produce allow/block lists and verification requirements
+
+## Typical outputs
+
+- `preflight_decision`
+- `risk_summary`
+- `allowed_actions`
+- `blocked_actions`
+- `verification_requirements`

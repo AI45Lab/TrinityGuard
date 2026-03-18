@@ -1,6 +1,15 @@
-﻿# trinityguard-runtime-selfmonitor
+# trinityguard-runtime-selfmonitor
 
-执行中的安全监控技能。
+Runtime behavior monitor.
 
-- 面向命令、工具、文件写入等关键动作
-- 输出实时告警和动作建议
+## Purpose
+
+- watch runtime events, retries, and source reliability
+- emit alerts and recommended mitigation actions
+
+## Typical outputs
+
+- `runtime_decision`
+- `alerts`
+- `suggested_actions`
+- `trust_annotations`

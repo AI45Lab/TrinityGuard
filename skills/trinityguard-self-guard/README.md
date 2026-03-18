@@ -1,47 +1,59 @@
-﻿# TrinityGuard Self Guard Skills
+# TrinityGuard Self-Guard Skills
 
-独立 skills 集合，不依赖修改 TrinityGuard 主体源码。
+This package provides a production-oriented self-guard workflow for agent responses.
 
-## Skills
-1. `trinityguard-self-guard-orchestrator`
-2. `trinityguard-preflight-selfcheck`
-3. `trinityguard-runtime-selfmonitor`
-4. `trinityguard-output-privacy-guard`
+## Source of truth
 
-## Design principles
-1. 解释型回答与执行动作同等纳入安全监测。
-2. 工具来源信息默认降级，需多源校验后再提升可信度。
-3. 先边界、再执行、后输出，全程可审计。
+- Authoritative implementation: `skills/trinityguard-self-guard`
+- Mirror distribution target: `TrinitySafeSkills/trinityguard-self-guard` (read-only)
 
-## Quick install
+## Skill set
+
+1. `using-trinityguard-self-guard`
+2. `trinityguard-self-guard-orchestrator`
+3. `trinityguard-preflight-selfcheck`
+4. `trinityguard-runtime-selfmonitor`
+5. `trinityguard-output-privacy-guard`
+
+## Core behavior
+
+- run guard checks before final user-facing output
+- enforce block/downgrade/allow decisions with traceability
+- expose source disclosure for single-source downgrade cases
+- support both `turn_dir` and `legacy` log layouts
+
+## Quick start
 
 ```bash
 python skills/trinityguard-self-guard/install/install_skill_local.py --target codex
-```
-
-## Verification
-
-```bash
 python skills/trinityguard-self-guard/install/verify_install.py --target codex --policy-profile balanced
 ```
 
-## Primary log contract (default: turn_dir)
-
-默认输出按“每轮目录”组织：
-- `.codex/logs/turns/<timestamp_turn_id>/input.json`
-- `.codex/logs/turns/<timestamp_turn_id>/result.json`
-- `.codex/logs/index.jsonl`（轻量全局索引）
-
-会话状态：
-- `.codex/logs/.self_guard_state/`
-
-## Legacy compatibility
-
-如需历史全量事件流，使用：
+## Real A/B contrast (release gate)
 
 ```bash
-python skills/trinityguard-self-guard/shared/scripts/self_guard_runtime_hook_template.py \
-  <input_json> \
-  --log-layout legacy \
-  --events-log .codex/logs/self_guard_events.jsonl
+python skills/trinityguard-self-guard/tests/run_ab_contrast.py   --policy-profile balanced   --runner-cmd "python skills/trinityguard-self-guard/tests/real_runner_example.py"
+```
+
+Default output: `.codex/logs/self_guard_tests/ab/`
+
+## Policy matrix
+
+```bash
+python skills/trinityguard-self-guard/tests/run_policy_matrix.py   --runner-cmd "python skills/trinityguard-self-guard/tests/real_runner_example.py"
+```
+
+Default output: `.codex/logs/self_guard_tests/policy_matrix/`
+
+## Metrics
+
+```bash
+python skills/trinityguard-self-guard/shared/scripts/summarize_guard_metrics.py   .codex/logs/index.jsonl
+```
+
+## Mirror sync
+
+```bash
+python skills/trinityguard-self-guard/install/sync_to_mirror.py
+python skills/trinityguard-self-guard/install/sync_to_mirror.py --check-only
 ```

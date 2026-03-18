@@ -1,4 +1,4 @@
----
+﻿---
 name: trinityguard-self-guard
 description: TrinityGuard 自监控安全总入口。用于让 code agent 在每轮任务中执行 preflight、runtime、output guard，并输出可追踪审计事件。
 ---
@@ -6,10 +6,11 @@ description: TrinityGuard 自监控安全总入口。用于让 code agent 在每
 # TrinityGuard Self-Guard (Root Skill)
 
 本技能是 `trinityguard-self-guard` 技能包根入口，统一编排：
-1. `trinityguard-self-guard-orchestrator`
-2. `trinityguard-preflight-selfcheck`
-3. `trinityguard-runtime-selfmonitor`
-4. `trinityguard-output-privacy-guard`
+1. `using-trinityguard-self-guard`
+2. `trinityguard-self-guard-orchestrator`
+3. `trinityguard-preflight-selfcheck`
+4. `trinityguard-runtime-selfmonitor`
+5. `trinityguard-output-privacy-guard`
 
 ## 执行要求
 1. 每轮对外输出前必须执行一次自检流程。
@@ -17,6 +18,11 @@ description: TrinityGuard 自监控安全总入口。用于让 code agent 在每
 3. 若结果为 `block`：禁止输出原始候选回复，必须拒答或脱敏。
 4. 若结果为 `downgrade`：必须降级表达并声明不确定性。
 5. 解释型回答也必须经过 output guard。
+
+## 权威来源与镜像
+1. 权威目录：`skills/trinityguard-self-guard`。
+2. 镜像目录：`TrinitySafeSkills/trinityguard-self-guard`（只读）。
+3. 同步脚本：`install/sync_to_mirror.py`（单向同步，禁止反向编辑）。
 
 ## 默认日志布局（turn_dir）
 默认日志根目录为 `./.codex/logs/`。
@@ -48,7 +54,7 @@ python shared/scripts/self_guard_runtime_hook_template.py \
   --out ./.codex/logs/runtime_hook_summary.json
 ```
 
-## legacy 兼容模式
+## Legacy 兼容模式
 如需历史全量事件流 JSONL：
 
 ```bash

@@ -54,8 +54,10 @@
     "private_key": "-----BEGIN (RSA|EC|DSA|OPENSSH) PRIVATE KEY-----"
   },
   "residual_leak_patterns": [
-    "(?i)(api[_-]?key|token|password|secret)\\\\s*[:=]\\\\s*(?!\\\\[REDACTED\\\\])[^\\\\s,;]+",
+    "(?i)(api[_-]?key|token|password|secret)\\s*[:=]\\s*(?!\\[REDACTED\\])[^\\s,;]+",
     "(?i)-----BEGIN (RSA|EC|DSA|OPENSSH) PRIVATE KEY-----",
-    "\\\\b\\\\d{17}[0-9Xx]\\\\b"
-  ]
+    "\\b\\d{17}[0-9Xx]\\b"
+  ],
+  "single_source_disclosure_title": "来源说明（单一工具来源）",
+  "single_source_missing_hint": "来源信息缺失"
 }

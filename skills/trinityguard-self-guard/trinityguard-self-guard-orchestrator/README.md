@@ -1,6 +1,16 @@
-﻿# trinityguard-self-guard-orchestrator
+# trinityguard-self-guard-orchestrator
 
-负责在单轮任务中统一调度 preflight、runtime、output guard。
+Single-turn orchestrator for preflight + runtime + output guard.
 
-- 适用：高风险执行任务，或敏感上下文解释任务
-- 不适用：完全无敏感上下文且无执行动作的轻量问答
+## Purpose
+
+- run all stages in order
+- merge reason codes and matched rules
+- compute final decision and write auditable records
+
+## Core outputs
+
+- `final_action`
+- `decision_chain`
+- `trace_id`
+- `output_guard.safe_response`

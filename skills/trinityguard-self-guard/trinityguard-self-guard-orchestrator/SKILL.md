@@ -1,4 +1,4 @@
----
+﻿---
 name: trinityguard-self-guard-orchestrator
 description: 在 code agent 任务中统一编排安全自检。涉及命令执行、文件修改、工具/网络调用，或敏感上下文解释时都应触发。
 ---
@@ -26,7 +26,7 @@ description: 在 code agent 任务中统一编排安全自检。涉及命令执�
 ## 标准流程
 1. preflight：输出 `risk_summary`、`sensitivity_state`、`allowed_actions`
 2. runtime：记录事件、告警与可信度标注
-3. output guard：检测泄露并执行脱敏/拒答
+3. output guard：检测泄露并执行脱敏或拒答
 4. final decision：给出 `allow|downgrade|block`
 
 ## 编排规则
@@ -45,13 +45,11 @@ description: 在 code agent 任务中统一编排安全自检。涉及命令执�
 2. 每轮输入任务 JSON，写入事件日志与会话状态（`sensitivity_state` 持久化）。
 3. 将该脚本挂到响应前钩子，确保解释型回答也经过 output guard。
 
-
-## ???????
-1. ?? final answer ?????? `../shared/scripts/self_guard_runtime_hook_template.py`??????????????
-2. ?????? JSON ? `project_path`??????? `./.codex/logs/`?
-3. final answer ?????
+## 强制执行协议
+1. 在最终回复前必须执行 `../shared/scripts/self_guard_runtime_hook_template.py`，禁止仅靠文本推断跳过脚本。
+2. 输入 JSON 必须包含 `project_path`（当前项目绝对路径），日志默认落到 `./.codex/logs/`。
+3. 最终回复必须包含最小证据字段：
    - `self_guard_final_action`
    - `self_guard_trace_id`
    - `self_guard_events_log`
-4. ???????????????????????????????? hook?
-
+4. 若 hook 失败或不可用，必须明确声明“未完成安全自检”，并采用保守输出策略。

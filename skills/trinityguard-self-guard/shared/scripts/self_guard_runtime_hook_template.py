@@ -381,6 +381,47 @@ def detect_leakage(text: str, leak_patterns: List[Pattern[str]]) -> bool:
     return any(p.search(text) for p in leak_patterns)
 
 
+def build_source_disclosure(
+    trust_annotations: List[Dict[str, Any]],
+    policy: Dict[str, Any],
+) -> Dict[str, Any]:
+    title = str(policy.get("single_source_disclosure_title", "Source Disclosure (Single-Source)")).strip() or "Source Disclosure (Single-Source)"
+    missing_hint = str(policy.get("single_source_missing_hint", "source metadata missing")).strip() or "source metadata missing"
+
+    source_items: List[Dict[str, str]] = []
+    for ann in trust_annotations:
+        source_items.append(
+            {
+                "source_id": str(ann.get("source_id", "unknown")),
+                "source_type": str(ann.get("source_type", "unknown")),
+                "confidence": str(ann.get("confidence", "unknown")),
+                "reason": str(ann.get("reason", "")),
+            }
+        )
+
+    if not source_items:
+        return {
+            "source_items": [],
+            "source_disclosure": f"\n\n{title}\n- {missing_hint}",
+        }
+
+    lines: List[str] = [f"\n\n{title}"]
+    for item in source_items:
+        lines.append(
+            "- source_id={source_id}, source_type={source_type}, confidence={confidence}, reason={reason}".format(
+                source_id=item["source_id"],
+                source_type=item["source_type"],
+                confidence=item["confidence"],
+                reason=item["reason"] if item["reason"] else "n/a",
+            )
+        )
+
+    return {
+        "source_items": source_items,
+        "source_disclosure": "\n".join(lines),
+    }
+
+
 def output_guard(
     candidate_response: str,
     sensitivity_state: str,
@@ -400,6 +441,8 @@ def output_guard(
     redaction_applied = False
     residual_leakage_detected = False
     redaction_summary: List[Dict[str, Any]] = []
+    source_items: List[Dict[str, str]] = []
+    source_disclosure = ""
     decision_reason_codes: List[str] = []
     matched_rules: List[str] = []
 
@@ -429,8 +472,11 @@ def output_guard(
         confidence = "low"
         decision_reason_codes.append("OG_SINGLE_SOURCE_DOWNGRADE")
         matched_rules.extend(sorted(single_source_types))
-        prefix = str(policy.get("force_uncertainty_prefix", "基于单一工具来源，结论存在不确定性："))
-        safe_response = f"{prefix}{safe_response}"
+        prefix = str(policy.get("force_uncertainty_prefix", "Single-source evidence only; confidence is limited: "))
+        disclosure = build_source_disclosure(trust_annotations, policy)
+        source_items = disclosure["source_items"]
+        source_disclosure = disclosure["source_disclosure"]
+        safe_response = f"{prefix}{safe_response}{source_disclosure}"
 
     if sensitivity_state in {"sensitive", "highly_sensitive"} and decision == "allow":
         confidence = "medium"
@@ -444,6 +490,8 @@ def output_guard(
         "matched_rules": sorted(set(matched_rules)),
         "confidence_level": confidence,
         "safe_response": safe_response,
+        "source_disclosure": source_disclosure,
+        "source_items": source_items,
         "output_decision": decision,
     }
 
@@ -690,6 +738,8 @@ def main() -> None:
                 "redaction_applied": output["redaction_applied"],
                 "redaction_summary": output["redaction_summary"],
                 "confidence_level": output["confidence_level"],
+                "source_disclosure_present": bool(output.get("source_disclosure", "")),
+                "source_count": len(output.get("source_items", [])),
                 "safe_response_length": len(output["safe_response"]),
                 "safe_response_preview": excerpt(output["safe_response"], 160),
             },
@@ -754,6 +804,8 @@ def main() -> None:
                 "output_decision": output["output_decision"],
                 "redaction_summary": output["redaction_summary"],
                 "safe_response": output["safe_response"],
+                "source_disclosure": output.get("source_disclosure", ""),
+                "source_items": output.get("source_items", []),
             },
         }
 
