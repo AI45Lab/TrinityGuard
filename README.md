@@ -2,10 +2,11 @@
   <img src="assets/logo_TG.png" alt="TrinityGuard Logo" width="200">
 </p>
 
-<h2 align="center">TrinityGuard: A Unified Framework for Safeguarding Multi-Agent System Safety</h2>
+<h2 align="center">TrinityGuard: A Unified Framework for Safeguarding Multi-Agent Systems</h2>
 
 <p align="center">
-  📄 <a href="Technical_Report_TrinityGuard_260215.pdf">Technical Report</a> |
+  📄 <a href="https://arxiv.org/abs/2603.15408">arXiv</a> |
+  📄 <a href="Technical_Report_TrinityGuard_260316.pdf">Technical Report</a> |
   🏠 <a href="https://github.com/AI45Lab/TrinityGuard">Project Page</a>
 </p>
 
@@ -487,10 +488,10 @@ If you use TrinityGuard in your research, please cite:
 
 ```bibtex
 @misc{trinityguard2026,
-  title = {TrinityGuard: A Unified Framework for Safeguarding Multi-Agent System Safety},
-  author = {Wang, Kai and Zeng, Biaojie and Wei, Zeming and Wang, Zhongan and Zhou, Hefeng and Yang, Chao and Qu, Jingjing and Xu, Xingcheng and Hu, Xia},
-  year = {2026},
-  url = {https://github.com/AI45Lab/TrinityGuard}
+  title = {TrinityGuard: A Unified Framework for Safeguarding Multi-Agent Systems},
+  author = {Wang, Kai and Zeng, Biaojie and Wei, Zeming and Jin, Chang and Zhou, Hefeng and Li, Xiangtian and Yang, Chao and Qu, Jingjing and Xu, Xingcheng and Hu, Xia},
+  journal={arXiv preprint arXiv:2603.15408},
+  year = {2026}
 }
 ```
 
