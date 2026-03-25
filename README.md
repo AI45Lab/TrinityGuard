@@ -412,33 +412,45 @@ safety_mas.register_monitor_agent("my_custom_monitor", MyCustomMonitor())
 
 ## Documentation
 
-- **Design Document**: `docs/plans/2026-01-23-mas-safety-framework-design.md`
-- **Implementation Plan**: `docs/plans/2026-01-23-implementation-plan.md`
-- **Judge Factory Design**: `docs/plans/2026-01-25-judge-factory-design.md`
-- **Progressive Monitoring Plan**: `docs/plans/2026-02-10-progressive-runtime-monitoring.md`
-- **Runtime Monitoring & Pretest**: `docs/runtime_monitoring_and_pretest.md`
-- **Risk Definitions**: `MAS风险层级说明.md`
+| Document | Path | Description |
+|----------|------|-------------|
+| **Project Management** | `docs/PROJECT_MANAGEMENT.md` | Document map, project overview, milestones |
+| **System Design** | `docs/DESIGN.md` | Architecture, components, interfaces (stable reference) |
+| **Implementation Progress** | `docs/PROGRESS.md` | Feature status, known issues, next steps |
+| Risk Taxonomy | `docs/architecture/risk_taxonomy.md` | All 20 risks in detail |
+| Architecture Analysis | `docs/architecture/src_architecture.md` | Deep-dive source code analysis |
+| Runtime Monitoring | `docs/architecture/runtime_monitoring.md` | Monitoring modes and design |
+| L1 Usage Guide | `docs/guides/l1_usage_guide.md` | Quick-start for L1 risk testing |
+| Historical Plans | `docs/archive/plans/` | Completed implementation plans |
 
 ## Project Structure
 
 ```
 TrinityGuard/
+├── README.md
+├── AGENTS.md                  # Agent safety check rules
 ├── src/
-│   ├── level1_framework/      # MAS framework wrappers (AG2)
-│   ├── level2_intermediary/   # Framework-agnostic interface
+│   ├── level1_framework/      # MAS framework wrappers (AG2, EvoAgentX)
+│   ├── level2_intermediary/   # Framework-agnostic interface & logging
 │   ├── level3_safety/
-│   │   ├── judges/            # Unified Judge system
-│   │   │   ├── base.py        # BaseJudge, JudgeResult
-│   │   │   ├── llm_judge.py   # LLM-based judge
-│   │   │   └── factory.py     # JudgeFactory
+│   │   ├── judges/            # Unified Judge system (LLM + pattern)
 │   │   ├── monitoring/        # Global monitor + progressive activation
 │   │   ├── risk_tests/        # 20 risk test implementations
-│   │   └── monitor_agents/    # 20 monitor implementations
+│   │   └── monitor_agents/    # 20 runtime monitor implementations
 │   └── utils/                 # Configuration, logging, LLM client
-├── examples/                  # Usage examples
-│   └── basic_usage.py
-├── docs/plans/                # Design and implementation docs
-└── test_functionality.py      # Integration tests
+├── tests/                     # Test suite (unit + integration + benchmarks)
+├── examples/                  # Usage examples and MAS application demos
+├── config/                    # YAML configuration files
+└── docs/
+    ├── PROJECT_MANAGEMENT.md  # Project management hub
+    ├── DESIGN.md              # Static design reference
+    ├── PROGRESS.md            # Dynamic implementation progress
+    ├── architecture/          # Architecture design documents
+    ├── guides/                # Usage guides
+    ├── analysis/              # Technical deep-dives
+    ├── survey/                # Research surveys
+    ├── TrinitySkills/         # Claude Code Skills documentation
+    └── archive/               # Historical plans and solutions
 ```
 
 ## Development
@@ -447,16 +459,19 @@ TrinityGuard/
 
 ```bash
 # Run integration tests
-PYTHONPATH=. python -m pytest test_functionality.py -v
+PYTHONPATH=. python -m pytest tests/test_functionality.py -v
 
-# Run examples
-python examples/basic_usage.py
-
-# Test AG2 fixed workflow support
-python test_serial_ag2_mas.py
+# Run all L1/L2/L3 risk tests
+pytest tests/level3_safety/test_all_l1_risks.py -v
+pytest tests/level3_safety/test_all_l2_risks.py -v
+pytest tests/level3_safety/test_all_l3_risks.py -v
 
 # Test global monitor & progressive activation
 pytest tests/level3_safety/test_global_monitor.py -v
+
+# Run examples
+python examples/basic_usage.py
+python examples/example_usage.py
 ```
 
 ### Adding a New Risk

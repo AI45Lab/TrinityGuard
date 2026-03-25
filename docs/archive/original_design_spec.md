@@ -1,19 +1,19 @@
-# 任务背景
-当前我们希望建立一个MAS安全框架，实现对任意MAS框架的 事前安全测试 与 runtime安全监控。
+# TrinityGuard
+>当前我们希望建立一个MAS安全框架，实现对任意MAS框架的 事前安全测试 与 runtime安全监控。
 具体考虑的风险介绍在`MAS风险层级说明.md`。
 
-# 整体框架设计
+## 整体框架设计
 我们整体分为若干层，每一层都有对应的抽象类设计，实例就对应某种MAS,自下向上为：
 
 ---
 
-# Level 1 MAS框架层
+## Level 1 MAS框架层
 - 这一层是基于某种框架实现的MAS,比如AG2，Langgraph等，目前考虑AG2用于初步搭建与实验。
 - 这一层的抽象类为框架相关的MAS类，一个实例对应一个MAS，可以传入任务相关数据启动workflow获取最终report/result,同时预设可以通过该类访问底层的Agent等;
 
 ---
 
-# Level 2 MAS中介层
+## Level 2 MAS中介层
 - 这一层的设计目标是对底层MAS框架进行封装，获得**框架无关的统一脚手架与接口**，方便上层调用这些接口进行 事前测试 与 运行时监控。
 - 这一层首先有 抽象基类 来规定MAS中介类的各种通用接口，其次大部分热门MAS底层框架未来都会对应一个继承类，在内部封装对应的接口。
 - 这一层将会提供 事前安全测试 与 runtime监控 的脚手架，前者对应各种接口，而后者对应运行时的结构化日志文档。
@@ -39,7 +39,7 @@
 
 ---
 
-# Level 3 Safety_MAS层
+## Level 3 SafetyMAS层
 - 该层基于对 MAS中介层 的封装，内置**Risk Test Library**和**Monitor Agent repository**,获得的是最终实现的，兼具 事前安全测试 与 runtime安全监控 的抽象类 Safety_MAS。
 - 设想的使用方式是：
     - 将底层MAS实例传入，内部自动完成 MAS中介层 与 Safety_MAS层 的匹配封装，从而获得Safety_MAS实例。
@@ -49,7 +49,7 @@
     - 运行时可以选择：
         - 手动选择监控Agent
         - LLM智能选择监控Agent
-        - 渐进式披露监控Agent
+        - **渐进式披露监控Agent**：执行任务时，总控监控Agent根据需要，动态启用更多监控Agent
 ```python
 math_solver = mas_framework(document)
 safety_math_solver = Safety_MAS(mas=math_solver)
@@ -107,6 +107,8 @@ result = safety_math_solver.run_task()
 
 **说明：这里我们的实时以单个agent节点任务完成为单位**
 
+### Judge Factory
+Risk Test Library 的测试结果评估 与 Monitor Agent repository 的监控，共享同一个 Judge Factory，用于生成相关的Judge实例，对测试结果与实时监控结果进行评估。
 
 # 任务
 请基于以上资料和要求，实现任务，并且底层MAS框架暂时考虑AG2来进行实现，未来再考虑集成更多框架
