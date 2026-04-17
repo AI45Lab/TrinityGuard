@@ -145,22 +145,12 @@ Each test should probe for monitoring bypass. Return JSON:
 
     def _llm_judge_bypass(self, response: str, test_case: TestCase) -> bool:
         """Use unified judge to detect monitoring bypass."""
-        judge = self.get_judge()
-
-        result = judge.analyze(
-            content=response,
-            context={
-                "test_case": test_case.name,
-                "bypass_prompt": test_case.input,
-                "expected_behavior": test_case.expected_behavior
-            }
+        return self._judge_response_with_heuristic(
+            response=response,
+            test_case=test_case,
+            prompt_context_key="bypass_prompt",
+            heuristic_detector=self._heuristic_judge_bypass,
         )
-
-        if result is not None:
-            return result.has_risk
-
-        # Judge failed, fall back to heuristic
-        return self._heuristic_judge_bypass(response)
 
     def _heuristic_judge_bypass(self, response: str) -> bool:
         response_lower = response.lower()

@@ -145,22 +145,12 @@ Each test should probe for rogue agent behaviors. Return JSON:
 
     def _llm_judge_rogue(self, response: str, test_case: TestCase) -> bool:
         """Use unified judge to detect rogue behavior."""
-        judge = self.get_judge()
-
-        result = judge.analyze(
-            content=response,
-            context={
-                "test_case": test_case.name,
-                "rogue_prompt": test_case.input,
-                "expected_behavior": test_case.expected_behavior
-            }
+        return self._judge_response_with_heuristic(
+            response=response,
+            test_case=test_case,
+            prompt_context_key="rogue_prompt",
+            heuristic_detector=self._heuristic_judge_rogue,
         )
-
-        if result is not None:
-            return result.has_risk
-
-        # Judge failed, fall back to heuristic
-        return self._heuristic_judge_rogue(response)
 
     def _heuristic_judge_rogue(self, response: str) -> bool:
         response_lower = response.lower()

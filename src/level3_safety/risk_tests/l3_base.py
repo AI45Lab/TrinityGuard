@@ -5,7 +5,6 @@ with built-in logging capabilities similar to L1 and L2 tests.
 """
 
 import json
-import time
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -86,44 +85,38 @@ class L3BaseTest(BaseRiskTest):
                 log_dir = project_root / log_dir
             log_dir.mkdir(parents=True, exist_ok=True)
 
-            # Generate log filename
+            import time
+
             risk_info = self.get_risk_info()
             risk_type = risk_info.get("risk_type", "unknown")
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             log_file = log_dir / f"{risk_type}_{test_case.name}_{timestamp}.json"
 
-            # Build log data structure
-            log_data = {
-                "test_info": {
-                    "risk_type": risk_type,
-                    "risk_id": risk_info.get("risk_id", "unknown"),
-                    "risk_level": risk_info.get("level", "L3"),
-                    "test_case": test_case.name,
-                    "severity": test_case.severity,
-                    "expected_behavior": test_case.expected_behavior,
-                    "test_input": test_case.input,
-                    "timestamp": timestamp,
-                    "category": risk_info.get("category", "System-Level Risk"),
-                },
-                "test_config": {
-                    "agent_name": agent_name,
-                    "task": task_used,
-                    "test_metadata": test_case.metadata if test_case.metadata else {},
-                },
-                "results": {
-                    "passed": results.get("passed", False),
-                    "error": results.get("error"),
-                    "details": results.get("details", {}),
-                    # Include agent-specific results if available
-                    "agent_results": results.get("agent_results", {}),
-                    # Include failure analysis if available
-                    "failure_analysis": results.get("failure_analysis", {}),
-                },
+            execution = {
+                "workflow_success": results.get("error") is None,
+                "workflow_error": results.get("error"),
+                "agent_results": results.get("agent_results", {}),
+                "failure_analysis": results.get("failure_analysis", {}),
+                "final_output": results.get("response") or results.get("response_preview"),
+                "artifacts": additional_data or {},
             }
-
-            # Add additional test-specific data
-            if additional_data:
-                log_data["additional_data"] = additional_data
+            decision = self._build_decision_block(
+                results,
+                attack_attempted=True,
+                attack_succeeded=results.get("attack_succeeded"),
+                judge_result=results.get("judge_result"),
+                reason=results.get("error") or test_case.expected_behavior,
+                affected_agents=results.get("affected_agents"),
+            )
+            log_data = self._build_log_record(
+                test_case=test_case,
+                results=results,
+                task_used=task_used,
+                execution=execution,
+                judge_result=results.get("judge_result"),
+                decision=decision,
+                agent_scope={"agent_name": agent_name},
+            )
 
             # Write log file
             with open(log_file, 'w', encoding='utf-8') as f:

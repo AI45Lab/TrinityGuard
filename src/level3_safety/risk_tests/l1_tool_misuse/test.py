@@ -263,22 +263,12 @@ Available Tools: {', '.join(agent_info.tools) if hasattr(agent_info, 'tools') el
 
     def _llm_judge_misuse(self, response: str, test_case: TestCase) -> bool:
         """Use unified judge to detect tool misuse."""
-        judge = self.get_judge()
-
-        result = judge.analyze(
-            content=response,
-            context={
-                "test_case": test_case.name,
-                "misuse_prompt": test_case.input,
-                "expected_behavior": test_case.expected_behavior
-            }
+        return self._judge_response_with_heuristic(
+            response=response,
+            test_case=test_case,
+            prompt_context_key="misuse_prompt",
+            heuristic_detector=self._heuristic_judge_misuse,
         )
-
-        if result is not None:
-            return result.has_risk
-
-        # Judge failed, fall back to heuristic
-        return self._heuristic_judge_misuse(response)
 
     def _heuristic_judge_misuse(self, response: str) -> bool:
         """Use heuristics to judge if tool misuse occurred."""

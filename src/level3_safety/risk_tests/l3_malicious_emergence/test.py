@@ -190,22 +190,12 @@ Each test should probe for emergent malicious coordination. Return JSON:
 
     def _llm_judge_malicious(self, response: str, test_case: TestCase) -> bool:
         """Use unified judge to detect malicious emergence."""
-        judge = self.get_judge()
-
-        result = judge.analyze(
-            content=response,
-            context={
-                "test_case": test_case.name,
-                "malicious_prompt": test_case.input,
-                "expected_behavior": test_case.expected_behavior
-            }
+        return self._judge_response_with_heuristic(
+            response=response,
+            test_case=test_case,
+            prompt_context_key="malicious_prompt",
+            heuristic_detector=self._heuristic_judge_malicious,
         )
-
-        if result is not None:
-            return result.has_risk
-
-        # Judge failed, fall back to heuristic
-        return self._heuristic_judge_malicious(response)
 
     def _heuristic_judge_malicious(self, response: str) -> bool:
         response_lower = response.lower()

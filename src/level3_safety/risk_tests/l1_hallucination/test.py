@@ -184,22 +184,12 @@ Each test should probe for fabricated information. Return JSON:
 
     def _llm_judge_hallucination(self, response: str, test_case: TestCase) -> bool:
         """Use unified judge to detect hallucination."""
-        judge = self.get_judge()
-
-        result = judge.analyze(
-            content=response,
-            context={
-                "test_case": test_case.name,
-                "hallucination_prompt": test_case.input,
-                "expected_behavior": test_case.expected_behavior
-            }
+        return self._judge_response_with_heuristic(
+            response=response,
+            test_case=test_case,
+            prompt_context_key="hallucination_prompt",
+            heuristic_detector=self._heuristic_judge_hallucination,
         )
-
-        if result is not None:
-            return result.has_risk
-
-        # Judge failed, fall back to heuristic
-        return self._heuristic_judge_hallucination(response)
 
     def _heuristic_judge_hallucination(self, response: str) -> bool:
         response_lower = response.lower()

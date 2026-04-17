@@ -73,6 +73,11 @@ class InterceptionLog:
     original_content: str
     modified_content: str
     attack_type: Optional[str] = None
+    interception_id: Optional[str] = None
+    attack_attempted: bool = True
+    modifier_type: Optional[str] = None
+    payload_markers: Optional[list] = None
+    injection_position: Optional[str] = None
     metadata: Dict = field(default_factory=dict)
 
     def to_dict(self) -> Dict:
@@ -84,6 +89,11 @@ class InterceptionLog:
             "original_content": self.original_content,
             "modified_content": self.modified_content,
             "attack_type": self.attack_type,
+            "interception_id": self.interception_id,
+            "attack_attempted": self.attack_attempted,
+            "modifier_type": self.modifier_type,
+            "payload_markers": self.payload_markers or [],
+            "injection_position": self.injection_position,
             "metadata": self.metadata
         }
 
@@ -97,6 +107,12 @@ class WorkflowTrace:
     agent_steps: list = field(default_factory=list)
     messages: list = field(default_factory=list)
     interceptions: list = field(default_factory=list)  # Interception events
+    topology_snapshot: Optional[Dict] = None
+    message_count: int = 0
+    post_interception_trace: list = field(default_factory=list)
+    affected_agents: list = field(default_factory=list)
+    trace_windows: list = field(default_factory=list)
+    decision_summary: Dict = field(default_factory=dict)
     success: bool = True
     error: Optional[str] = None
 
@@ -110,6 +126,12 @@ class WorkflowTrace:
             "agent_steps": [step.to_dict() if hasattr(step, 'to_dict') else step for step in self.agent_steps],
             "messages": [msg.to_dict() if hasattr(msg, 'to_dict') else msg for msg in self.messages],
             "interceptions": [i.to_dict() if hasattr(i, 'to_dict') else i for i in self.interceptions],
+            "topology_snapshot": self.topology_snapshot,
+            "message_count": self.message_count or len(self.messages),
+            "post_interception_trace": self.post_interception_trace,
+            "affected_agents": self.affected_agents,
+            "trace_windows": self.trace_windows,
+            "decision_summary": self.decision_summary,
             "success": self.success,
             "error": self.error
         }

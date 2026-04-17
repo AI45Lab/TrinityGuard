@@ -37,6 +37,10 @@ class MonitoredWorkflowRunner(WorkflowRunner):
         """
         # Start trace
         self.log_writer.start_trace(task)
+        try:
+            self.log_writer.set_topology_snapshot(self.mas.get_topology())
+        except Exception:
+            self.log_writer.set_topology_snapshot(None)
 
         # Register message hook
         self.mas.register_message_hook(self.on_message)

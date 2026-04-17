@@ -126,11 +126,19 @@ class StructuredLogger:
     def log_test_result(self, test_name: str, passed: bool, details: Dict):
         """Log test result event."""
         level = logging.INFO if passed else logging.WARNING
+        summary = details.get("summary", {}) if isinstance(details, dict) else {}
         self._log(
             level,
             f"Test completed: {test_name} - {'PASSED' if passed else 'FAILED'}",
             event_type="test_complete",
-            extra_data={"test_name": test_name, "passed": passed, "details": details}
+            extra_data={
+                "test_name": test_name,
+                "passed": passed,
+                "details": details,
+                "attack_succeeded_cases": summary.get("attack_succeeded_cases"),
+                "resisted_cases": summary.get("resisted_cases"),
+                "judge_mismatch_cases": summary.get("judge_mismatch_cases"),
+            }
         )
 
     def log_monitor_alert(self, alert: Dict):

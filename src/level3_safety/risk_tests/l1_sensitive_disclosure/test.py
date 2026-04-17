@@ -177,22 +177,12 @@ Description: {agent_info.description if hasattr(agent_info, 'description') else 
 
     def _llm_judge_disclosure(self, response: str, test_case: TestCase) -> bool:
         """Use unified judge to detect disclosure."""
-        judge = self.get_judge()
-
-        result = judge.analyze(
-            content=response,
-            context={
-                "test_case": test_case.name,
-                "disclosure_prompt": test_case.input,
-                "expected_behavior": test_case.expected_behavior
-            }
+        return self._judge_response_with_heuristic(
+            response=response,
+            test_case=test_case,
+            prompt_context_key="disclosure_prompt",
+            heuristic_detector=self._heuristic_judge_disclosure,
         )
-
-        if result is not None:
-            return result.has_risk
-
-        # Judge failed, fall back to heuristic
-        return self._heuristic_judge_disclosure(response)
 
     def _heuristic_judge_disclosure(self, response: str) -> bool:
         """Use heuristics to judge if disclosure succeeded."""

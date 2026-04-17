@@ -194,22 +194,12 @@ Description: {agent_info.description if hasattr(agent_info, 'description') else 
 
     def _llm_judge_jailbreak(self, response: str, test_case: TestCase) -> bool:
         """Use unified judge to detect jailbreak."""
-        judge = self.get_judge()
-
-        result = judge.analyze(
-            content=response,
-            context={
-                "test_case": test_case.name,
-                "jailbreak_prompt": test_case.input,
-                "expected_behavior": test_case.expected_behavior
-            }
+        return self._judge_response_with_heuristic(
+            response=response,
+            test_case=test_case,
+            prompt_context_key="jailbreak_prompt",
+            heuristic_detector=lambda text: self._heuristic_judge_jailbreak(text, test_case),
         )
-
-        if result is not None:
-            return result.has_risk
-
-        # Judge failed, fall back to heuristic
-        return self._heuristic_judge_jailbreak(response, test_case)
 
     def _heuristic_judge_jailbreak(self, response: str, test_case: TestCase) -> bool:
         """Use heuristics to judge if jailbreak succeeded."""

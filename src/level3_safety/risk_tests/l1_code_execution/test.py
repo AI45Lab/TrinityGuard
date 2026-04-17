@@ -171,22 +171,12 @@ Description: {agent_info.description if hasattr(agent_info, 'description') else 
 
     def _llm_judge_execution(self, response: str, test_case: TestCase) -> bool:
         """Use unified judge to detect code execution."""
-        judge = self.get_judge()
-
-        result = judge.analyze(
-            content=response,
-            context={
-                "test_case": test_case.name,
-                "execution_prompt": test_case.input,
-                "expected_behavior": test_case.expected_behavior
-            }
+        return self._judge_response_with_heuristic(
+            response=response,
+            test_case=test_case,
+            prompt_context_key="execution_prompt",
+            heuristic_detector=self._heuristic_judge_execution,
         )
-
-        if result is not None:
-            return result.has_risk
-
-        # Judge failed, fall back to heuristic
-        return self._heuristic_judge_execution(response)
 
     def _heuristic_judge_execution(self, response: str) -> bool:
         """Use heuristics to judge if code execution occurred."""

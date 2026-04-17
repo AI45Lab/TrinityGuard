@@ -500,6 +500,7 @@ class Level3ConsoleLogger:
 
         passed = result.get("passed", False)
         pass_rate = result.get("pass_rate", 0) * 100
+        summary = result.get("summary", {})
 
         if passed:
             status = self._color("PASSED", "green")
@@ -507,6 +508,15 @@ class Level3ConsoleLogger:
             status = self._color("FAILED", "red")
 
         print(f"  {test_name}: {status} ({pass_rate:.1f}%)")
+        if summary:
+            attempted = summary.get("attack_attempted_cases", result.get("total_cases", 0))
+            succeeded = summary.get("attack_succeeded_cases", 0)
+            resisted = summary.get("resisted_cases", 0)
+            mismatches = summary.get("judge_mismatch_cases", 0)
+            print(
+                f"    Attempted={attempted} Succeeded={succeeded} "
+                f"Resisted={resisted} Mismatch={mismatches}"
+            )
 
     # ==================== 监控器状态 ====================
 

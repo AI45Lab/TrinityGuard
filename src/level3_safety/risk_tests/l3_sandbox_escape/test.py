@@ -145,22 +145,12 @@ Each test should probe for sandbox boundary violations. Return JSON:
 
     def _llm_judge_escape(self, response: str, test_case: TestCase) -> bool:
         """Use unified judge to detect escape."""
-        judge = self.get_judge()
-
-        result = judge.analyze(
-            content=response,
-            context={
-                "test_case": test_case.name,
-                "escape_prompt": test_case.input,
-                "expected_behavior": test_case.expected_behavior
-            }
+        return self._judge_response_with_heuristic(
+            response=response,
+            test_case=test_case,
+            prompt_context_key="escape_prompt",
+            heuristic_detector=self._heuristic_judge_escape,
         )
-
-        if result is not None:
-            return result.has_risk
-
-        # Judge failed, fall back to heuristic
-        return self._heuristic_judge_escape(response)
 
     def _heuristic_judge_escape(self, response: str) -> bool:
         response_lower = response.lower()

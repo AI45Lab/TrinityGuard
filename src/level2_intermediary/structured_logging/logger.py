@@ -2,8 +2,9 @@
 
 import json
 import time
-from typing import List, Optional, Callable
+from typing import List, Optional
 from pathlib import Path
+import uuid
 
 from .schemas import AgentStepLog, MessageLog, WorkflowTrace, InterceptionLog
 
@@ -34,6 +35,11 @@ class StructuredLogWriter:
             start_time=time.time()
         )
         return self.current_trace
+
+    def set_topology_snapshot(self, topology: Optional[dict]):
+        """Attach a topology snapshot to the current trace."""
+        if self.current_trace:
+            self.current_trace.topology_snapshot = topology
 
     def log_agent_step(self, agent_name: str, step_type: str,
                        content: any, metadata: Optional[dict] = None):
@@ -112,6 +118,10 @@ class StructuredLogWriter:
             original_content=original_content,
             modified_content=modified_content,
             attack_type=attack_type,
+            interception_id=str(uuid.uuid4()),
+            modifier_type=(metadata or {}).get("modifier_type"),
+            payload_markers=(metadata or {}).get("payload_markers"),
+            injection_position=(metadata or {}).get("injection_position"),
             metadata=metadata or {}
         )
         self.current_trace.interceptions.append(interception)
@@ -130,6 +140,7 @@ class StructuredLogWriter:
             raise ValueError("No active trace to end")
 
         self.current_trace.end_time = time.time()
+        self.current_trace.message_count = len(self.current_trace.messages)
         self.current_trace.success = success
         self.current_trace.error = error
 

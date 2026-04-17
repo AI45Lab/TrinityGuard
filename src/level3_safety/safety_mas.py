@@ -300,6 +300,38 @@ class Safety_MAS:
 
         total_cases = sum(r.get("total_cases", 0) for r in results.values())
         failed_cases = sum(r.get("failed_cases", 0) for r in results.values())
+        attack_attempted_cases = 0
+        attack_succeeded_cases = 0
+        resisted_cases = 0
+        judge_mismatch_cases = 0
+        judge_fallback_tests = 0
+
+        for result in results.values():
+            if not isinstance(result, dict):
+                continue
+
+            used_fallback = False
+            for detail in result.get("details", []) or []:
+                decision = detail.get("decision", {})
+
+                if decision.get("attack_attempted") or any(
+                    key in detail for key in ("attack_succeeded", "goal_drifted", "judge_result")
+                ):
+                    attack_attempted_cases += 1
+                if decision.get("attack_succeeded") or detail.get("attack_succeeded") or detail.get("goal_drifted"):
+                    attack_succeeded_cases += 1
+                if decision.get("system_resisted") or (
+                    detail.get("passed", False)
+                    and any(key in detail for key in ("attack_succeeded", "goal_drifted", "judge_result"))
+                ):
+                    resisted_cases += 1
+                if "possible_false_positive" in decision.get("audit_flags", []):
+                    judge_mismatch_cases += 1
+                if decision.get("decision_basis") == "judge_fallback":
+                    used_fallback = True
+
+            if used_fallback:
+                judge_fallback_tests += 1
 
         return {
             "total_tests": total_tests,
@@ -307,7 +339,13 @@ class Safety_MAS:
             "failed_tests": failed_tests,
             "total_cases": total_cases,
             "failed_cases": failed_cases,
-            "overall_pass_rate": (total_cases - failed_cases) / total_cases if total_cases > 0 else 0
+            "overall_pass_rate": (total_cases - failed_cases) / total_cases if total_cases > 0 else 0,
+            "attack_attempted_cases": attack_attempted_cases,
+            "attack_succeeded_cases": attack_succeeded_cases,
+            "resisted_cases": resisted_cases,
+            "judge_mismatch_cases": judge_mismatch_cases,
+            "tests_using_judge_fallback": judge_fallback_tests,
+            "false_positive_candidates": judge_mismatch_cases,
         }
 
     def get_test_report(self) -> str:
@@ -330,10 +368,24 @@ class Safety_MAS:
             total = result.get("total_cases", 0)
             failed = result.get("failed_cases", 0)
             pass_rate = result.get("pass_rate", 0) * 100
+            succeeded = 0
+            resisted = 0
+            mismatches = 0
+            for detail in result.get("details", []) or []:
+                decision = detail.get("decision", {})
+                if decision.get("attack_succeeded") or detail.get("attack_succeeded") or detail.get("goal_drifted"):
+                    succeeded += 1
+                if decision.get("system_resisted"):
+                    resisted += 1
+                if "possible_false_positive" in decision.get("audit_flags", []):
+                    mismatches += 1
 
             status = "✅ PASSED" if passed else "❌ FAILED"
             report_lines.append(f"{status} {test_name}")
             report_lines.append(f"  Cases: {total}, Failed: {failed}, Pass Rate: {pass_rate:.1f}%")
+            report_lines.append(
+                f"  Attempted: {total}, Succeeded: {succeeded}, Resisted: {resisted}, Judge Mismatch: {mismatches}"
+            )
 
             severity_summary = result.get("severity_summary", {})
             if any(severity_summary.values()):
