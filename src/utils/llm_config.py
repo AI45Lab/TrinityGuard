@@ -1,19 +1,17 @@
-"""LLM configuration loader for TrinityGuard."""
+"""LLM configuration loader — 支持多 profile 和按 agent/monitor 单独配置."""
 
 import os
 import warnings
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
-
+from typing import Optional, Dict
 import yaml
-
 from .exceptions import ConfigurationError
 
 
 @dataclass
-class LLMConfig:
-    """LLM configuration settings."""
+class LLMProfile:
+    """单个 LLM 配置 profile."""
     provider: str = "openai"
     model: str = "gpt-4o-mini"
     api_key: Optional[str] = None
@@ -21,9 +19,9 @@ class LLMConfig:
     base_url: Optional[str] = None
     temperature: float = 0
     max_tokens: int = 4096
+    timeout: int = 30
 
     def get_api_key(self) -> str:
-        """Get API key, prioritizing direct config over environment variable."""
         if self.api_key:
             return self.api_key
         if self.api_key_env:
@@ -31,12 +29,12 @@ class LLMConfig:
             if key:
                 return key
         raise ConfigurationError(
-            "No API key configured. Set 'api_key' in llm_config.yaml "
-            "or set the environment variable specified in 'api_key_env'."
+            f"No API key configured for provider '{self.provider}'. "
+            f"Set api_key directly or set the env var in api_key_env."
         )
 
     def to_ag2_config(self) -> dict:
-        """Convert to AG2/AutoGen llm_config format."""
+        """转换为 AG2/AutoGen llm_config 格式."""
         config = {
             "model": self.model,
             "api_key": self.get_api_key(),
@@ -44,129 +42,197 @@ class LLMConfig:
         }
         if self.base_url:
             config["base_url"] = self.base_url
+        elif self.provider == "deepseek":
+            config["base_url"] = "https://api.deepseek.com/v1"
         return config
-
-
-class ConfigNotFoundError(Exception):
-    """Configuration file not found error."""
-    pass
 
 
 @dataclass
 class MASLLMConfig:
-    """LLM configuration for tested MAS (Multi-Agent System)."""
-    provider: str = "openai"
-    model: str = "gpt-4o-mini"
-    api_key: Optional[str] = None
-    api_key_env: Optional[str] = None
-    base_url: Optional[str] = None
-    temperature: float = 0
-    max_tokens: int = 4096
+    """MAS 多 agent LLM 配置容器."""
+    default_profile: LLMProfile = field(default_factory=LLMProfile)
+    agent_profiles: Dict[str, LLMProfile] = field(default_factory=dict)
+
+    def get_profile_for_agent(self, agent_name: str) -> LLMProfile:
+        """获取指定 agent 的 LLM profile，找不到则用 default."""
+        return self.agent_profiles.get(agent_name, self.default_profile)
+
+    # 向后兼容：让旧代码 get_mas_llm_config().model 等仍然可用
+    @property
+    def provider(self) -> str:
+        return self.default_profile.provider
+
+    @property
+    def model(self) -> str:
+        return self.default_profile.model
+
+    @property
+    def base_url(self) -> Optional[str]:
+        return self.default_profile.base_url
+
+    @property
+    def temperature(self) -> float:
+        return self.default_profile.temperature
+
+    @property
+    def max_tokens(self) -> int:
+        return self.default_profile.max_tokens
 
     def get_api_key(self) -> str:
-        """Get API key, prioritizing direct config over environment variable."""
-        if self.api_key:
-            return self.api_key
-        if self.api_key_env:
-            key = os.getenv(self.api_key_env)
-            if key:
-                return key
-        raise ConfigurationError(
-            "No API key configured. Set 'api_key' in mas_llm_config.yaml "
-            "or set the environment variable specified in 'api_key_env'."
-        )
+        return self.default_profile.get_api_key()
 
     def to_ag2_config(self) -> dict:
-        """Convert to AG2/AutoGen llm_config format."""
-        config = {
-            "model": self.model,
-            "api_key": self.get_api_key(),
-            "temperature": self.temperature,
-        }
-        if self.base_url:
-            config["base_url"] = self.base_url
-        return config
+        return self.default_profile.to_ag2_config()
 
 
 @dataclass
 class MonitorLLMConfig:
-    """LLM configuration for Monitor agents and Judges (with extended settings)."""
-    provider: str = "openai"
-    model: str = "gpt-4o-mini"
-    api_key: Optional[str] = None
-    api_key_env: Optional[str] = None
-    base_url: Optional[str] = None
-    temperature: float = 0
-    max_tokens: int = 4096
+    """Monitor/Judge 多 monitor LLM 配置容器."""
+    default_profile: LLMProfile = field(default_factory=LLMProfile)
+    monitor_profiles: Dict[str, LLMProfile] = field(default_factory=dict)
 
-    # Extended settings for monitors/judges
+    # Judge 专属参数
     judge_temperature: float = 0.1
-    judge_max_tokens: int = 500
+    judge_max_tokens: int = 8000
     retry_count: int = 3
     retry_delay: float = 1.0
     timeout: int = 30
 
+    def get_profile_for_monitor(self, monitor_name: str) -> LLMProfile:
+        """获取指定 monitor 的 LLM profile，找不到则用 default."""
+        return self.monitor_profiles.get(monitor_name, self.default_profile)
+
+    # 向后兼容属性
+    @property
+    def provider(self) -> str:
+        return self.default_profile.provider
+
+    @property
+    def model(self) -> str:
+        return self.default_profile.model
+
+    @property
+    def base_url(self) -> Optional[str]:
+        return self.default_profile.base_url
+
+    @property
+    def temperature(self) -> float:
+        return self.default_profile.temperature
+
+    @property
+    def max_tokens(self) -> int:
+        return self.default_profile.max_tokens
+
     def get_api_key(self) -> str:
-        """Get API key, prioritizing direct config over environment variable."""
-        if self.api_key:
-            return self.api_key
-        if self.api_key_env:
-            key = os.getenv(self.api_key_env)
-            if key:
-                return key
-        raise ConfigurationError(
-            "No API key configured. Set 'api_key' in monitor_llm_config.yaml "
-            "or set the environment variable specified in 'api_key_env'."
+        return self.default_profile.get_api_key()
+
+
+# ─── 内部工具函数 ──────────────────────────────────────────
+
+def _load_profiles(config_dir: Path) -> Dict[str, LLMProfile]:
+    """加载 llm_profiles.yaml 中定义的所有 profile."""
+    profiles_path = config_dir / "llm_profiles.yaml"
+    if not profiles_path.exists():
+        return {}
+
+    with open(profiles_path, 'r', encoding='utf-8') as f:
+        data = yaml.safe_load(f)
+
+    profiles = {}
+    for name, cfg in data.get("profiles", {}).items():
+        profiles[name] = LLMProfile(
+            provider=cfg.get("provider", "openai"),
+            model=cfg.get("model", "gpt-4o-mini"),
+            api_key=cfg.get("api_key"),
+            api_key_env=cfg.get("api_key_env"),
+            base_url=cfg.get("base_url"),
+            temperature=cfg.get("temperature", 0),
+            max_tokens=cfg.get("max_tokens", 4096),
+            timeout=cfg.get("timeout", 30),
+        )
+    return profiles
+
+
+def _resolve_profile(cfg_block: dict, named_profiles: Dict[str, LLMProfile]) -> LLMProfile:
+    """
+    将 yaml 配置块解析为 LLMProfile。
+    支持两种写法：
+      1. { profile: "deepseek_r1" }            # 引用命名 profile
+      2. { provider: "deepseek", model: ... }  # 直接内联配置
+    """
+    if "profile" in cfg_block:
+        profile_name = cfg_block["profile"]
+        if profile_name not in named_profiles:
+            raise ConfigurationError(
+                f"Profile '{profile_name}' not found in llm_profiles.yaml. "
+                f"Available: {list(named_profiles.keys())}"
+            )
+        base = named_profiles[profile_name]
+        # 允许在引用 profile 基础上覆盖部分字段
+        overrides = {k: v for k, v in cfg_block.items() if k != "profile"}
+        if overrides:
+            import dataclasses
+            # Only pass overrides that are valid fields for LLMProfile
+            profile_fields = {f.name for f in dataclasses.fields(base)}
+            valid_overrides = {k: v for k, v in overrides.items() if k in profile_fields}
+            invalid_keys = [k for k in overrides.keys() if k not in profile_fields]
+            if invalid_keys:
+                # Warn that some override keys were ignored (e.g., judge_temperature)
+                warnings.warn(f"Ignored profile override keys not present in LLMProfile: {invalid_keys}")
+            if valid_overrides:
+                return dataclasses.replace(base, **valid_overrides)
+        # No overrides or no valid overrides — return base profile unchanged
+        return base
+    else:
+        return LLMProfile(
+            provider=cfg_block.get("provider", "openai"),
+            model=cfg_block.get("model", "gpt-4o-mini"),
+            api_key=cfg_block.get("api_key"),
+            api_key_env=cfg_block.get("api_key_env"),
+            base_url=cfg_block.get("base_url"),
+            temperature=cfg_block.get("temperature", 0),
+            max_tokens=cfg_block.get("max_tokens", 4096),
+            timeout=cfg_block.get("timeout", 30),
         )
 
 
-# Global config instance
-_llm_config: Optional[LLMConfig] = None
+# ─── 对外加载函数 ──────────────────────────────────────────
 
-# Global config instances
+_config_dir = Path(__file__).parent.parent.parent / "config"
 _mas_llm_config: Optional[MASLLMConfig] = None
 _monitor_llm_config: Optional[MonitorLLMConfig] = None
 
 
 def load_mas_llm_config(path: Optional[str] = None) -> MASLLMConfig:
-    """Load MAS LLM configuration from YAML file."""
     global _mas_llm_config
+    config_dir = Path(path).parent if path else _config_dir
+    cfg_path = Path(path) if path else config_dir / "mas_llm_config.yaml"
 
-    if path is None:
-        path = Path(__file__).parent.parent.parent / "config" / "mas_llm_config.yaml"
-    else:
-        path = Path(path)
+    if not cfg_path.exists():
+        raise ConfigurationError(f"mas_llm_config.yaml not found: {cfg_path}")
 
-    if not path.exists():
-        raise ConfigNotFoundError(
-            f"MAS LLM config file not found: {path}\n"
-            f"Please create the config file with the following format:\n"
-            f"  provider: openai\n"
-            f"  model: gpt-4o-mini\n"
-            f"  api_key: your-api-key\n"
-            f"  base_url: your-base-url  # optional\n"
-            f"  temperature: 0\n"
-            f"  max_tokens: 4096"
-        )
+    named_profiles = _load_profiles(config_dir)
 
-    with open(path, 'r', encoding='utf-8') as f:
+    with open(cfg_path, 'r', encoding='utf-8') as f:
         data = yaml.safe_load(f)
 
-    _mas_llm_config = MASLLMConfig(
-        provider=data.get("provider", "openai"),
-        model=data.get("model", "gpt-4o-mini"),
-        api_key=data.get("api_key"),
-        api_key_env=data.get("api_key_env"),
-        base_url=data.get("base_url"),
-        temperature=data.get("temperature", 0),
-        max_tokens=data.get("max_tokens", 4096),
-    )
+    # 解析 default
+    default_block = data.get("default", {})
+    default_profile = _resolve_profile(default_block, named_profiles)
 
+    # 解析每个 agent 的单独配置
+    agent_profiles = {}
+    for agent_name, agent_block in data.get("agents", {}).items():
+        agent_profiles[agent_name] = _resolve_profile(agent_block, named_profiles)
+
+    _mas_llm_config = MASLLMConfig(
+        default_profile=default_profile,
+        agent_profiles=agent_profiles,
+    )
     return _mas_llm_config
 
 
 def get_mas_llm_config() -> MASLLMConfig:
-    """Get the MAS LLM configuration, loading if necessary."""
     global _mas_llm_config
     if _mas_llm_config is None:
         _mas_llm_config = load_mas_llm_config()
@@ -174,54 +240,39 @@ def get_mas_llm_config() -> MASLLMConfig:
 
 
 def load_monitor_llm_config(path: Optional[str] = None) -> MonitorLLMConfig:
-    """Load Monitor LLM configuration from YAML file."""
     global _monitor_llm_config
+    config_dir = Path(path).parent if path else _config_dir
+    cfg_path = Path(path) if path else config_dir / "monitor_llm_config.yaml"
 
-    if path is None:
-        path = Path(__file__).parent.parent.parent / "config" / "monitor_llm_config.yaml"
-    else:
-        path = Path(path)
+    if not cfg_path.exists():
+        raise ConfigurationError(f"monitor_llm_config.yaml not found: {cfg_path}")
 
-    if not path.exists():
-        raise ConfigNotFoundError(
-            f"Monitor LLM config file not found: {path}\n"
-            f"Please create the config file with the following format:\n"
-            f"  provider: openai\n"
-            f"  model: gpt-4o-mini\n"
-            f"  api_key: your-api-key\n"
-            f"  base_url: your-base-url  # optional\n"
-            f"  temperature: 0\n"
-            f"  max_tokens: 4096\n"
-            f"  judge_temperature: 0.1\n"
-            f"  judge_max_tokens: 500\n"
-            f"  retry_count: 3\n"
-            f"  retry_delay: 1.0\n"
-            f"  timeout: 30"
-        )
+    named_profiles = _load_profiles(config_dir)
 
-    with open(path, 'r', encoding='utf-8') as f:
+    with open(cfg_path, 'r', encoding='utf-8') as f:
         data = yaml.safe_load(f)
 
-    _monitor_llm_config = MonitorLLMConfig(
-        provider=data.get("provider", "openai"),
-        model=data.get("model", "gpt-4o-mini"),
-        api_key=data.get("api_key"),
-        api_key_env=data.get("api_key_env"),
-        base_url=data.get("base_url"),
-        temperature=data.get("temperature", 0),
-        max_tokens=data.get("max_tokens", 4096),
-        judge_temperature=data.get("judge_temperature", 0.1),
-        judge_max_tokens=data.get("judge_max_tokens", 500),
-        retry_count=data.get("retry_count", 3),
-        retry_delay=data.get("retry_delay", 1.0),
-        timeout=data.get("timeout", 30),
-    )
+    default_block = data.get("default", {})
+    default_profile = _resolve_profile(default_block, named_profiles)
 
+    monitor_profiles = {}
+    for mon_name, mon_block in data.get("monitors", {}).items():
+        monitor_profiles[mon_name] = _resolve_profile(mon_block, named_profiles)
+
+    # judge 专属参数从 default 块读取
+    _monitor_llm_config = MonitorLLMConfig(
+        default_profile=default_profile,
+        monitor_profiles=monitor_profiles,
+        judge_temperature=default_block.get("judge_temperature", 1.0),
+        judge_max_tokens=default_block.get("judge_max_tokens", 8000),
+        retry_count=default_block.get("retry_count", 3),
+        retry_delay=default_block.get("retry_delay", 1.0),
+        timeout=default_block.get("timeout", 120),
+    )
     return _monitor_llm_config
 
 
 def get_monitor_llm_config() -> MonitorLLMConfig:
-    """Get the Monitor LLM configuration, loading if necessary."""
     global _monitor_llm_config
     if _monitor_llm_config is None:
         _monitor_llm_config = load_monitor_llm_config()
@@ -229,64 +280,59 @@ def get_monitor_llm_config() -> MonitorLLMConfig:
 
 
 def reset_mas_llm_config():
-    """Reset the global MAS LLM config (useful for testing)."""
     global _mas_llm_config
     _mas_llm_config = None
 
 
 def reset_monitor_llm_config():
-    """Reset the global Monitor LLM config (useful for testing)."""
     global _monitor_llm_config
     _monitor_llm_config = None
 
 
-def load_llm_config(path: Optional[str] = None) -> LLMConfig:
-    """DEPRECATED: Use load_mas_llm_config() or load_monitor_llm_config() instead."""
-    warnings.warn(
-        "load_llm_config() is deprecated. Use load_mas_llm_config() for MAS "
-        "or load_monitor_llm_config() for monitors.",
-        DeprecationWarning,
-        stacklevel=2
-    )
-    mas_config = load_mas_llm_config(path)
-    return LLMConfig(
-        provider=mas_config.provider,
-        model=mas_config.model,
-        api_key=mas_config.api_key,
-        api_key_env=mas_config.api_key_env,
-        base_url=mas_config.base_url,
-        temperature=mas_config.temperature,
-        max_tokens=mas_config.max_tokens,
-    )
+# 向后兼容：历史代码可能直接从这个模块导入 LLMConfig
+# 把 LLMProfile 映射为 LLMConfig，避免 ImportError
+LLMConfig = LLMProfile
 
 
-def get_llm_config() -> LLMConfig:
-    """DEPRECATED: Use get_mas_llm_config() or get_monitor_llm_config() instead."""
+# 向后兼容：旧的单一-LLM API 名称（deprecated）
+def load_llm_config(path: Optional[str] = None) -> MASLLMConfig:
+    """Deprecated wrapper for backward compatibility.
+    Delegates to load_mas_llm_config and warns.
+    """
     warnings.warn(
-        "get_llm_config() is deprecated. Use get_mas_llm_config() for MAS "
-        "or get_monitor_llm_config() for monitors.",
+        "load_llm_config() is deprecated. Use load_mas_llm_config() instead.",
         DeprecationWarning,
-        stacklevel=2
     )
-    mas_config = get_mas_llm_config()
-    return LLMConfig(
-        provider=mas_config.provider,
-        model=mas_config.model,
-        api_key=mas_config.api_key,
-        api_key_env=mas_config.api_key_env,
-        base_url=mas_config.base_url,
-        temperature=mas_config.temperature,
-        max_tokens=mas_config.max_tokens,
+    return load_mas_llm_config(path)
+
+
+def get_llm_config() -> MASLLMConfig:
+    """Deprecated wrapper that returns the cached MAS LLM config."""
+    warnings.warn(
+        "get_llm_config() is deprecated. Use get_mas_llm_config() instead.",
+        DeprecationWarning,
     )
+    return get_mas_llm_config()
 
 
 def reset_llm_config():
-    """DEPRECATED: Use reset_mas_llm_config() or reset_monitor_llm_config() instead."""
+    """Deprecated wrapper to reset the cached MAS LLM config."""
     warnings.warn(
-        "reset_llm_config() is deprecated. Use reset_mas_llm_config() "
-        "or reset_monitor_llm_config() instead.",
+        "reset_llm_config() is deprecated. Use reset_mas_llm_config() instead.",
         DeprecationWarning,
-        stacklevel=2
     )
-    reset_mas_llm_config()
-    reset_monitor_llm_config()
+    return reset_mas_llm_config()
+
+
+__all__ = [
+    "LLMProfile",
+    "LLMConfig",
+    "MASLLMConfig",
+    "MonitorLLMConfig",
+    "load_mas_llm_config",
+    "get_mas_llm_config",
+    "reset_mas_llm_config",
+    "load_monitor_llm_config",
+    "get_monitor_llm_config",
+    "reset_monitor_llm_config",
+]

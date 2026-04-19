@@ -37,7 +37,8 @@ Respond with JSON only, no other text:
         risk_type: str,
         system_prompt: Optional[str] = None,
         system_prompt_file: Optional[Path] = None,
-        llm_client: Optional[BaseLLMClient] = None
+        llm_client: Optional[BaseLLMClient] = None,
+        monitor_name: Optional[str] = None,
     ):
         """Initialize LLM Judge.
 
@@ -48,6 +49,7 @@ Respond with JSON only, no other text:
             llm_client: Optional pre-configured LLM client
         """
         super().__init__(risk_type)
+        self._monitor_name = monitor_name
         self._llm_client = llm_client
         self._system_prompt = self._load_system_prompt(system_prompt, system_prompt_file)
 
@@ -72,7 +74,8 @@ Be precise and avoid false positives.'''
     def llm_client(self) -> BaseLLMClient:
         """Lazy load LLM client with monitor config."""
         if self._llm_client is None:
-            self._llm_client = get_monitor_llm_client()
+            from ...utils.llm_client import get_monitor_llm_client
+            self._llm_client = get_monitor_llm_client(self._monitor_name)
         return self._llm_client
 
     def get_judge_info(self) -> Dict[str, str]:

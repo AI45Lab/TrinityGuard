@@ -16,6 +16,7 @@ except ImportError:
 from .base import BaseMAS, AgentInfo, WorkflowResult
 from ..utils.exceptions import MASFrameworkError
 from ..utils.logging_config import get_logger
+from ..utils.llm_config import get_mas_llm_config
 
 
 class AG2MAS(BaseMAS):
@@ -123,8 +124,26 @@ class AG2MAS(BaseMAS):
                 "timestamp": time.time()
             })
 
-            # Call original send with modified message
-            return original_send(modified_message, recipient, request_reply, silent)
+            # Call original send with modified message — wrap to log timing and exceptions
+            start_ts = time.time()
+            try:
+                mas_ref.logger.debug(
+                    f"SEND_WRAPPER calling original_send from={agent_name} to={logical_target} msg_len={len(modified_hook_msg.get('content','')) if modified_hook_msg.get('content') is not None else 0}"
+                )
+                result = original_send(modified_message, recipient, request_reply, silent)
+                duration = time.time() - start_ts
+                mas_ref.logger.debug(
+                    f"SEND_WRAPPER original_send returned from={agent_name} to={logical_target} duration={duration:.3f}s"
+                )
+                return result
+            except Exception as e:
+                duration = time.time() - start_ts
+                mas_ref.logger.error(
+                    f"SEND_WRAPPER original_send raised from={agent_name} to={logical_target} duration={duration:.3f}s error={str(e)}",
+                    exc_info=True,
+                )
+                # Re-raise to preserve original behavior (and let outer handlers log)
+                raise
 
         agent.send = send_wrapper
 
@@ -308,32 +327,22 @@ class AG2MAS(BaseMAS):
 
 
 def create_ag2_mas_from_config(config: Dict) -> AG2MAS:
-    """Create AG2MAS instance from configuration dict.
+    mas_cfg = get_mas_llm_config()
 
-    Args:
-        config: Configuration dict with agent definitions
-
-    Returns:
-        AG2MAS instance
-
-    Example config:
-        {
-            "agents": [
-                {
-                    "name": "coordinator",
-                    "system_message": "You are a coordinator agent.",
-                    "llm_config": {"model": "gpt-4"}
-                }
-            ],
-            "mode": "group_chat"  # or "direct"
-        }
-    """
     agents = []
     for agent_config in config.get("agents", []):
+        agent_name = agent_config["name"]
+        
+        llm_config = agent_config.get("llm_config")  # 显式传入则直接用
+        if llm_config is None:
+            # 没有显式指定时，从 mas_llm_config 按 agent 名查找
+            profile = mas_cfg.get_profile_for_agent(agent_name)
+            llm_config = profile.to_ag2_config()
+            
         agent = ConversableAgent(
-            name=agent_config["name"],
+            name=agent_name,
             system_message=agent_config.get("system_message", ""),
-            llm_config=agent_config.get("llm_config", False),
+            llm_config=llm_config,
             human_input_mode=agent_config.get("human_input_mode", "NEVER")
         )
 

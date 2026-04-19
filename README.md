@@ -333,6 +333,37 @@ LLM configuration files (default paths):
 
 Both support `api_key` or `api_key_env` for credentials.
 
+### DeepSeek R1: runtime tuning and env vars
+
+When using DeepSeek R1 models (e.g. `deepseek-reasoner`), the model may allocate tokens to intermediate "reasoning" steps which can cause the final `message.content` to be empty if `max_tokens` is set too small.
+
+To help control behavior and costs, TrinityGuard supports two environment variables:
+
+- `TRINITYGUARD_DEEPSEEK_AUTO_RETRY` (default: off)
+    - If set to `1` / `true`, the DeepSeek client will automatically retry once with a larger token budget when the initial response's `message.content` is empty.
+    - Enable this when you want best-effort answers even if callers pass a small `max_tokens`.
+
+- `TRINITYGUARD_DEEPSEEK_RETRY_MAX_TOKENS` (default: uses `profile.max_tokens`)
+    - Integer cap for the retry request's `max_tokens`. When present, the retry will use `min(profile.max_tokens, TRINITYGUARD_DEEPSEEK_RETRY_MAX_TOKENS)`.
+    - Recommended conservative values: `200` (cheap), `2000` (moderate). Avoid setting this to extremely large values unless you accept the cost.
+
+Behavior summary:
+- Default (no env vars): no automatic retry; if the primary response is empty and `reasoning_content` exists, TrinityGuard will return the `reasoning_content` as a fallback and log a warning.
+- With `TRINITYGUARD_DEEPSEEK_AUTO_RETRY=1`: client will retry once using the configured cap and return the retry result (logged). This may increase latency and cost.
+
+Example (bash):
+
+```bash
+# Enable auto-retry with a 200-token retry cap
+export TRINITYGUARD_DEEPSEEK_AUTO_RETRY=1
+export TRINITYGUARD_DEEPSEEK_RETRY_MAX_TOKENS=200
+
+# Run a quick example
+python examples/basic_usage.py
+```
+
+Note: these env vars are intended for runtime testing and debugging. Be conservative with retry caps in production to avoid unexpected LLM costs.
+
 ## Runtime Monitoring Modes
 
 - **MANUAL**: Manually select monitors via `selected_monitors`
