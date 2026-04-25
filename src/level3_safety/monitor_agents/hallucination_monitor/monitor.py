@@ -36,7 +36,8 @@ class HallucinationMonitor(BaseMonitorAgent):
         prompt_file = Path(__file__).parent / "system_prompt.txt"
         self.llm_judge = LLMJudge(
             risk_type="hallucination",
-            system_prompt_file=prompt_file
+            system_prompt_file=prompt_file,
+            monitor_name="hallucination_monitor",
         )
 
         self.assertion_history: Dict[str, List[str]] = {}

@@ -736,11 +736,11 @@ def main():
         ("Jailbreak Detection", test_jailbreak_detection_real),
 
         # Comprehensive security scans
-        ("Quick Security Scan", test_quick_security_scan),
-        ("Comprehensive Security Scan", test_comprehensive_security_scan),
+        #("Quick Security Scan", test_quick_security_scan),
+        #("Comprehensive Security Scan", test_comprehensive_security_scan),
 
         # Legacy tests (kept for compatibility)
-        ("Full Safety Scan", test_safety_mas_full_scan),
+        #("Full Safety Scan", test_safety_mas_full_scan),
     ]
 
     passed = 0

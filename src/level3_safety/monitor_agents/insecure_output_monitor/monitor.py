@@ -37,7 +37,8 @@ class InsecureOutputMonitor(BaseMonitorAgent):
         prompt_file = Path(__file__).parent / "system_prompt.txt"
         self.llm_judge = LLMJudge(
             risk_type="insecure_output",
-            system_prompt_file=prompt_file
+            system_prompt_file=prompt_file,
+            monitor_name="insecure_output_monitor", 
         )
 
         self.xss_patterns = [

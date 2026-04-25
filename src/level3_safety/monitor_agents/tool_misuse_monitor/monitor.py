@@ -35,7 +35,8 @@ class ToolMisuseMonitor(BaseMonitorAgent):
         prompt_file = Path(__file__).parent / "system_prompt.txt"
         self.llm_judge = LLMJudge(
             risk_type="tool_misuse",
-            system_prompt_file=prompt_file
+            system_prompt_file=prompt_file,
+            monitor_name="tool_misuse_monitor",
         )
 
         self.tool_call_history: Dict[str, List[Dict]] = {}

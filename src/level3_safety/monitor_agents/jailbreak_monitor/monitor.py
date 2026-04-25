@@ -27,7 +27,8 @@ class JailbreakMonitor(BaseMonitorAgent):
         prompt_file = Path(__file__).parent / "system_prompt.txt"
         self.llm_judge = LLMJudge(
             risk_type="jailbreak",
-            system_prompt_file=prompt_file
+            system_prompt_file=prompt_file,
+            monitor_name="jailbreak_monitor",   # 新增，与 monitor_llm_config.yaml 中的 key 对应
         )
 
         # Pattern fallback

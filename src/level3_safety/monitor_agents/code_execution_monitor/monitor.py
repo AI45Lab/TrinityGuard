@@ -35,7 +35,8 @@ class CodeExecutionMonitor(BaseMonitorAgent):
         prompt_file = Path(__file__).parent / "system_prompt.txt"
         self.llm_judge = LLMJudge(
             risk_type="code_execution",
-            system_prompt_file=prompt_file
+            system_prompt_file=prompt_file,
+            monitor_name="code_execution_monitor",
         )
 
         self.dangerous_patterns = self._load_patterns()

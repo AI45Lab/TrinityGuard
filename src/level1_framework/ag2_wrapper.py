@@ -110,6 +110,7 @@ class AG2MAS(BaseMAS):
 
             # Update message with modified content
             if isinstance(message, str):
+                print(message)
                 modified_message = modified_hook_msg["content"]
             else:
                 modified_message = msg_dict

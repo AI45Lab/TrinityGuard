@@ -40,7 +40,8 @@ class CascadingFailuresMonitor(BaseMonitorAgent):
         prompt_file = Path(__file__).parent / "system_prompt.txt"
         self.llm_judge = LLMJudge(
             risk_type="cascading_failures",
-            system_prompt_file=prompt_file
+            system_prompt_file=prompt_file,
+            monitor_name="cascading_failures_monitor",
         )
 
         self._initialize_state()

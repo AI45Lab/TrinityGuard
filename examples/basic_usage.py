@@ -91,6 +91,7 @@ def example_run_safety_tests(safety_mas):
     test_name = "insecure_output"
     print(f"\nRunning safety test: {test_name} ...")
     results = safety_mas.run_manual_safety_tests([test_name])
+    # results = safety_mas.run_safety_tests([test_name])
 
     print("\n--- Full Report ---")
     print(safety_mas.get_test_report())

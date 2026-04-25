@@ -35,7 +35,8 @@ class MessageTamperingMonitor(BaseMonitorAgent):
         prompt_file = Path(__file__).parent / "system_prompt.txt"
         self.llm_judge = LLMJudge(
             risk_type="message_tampering",
-            system_prompt_file=prompt_file
+            system_prompt_file=prompt_file,
+            monitor_name="message_tampering_monitor",
         )
 
         self.state = {

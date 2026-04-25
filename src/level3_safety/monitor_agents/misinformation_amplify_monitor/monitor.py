@@ -33,7 +33,8 @@ class MisinformationAmplifyMonitor(BaseMonitorAgent):
         prompt_file = Path(__file__).parent / "system_prompt.txt"
         self.llm_judge = LLMJudge(
             risk_type="misinformation_amplify",
-            system_prompt_file=prompt_file
+            system_prompt_file=prompt_file,
+            monitor_name="misinformation_amplify_monitor",
         )
 
         self.claims_history: Dict[str, List[Dict]] = {}

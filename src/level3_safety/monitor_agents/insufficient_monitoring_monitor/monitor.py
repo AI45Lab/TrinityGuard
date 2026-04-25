@@ -35,7 +35,8 @@ class InsufficientMonitoringMonitor(BaseMonitorAgent):
         prompt_file = Path(__file__).parent / "system_prompt.txt"
         self.llm_judge = LLMJudge(
             risk_type="insufficient_monitoring",
-            system_prompt_file=prompt_file
+            system_prompt_file=prompt_file,
+            monitor_name="insufficient_monitoring_monitor",
         )
 
         self.bypass_attempts: Dict[str, List[str]] = {}

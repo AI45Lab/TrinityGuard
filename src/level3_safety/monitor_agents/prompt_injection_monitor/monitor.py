@@ -36,7 +36,8 @@ class PromptInjectionMonitor(BaseMonitorAgent):
         prompt_file = Path(__file__).parent / "system_prompt.txt"
         self.llm_judge = LLMJudge(
             risk_type="prompt_injection",
-            system_prompt_file=prompt_file
+            system_prompt_file=prompt_file,
+            monitor_name="prompt_injection_monitor",
         )
 
         self.injection_patterns = self._load_patterns()

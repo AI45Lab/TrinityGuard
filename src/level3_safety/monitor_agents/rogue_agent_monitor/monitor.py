@@ -36,7 +36,8 @@ class RogueAgentMonitor(BaseMonitorAgent):
         prompt_file = Path(__file__).parent / "system_prompt.txt"
         self.llm_judge = LLMJudge(
             risk_type="rogue_agent",
-            system_prompt_file=prompt_file
+            system_prompt_file=prompt_file,
+            monitor_name="rogue_agent_monitor",
         )
 
     def get_monitor_info(self) -> Dict[str, str]:

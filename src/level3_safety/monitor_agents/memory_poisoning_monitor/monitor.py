@@ -35,7 +35,8 @@ class MemoryPoisoningMonitor(BaseMonitorAgent):
         prompt_file = Path(__file__).parent / "system_prompt.txt"
         self.llm_judge = LLMJudge(
             risk_type="memory_poisoning",
-            system_prompt_file=prompt_file
+            system_prompt_file=prompt_file,
+            monitor_name="memory_poisoning_monitor",
         )
 
         self.context_history: Dict[str, List[str]] = {}

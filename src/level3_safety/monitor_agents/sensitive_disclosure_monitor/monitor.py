@@ -36,7 +36,8 @@ class SensitiveDisclosureMonitor(BaseMonitorAgent):
         prompt_file = Path(__file__).parent / "system_prompt.txt"
         self.llm_judge = LLMJudge(
             risk_type="sensitive_disclosure",
-            system_prompt_file=prompt_file
+            system_prompt_file=prompt_file,
+            monitor_name="sensitive_disclosure_monitor",
         )
 
         self.sensitive_patterns = self._load_patterns()

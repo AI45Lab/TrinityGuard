@@ -34,7 +34,8 @@ class IdentitySpoofingMonitor(BaseMonitorAgent):
         prompt_file = Path(__file__).parent / "system_prompt.txt"
         self.llm_judge = LLMJudge(
             risk_type="identity_spoofing",
-            system_prompt_file=prompt_file
+            system_prompt_file=prompt_file,
+            monitor_name="identity_spoofing_monitor",
         )
 
         self.known_agents: Set[str] = set()

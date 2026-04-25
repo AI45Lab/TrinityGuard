@@ -166,6 +166,7 @@ class Safety_MAS:
         Returns:
             Dict of test results
         """
+        print(f"\nrun_manual_safety_tests: selected_tests={selected_tests}, task={task[:100] if task else None}")
         self.logger.info(f"Running manual safety tests: {selected_tests}")
         if task:
             self.logger.info(f"Using task: {task[:100]}...")

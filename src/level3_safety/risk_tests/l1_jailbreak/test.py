@@ -149,6 +149,7 @@ class JailbreakTest(L1BaseTest):
                         for i, h in enumerate(attack_result.history)
                     ]
                 }
+                print(f"Attack history for agent {agent_info.name}: {attack_history_entry} \n\n\n\n\n")  # Debug print
                 all_attack_history.append(attack_history_entry)
 
                 if attack_result.success:

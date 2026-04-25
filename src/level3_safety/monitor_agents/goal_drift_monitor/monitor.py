@@ -33,7 +33,8 @@ class GoalDriftMonitor(BaseMonitorAgent):
         prompt_file = Path(__file__).parent / "system_prompt.txt"
         self.llm_judge = LLMJudge(
             risk_type="goal_drift",
-            system_prompt_file=prompt_file
+            system_prompt_file=prompt_file,
+            monitor_name="goal_drift_monitor",
         )
 
         self.original_objectives: Dict[str, str] = {}

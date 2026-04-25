@@ -36,7 +36,8 @@ class SandboxEscapeMonitor(BaseMonitorAgent):
         prompt_file = Path(__file__).parent / "system_prompt.txt"
         self.llm_judge = LLMJudge(
             risk_type="sandbox_escape",
-            system_prompt_file=prompt_file
+            system_prompt_file=prompt_file,
+            monitor_name="sandbox_escape_monitor",
         )
 
         self.escape_attempts: Dict[str, List[Dict]] = {}

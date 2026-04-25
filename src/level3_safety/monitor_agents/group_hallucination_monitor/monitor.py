@@ -36,7 +36,8 @@ class GroupHallucinationMonitor(BaseMonitorAgent):
         prompt_file = Path(__file__).parent / "system_prompt.txt"
         self.llm_judge = LLMJudge(
             risk_type="group_hallucination",
-            system_prompt_file=prompt_file
+            system_prompt_file=prompt_file,
+            monitor_name="group_hallucination_monitor",
         )
 
     def get_monitor_info(self) -> Dict[str, str]:

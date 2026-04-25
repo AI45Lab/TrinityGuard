@@ -4,7 +4,7 @@ import os
 import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 import yaml
 from .exceptions import ConfigurationError
 
@@ -20,6 +20,7 @@ class LLMProfile:
     temperature: float = 0
     max_tokens: int = 4096
     timeout: int = 30
+    price: List[float] = field(default_factory=list)
 
     def get_api_key(self) -> str:
         if self.api_key:
@@ -44,6 +45,11 @@ class LLMProfile:
             config["base_url"] = self.base_url
         elif self.provider == "deepseek":
             config["base_url"] = "https://api.deepseek.com/v1"
+
+        # ⭐ 修复：独立判断 price，而不是 elif
+        if self.price:
+            config["price"] = self.price
+        print(f"LLMProfile.to_ag2_config() generated config: {config}")
         return config
 
 
@@ -149,6 +155,7 @@ def _load_profiles(config_dir: Path) -> Dict[str, LLMProfile]:
             temperature=cfg.get("temperature", 0),
             max_tokens=cfg.get("max_tokens", 4096),
             timeout=cfg.get("timeout", 30),
+            price=cfg.get("price", [0.00028, 0.00028])
         )
     return profiles
 
@@ -184,6 +191,7 @@ def _resolve_profile(cfg_block: dict, named_profiles: Dict[str, LLMProfile]) -> 
         # No overrides or no valid overrides — return base profile unchanged
         return base
     else:
+        print("Warning: No 'profile' key found in config block. Interpreting as inline LLMProfile config.")
         return LLMProfile(
             provider=cfg_block.get("provider", "openai"),
             model=cfg_block.get("model", "gpt-4o-mini"),
@@ -193,6 +201,7 @@ def _resolve_profile(cfg_block: dict, named_profiles: Dict[str, LLMProfile]) -> 
             temperature=cfg_block.get("temperature", 0),
             max_tokens=cfg_block.get("max_tokens", 4096),
             timeout=cfg_block.get("timeout", 30),
+            price=cfg_block.get("price", [0.00028, 0.00028])
         )
 
 

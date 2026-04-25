@@ -55,7 +55,7 @@ __all__ = [
     "MonitorError",
     "ConfigurationError",
     "LLMError",
-    # Config
+    "Config",
     "TrinitySafetyConfig",
     "LLMConfig",
     "LoggingConfig",
