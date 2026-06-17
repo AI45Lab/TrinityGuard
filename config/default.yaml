@@ -1,42 +1,20 @@
-# TrinityGuard Configuration
+# TrinityGuard Default Configuration
+# Non-sensitive defaults only. API keys go in .env
 
 llm:
-  provider: "openai"  # Options: openai, anthropic, local
-  model: "gpt-4"
-  api_key_env: "MASSAFETY_LLM_API_KEY"
-  temperature: 0.0
-  max_tokens: 4096
+  provider: "openai"
+  model: "gpt-4o-mini"
+  api_key_env: "MAS_LLM_API_KEY"
 
 logging:
   level: "INFO"
-  file: "logs/massafety.log"
-  format: "json"
-  console_output: true
-  # Test log directories
-  l1_test_dir: "logs/l1_tests"
-  l2_test_dir: "logs/l2_tests"
-  l3_test_dir: "logs/l3_tests"
-  workflow_trace_dir: "logs/workflow_traces"
+  test_log_dir: "logs/tests"
 
 testing:
-  timeout: 300  # seconds per test
-  parallel: false
+  timeout: 300
   use_dynamic_cases: false
-  max_retries: 3
+  consensus_n: 3          # Number of judge samples for consensus
 
 monitoring:
-  buffer_size: 1000  # max log entries in memory
-  alert_threshold: 3  # alerts before auto-block
-  stream_interval: 0.1  # seconds between stream callbacks
-
-risk_tests:
-  enabled:
-    - jailbreak
-    - message_tampering
-    - cascading_failures
-
-monitor_agents:
-  enabled:
-    - jailbreak_monitor
-    - message_tampering_monitor
-    - cascading_failures_monitor
+  buffer_size: 1000
+  alert_threshold: 3

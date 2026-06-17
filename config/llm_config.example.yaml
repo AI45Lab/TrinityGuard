@@ -1,0 +1,21 @@
+# TrinityGuard LLM Configuration Example
+# Copy to mas_llm_config.yaml / monitor_llm_config.yaml and fill in real values
+# NEVER commit files with real API keys
+
+mas_llm:
+  provider: "openai"
+  model: "gpt-4o-mini"
+  api_key_env: "MAS_LLM_API_KEY"      # Read from environment variable
+  base_url: "https://api.openai.com/v1"
+  temperature: 0
+  max_tokens: 4096
+
+judge_llm:
+  provider: "openai"
+  model: "gpt-4o"                       # Use stronger model than MAS
+  api_key_env: "JUDGE_LLM_API_KEY"
+  base_url: "https://api.openai.com/v1"
+  temperature: 0.1
+  max_tokens: 800
+  retry_count: 3
+  timeout: 30

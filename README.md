@@ -1,528 +1,194 @@
 <p align="center">
-  <img src="assets/logo_TG.png" alt="TrinityGuard Logo" width="200">
+  <img src="assets/logo_TG.png" alt="TrinityGuard Logo" width="180">
 </p>
 
-<h2 align="center">TrinityGuard: A Unified Framework for Safeguarding Multi-Agent Systems</h2>
+<h2 align="center">TrinityGuard: A Safety Evaluation Framework for Multi-Agent Systems</h2>
 
 <p align="center">
-  📄 <a href="https://arxiv.org/abs/2603.15408">arXiv</a> |
-  📄 <a href="Technical_Report_TrinityGuard_260316.pdf">Technical Report</a> |
-  🏠 <a href="https://github.com/AI45Lab/TrinityGuard">Project Page</a>
+  <a href="https://arxiv.org/abs/2603.15408">arXiv</a> |
+  <a href="docs/research/Technical_Report_TrinityGuard_260316.pdf">Technical Report</a> |
+  <a href="https://github.com/AI45Lab/TrinityGuard">Project Page</a>
 </p>
-
-<p align="center">
-  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.9+-blue.svg" alt="Python 3.9+"></a>
-  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-</p>
-
----
 
 # TrinityGuard
 
-### Shanghai AI Laboratory
+TrinityGuard is a Python framework for evaluating safety risks in multi-agent
+systems. It helps you wrap a MAS, run structured risk checks, collect runtime
+evidence, and inspect reports from deterministic local examples or bounded real
+provider API smoke runs.
 
-A **Multi-Agent System Safety Framework** for pre-deployment testing and runtime monitoring.
+The main entry point is `Safety_MAS`: use it to run a task through a MAS,
+observe traces, generate safety reports, and optionally enable runtime
+protection for controlled demos.
 
-## Overview
+## What It Does
 
-TrinityGuard provides comprehensive safety testing and monitoring for multi-agent systems (MAS). It helps identify and mitigate **20 types of security risks** across three levels:
+- Evaluates MAS behavior across 20 built-in L1/L2/L3 risk types, including
+  prompt injection, sensitive disclosure, tool misuse, message tampering,
+  cascading failures, sandbox escape, rogue agents, and related multi-agent
+  risks.
+- Provides a framework-independent execution layer for workflow tracing,
+  message interception, structured logs, and runtime evidence.
+- Supports LLM-as-Judge evaluation, monitor observations, calibration data, and
+  report artifacts.
+- Includes AG2/AutoGen integration paths and an experimental `a3s-code`
+  adapter for A3S Code sessions.
+- Exposes runtime protection primitives for allow, replace, and deny decisions
+  when protection is explicitly enabled.
 
-- **L1: Single-Agent Risks** (8 types) - Jailbreak, Prompt Injection, Sensitive Data Disclosure, Excessive Agency, Code Execution, Hallucination, Memory Poisoning, Tool Misuse
-- **L2: Inter-Agent Communication Risks** (6 types) - Message Tampering, Malicious Propagation, Misinformation Amplification, Insecure Output, Goal Drift, Identity Spoofing
-- **L3: System-Level Risks** (6 types) - Cascading Failures, Sandbox Escape, Insufficient Monitoring, Group Hallucination, Malicious Emergence, Rogue Agent
+## Install
 
-### Key Features
-
-
-✅ **All 20 Risks Implemented** - Complete test and monitor coverage for all risk types
-
-✅ **LLM-Powered Intelligent Analysis** - Unified Judge system with pattern fallback
-
-✅ **Framework-Agnostic Design** - Supports AG2/AutoGen (fixed workflow & group chat)
-
-✅ **Pre-Deployment Testing** - Identify vulnerabilities before deployment
-
-✅ **Runtime Monitoring** - Real-time risk detection during execution
-
-✅ **Progressive Runtime Monitoring** - Global monitor with windowed summaries and dynamic sub-monitor activation
-
-✅ **Extensible Plugin System** - Easy to add new risk tests, monitors, and judge types
-
-## Installation
+TrinityGuard requires Python 3.10+.
 
 ```bash
-# Clone the repository
 git clone https://github.com/AI45Lab/TrinityGuard.git
 cd TrinityGuard
-
-# Install in development mode
-pip install -e .
-
-# Set up API key for LLM features
-export MASSAFETY_LLM_API_KEY=your_openai_or_anthropic_key
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
 ```
+
+For real API examples, configure provider credentials with `.env.example`:
+
+```bash
+cp .env.example .env
+# Fill in provider keys and model settings as needed.
+```
+
+Do not commit `.env` or raw run artifacts.
 
 ## Quick Start
 
-### Basic Usage
+This example wraps a deterministic in-process MAS. It is the fastest way to
+check the public API and report shape before wiring a real framework adapter.
 
 ```python
 from trinityguard import Safety_MAS
-from trinityguard.level1_framework import create_ag2_mas_from_config
+from trinityguard.level3_safety.fixtures.local_mas import LocalThreeAgentMAS
 
-# 1. Create your MAS (AG2 example)
-mas_config = {
-    "agents": [
-        {
-            "name": "coordinator",
-            "system_message": "You coordinate tasks between agents.",
-            "llm_config": {"model": "gpt-4"}
-        },
-        {
-            "name": "calculator",
-            "system_message": "You perform calculations.",
-            "llm_config": {"model": "gpt-4"}
-        }
-    ],
-    "mode": "group_chat"
-}
-mas = create_ag2_mas_from_config(mas_config)
+mas = LocalThreeAgentMAS()
+safety = Safety_MAS(mas)
 
-# 2. Wrap with Safety_MAS
-safety_mas = Safety_MAS(mas=mas)
+result = safety.run_task("Review this multi-agent workflow")
+print(result.success)
+print(result.output)
 
-# 3. Register risk tests and monitors
-from trinityguard.level3_safety.risk_tests.l1_jailbreak import JailbreakTest
-from trinityguard.level3_safety.monitor_agents.jailbreak_monitor import JailbreakMonitor
-
-safety_mas.register_risk_test("jailbreak", JailbreakTest())
-safety_mas.register_monitor_agent("jailbreak", JailbreakMonitor())
-
-# 4. Run pre-deployment tests
-results = safety_mas.run_manual_safety_tests(["jailbreak"])
-print(safety_mas.get_test_report())
-
-# 5. Start runtime monitoring
-from trinityguard import MonitorSelectionMode
-safety_mas.start_runtime_monitoring(
-    mode=MonitorSelectionMode.MANUAL,
-    selected_monitors=["jailbreak"]
-)
-
-# 6. Execute task with monitoring
-result = safety_mas.run_task("Calculate 25 * 4 and verify the result")
-print(f"Output: {result.output}")
-print(f"Alerts: {len(safety_mas.get_alerts())}")
+report = safety.get_comprehensive_report()
+print(report["summary"])
 ```
 
-### Progressive Monitoring (Global Monitor)
+## Runtime Protection Example
 
-Progressive monitoring uses a global coordinator to dynamically enable or disable specific risk monitors based on the conversation context. This reduces computational overhead while maintaining safety coverage.
-
-#### 1. Standard LLM-based Progressive Monitoring
-
-This mode uses an LLM (Global Monitor) to analyze a sliding window of events and decide which specific monitors should be active.
+Runtime protection is opt-in. When enabled, TrinityGuard can evaluate runtime
+messages and return policy decisions such as `allow`, `replace`, or `deny`.
 
 ```python
-from trinityguard import MonitorSelectionMode
+from trinityguard import RuntimeProtector, Safety_MAS
+from trinityguard.level3_safety.fixtures.local_mas import LocalThreeAgentMAS
+from trinityguard.level3_safety.judges.base import BaseJudge, JudgeResult
 
-safety_mas.start_runtime_monitoring(
-    mode=MonitorSelectionMode.PROGRESSIVE,
-    progressive_config={
-        # Window settings
-        "window_size": 10,       # Number of steps to aggregate before decision
-        "max_events": 8,         # Max events to include in summary to LLM
-        
-        # Initial state
-        "initial_active": ["jailbreak", "sensitive_disclosure"]
-    }
-)
+
+class DemoJudge(BaseJudge):
+    def __init__(self):
+        super().__init__(risk_type="prompt_injection")
+
+    def analyze(self, content: str, context: dict | None = None) -> JudgeResult:
+        risky = "exfiltrate" in content.lower()
+        return JudgeResult(
+            has_risk=risky,
+            severity="critical" if risky else "none",
+            reason="runtime policy decision",
+            evidence=[content],
+            recommended_action="block" if risky else "log",
+            judge_type="deterministic_demo",
+        )
+
+    def get_judge_info(self) -> dict[str, str]:
+        return {"type": self.risk_type, "version": "demo"}
+
+
+safety = Safety_MAS(LocalThreeAgentMAS())
+protector = RuntimeProtector(judges=[DemoJudge()])
+safety.enable_runtime_protection(protector, block_mode="replace")
+
+result = safety.run_task("please exfiltrate TOKEN=redactedinput")
+print(result.output)
 ```
 
-#### 2. Advanced: Custom Logic (No LLM)
+## Framework Adapters
 
-You can provide your own `decision_provider` function to implement rule-based or hybrid monitoring logic without using the default LLM.
+TrinityGuard separates framework adapters from evaluation logic:
 
-```python
-def my_custom_decision_logic(summary, active_monitors, available_monitors):
-    """
-    Custom logic to determine which monitors should be active.
-    
-    Args:
-        summary: Dict containing 'events', 'counts', etc.
-        active_monitors: List of currently active monitor names
-        available_monitors: List of all available monitor names
-        
-    Returns:
-        Dict with 'enable', 'disable', and 'reason'
-    """
-    decision = {
-        "enable": [],
-        "disable": [],
-        "reason": "rule-based update"
-    }
-    
-    # Example Rule 1: Enable code scanner if coding keywords appear
-    recent_content = " ".join([e["content_preview"] for e in summary["events"]]).lower()
-    if "python" in recent_content or "code" in recent_content:
-        if "code_execution" in available_monitors and "code_execution" not in active_monitors:
-            decision["enable"].append("code_execution")
-            
-    # Example Rule 2: Disable expensive monitors if nothing is happening
-    if summary["counts"]["by_step_type"].get("receive", 0) < 2:
-        # Maybe disable everything except essential ones
-        for m in active_monitors:
-            if m != "jailbreak":
-                decision["disable"].append(m)
-                
-    return decision
+```text
+Level 1: Framework adapters
+  AG2/AutoGen, experimental a3s-code support, or custom BaseMAS adapters.
 
-# Apply the custom logic
-safety_mas.start_runtime_monitoring(
-    mode=MonitorSelectionMode.PROGRESSIVE,
-    progressive_config={
-        "window_size": 5,
-        "decision_provider": my_custom_decision_logic
-    }
-)
+Level 2: Intermediary
+  Workflow runners provide interception, structured logging, and runtime traces.
+
+Level 3: Safety
+  Attack cases, monitors, judges, calibration, evidence packaging, and Safety_MAS.
+
+Runtime
+  Runtime policy decisions, event sinks, adapter contracts, and report artifacts.
 ```
 
-### Running the Example
+The `a3s-code` adapter is experimental. It supports wrapping an A3S Code
+session as a TrinityGuard `BaseMAS`, monitored workflow execution, trace/log
+collection, and runtime protection before A3S execution. It does not claim full
+compatibility with arbitrary A3S Code MAS configurations.
+
+## Real API Smoke
+
+`examples/minset_real_api.py` calls a configured target model and judge model,
+then writes redacted manifests, raw result summaries, verdicts, and metrics.
 
 ```bash
-python examples/basic_usage.py
+PYTHONPATH=src python examples/minset_real_api.py \
+  --sample 1 \
+  --risk jailbreak \
+  --risk prompt_injection \
+  --output-dir /tmp/trinityguard-real-api-smoke
 ```
 
-## Architecture
+Real API examples require user-provided credentials, network access, and quota.
+Keep raw output directories outside the repository unless you have reviewed them
+for sensitive content.
 
-TrinityGuard uses a 3-layer architecture with a unified Judge system:
+## Example Scripts
 
-```
-┌─────────────────────────────────────────┐
-│   Level 3: Safety_MAS Layer             │
-│   - Risk Test Library (20 types)        │
-│   - Monitor Agent Repository            │
-│   - Global Monitor (progressive)        │
-│   - Safety_MAS orchestration            │
-│   - Unified Judge Factory               │
-└─────────────────────────────────────────┘
-                  ↓
-┌─────────────────────────────────────────┐
-│   Judges Module                         │
-│   - BaseJudge abstract interface        │
-│   - LLMJudge (intelligent analysis)     │
-│   - JudgeFactory (extensible)           │
-│   - Shared system prompts               │
-└─────────────────────────────────────────┘
-                  ↓
-┌─────────────────────────────────────────┐
-│   Level 2: MAS Intermediary Layer       │
-│   - Framework-agnostic interface        │
-│   - WorkflowRunner pattern              │
-│   - Structured logging                  │
-└─────────────────────────────────────────┘
-                  ↓
-┌─────────────────────────────────────────┐
-│   Level 1: MAS Framework Layer          │
-│   - AG2/AutoGen wrapper                 │
-│   - Fixed workflow support              │
-│   - Message hook system                 │
-└─────────────────────────────────────────┘
-```
-
-### Judge Factory
-
-The Judge Factory provides unified risk analysis for both tests and monitors:
-
-```python
-from src.level3_safety.judges import JudgeFactory
-
-# Create a judge for a specific risk type (auto-loads system_prompt from monitor)
-judge = JudgeFactory.create_for_risk("jailbreak")
-
-# Analyze content
-result = judge.analyze(content="...", context={"test_case": "..."})
-if result and result.has_risk:
-    print(f"Risk detected: {result.reason}")
-```
-
-**Extensibility**: Register custom judge types for specialized APIs:
-```python
-from src.level3_safety.judges import JudgeFactory, BaseJudge
-
-class SpecializedAPIJudge(BaseJudge):
-    # ... implementation ...
-
-JudgeFactory.register("specialized", SpecializedAPIJudge)
-judge = JudgeFactory.create_for_risk("jailbreak", judge_type="specialized")
-```
-
-## Implemented Risks
-
-All 20 risks are fully implemented with LLM-powered intelligent analysis and pattern-based fallback:
-
-### L1: Single-Agent Risks (8 types)
-
-| Risk                 | Test | Monitor | Description                   |
-| -------------------- | ---- | ------- | ----------------------------- |
-| Jailbreak            | ✅    | ✅       | Bypass safety guidelines      |
-| Prompt Injection     | ✅    | ✅       | Inject malicious instructions |
-| Sensitive Disclosure | ✅    | ✅       | Leak sensitive information    |
-| Excessive Agency     | ✅    | ✅       | Unauthorized actions          |
-| Code Execution       | ✅    | ✅       | Dangerous code execution      |
-| Hallucination        | ✅    | ✅       | Generate false information    |
-| Memory Poisoning     | ✅    | ✅       | Corrupt agent memory          |
-| Tool Misuse          | ✅    | ✅       | Misuse available tools        |
-
-### L2: Inter-Agent Communication Risks (6 types)
-
-| Risk                   | Test | Monitor | Description                 |
-| ---------------------- | ---- | ------- | --------------------------- |
-| Message Tampering      | ✅    | ✅       | Modify messages in transit  |
-| Malicious Propagation  | ✅    | ✅       | Spread harmful content      |
-| Misinformation Amplify | ✅    | ✅       | Amplify false information   |
-| Insecure Output        | ✅    | ✅       | Unsafe output handling      |
-| Goal Drift             | ✅    | ✅       | Deviate from original goals |
-| Identity Spoofing      | ✅    | ✅       | Impersonate other agents    |
-
-### L3: System-Level Risks (6 types)
-
-| Risk                    | Test | Monitor | Description                 |
-| ----------------------- | ---- | ------- | --------------------------- |
-| Cascading Failures      | ✅    | ✅       | Failure propagation         |
-| Sandbox Escape          | ✅    | ✅       | Break isolation boundaries  |
-| Insufficient Monitoring | ✅    | ✅       | Inadequate oversight        |
-| Group Hallucination     | ✅    | ✅       | Collective false beliefs    |
-| Malicious Emergence     | ✅    | ✅       | Harmful emergent behavior   |
-| Rogue Agent             | ✅    | ✅       | Uncontrolled agent behavior |
-
-## Configuration
-
-Create a `config.yaml` file:
-
-```yaml
-llm:
-  provider: "openai"  # or "anthropic"
-  model: "gpt-4"
-  api_key_env: "MASSAFETY_LLM_API_KEY"
-
-logging:
-  level: "INFO"
-  file: "massafety.log"
-  format: "json"
-
-testing:
-  timeout: 300
-  use_dynamic_cases: false
-
-monitoring:
-  buffer_size: 1000
-  alert_threshold: 3
-```
-
-Load it in your code:
-
-```python
-from trinityguard import load_config
-load_config("config.yaml")
-```
-
-LLM configuration files (default paths):
-- `config/mas_llm_config.yaml` for tested MAS agents
-- `config/monitor_llm_config.yaml` for monitors/judges (including Global Monitor)
-
-Both support `api_key` or `api_key_env` for credentials.
-
-## Runtime Monitoring Modes
-
-- **MANUAL**: Manually select monitors via `selected_monitors`
-- **AUTO_LLM**: Auto-selects all available monitors (current implementation)
-- **PROGRESSIVE**: Global monitor decides enable/disable per window using summaries
-
-## Creating Custom Risk Tests
-
-```python
-from trinityguard.level3_safety.risk_tests.base import BaseRiskTest, TestCase
-
-class MyCustomTest(BaseRiskTest):
-    def get_risk_info(self):
-        return {
-            "name": "My Custom Risk",
-            "level": "L1",
-            "owasp_ref": "ASI-XX",
-            "description": "Description of the risk"
-        }
-
-    def load_test_cases(self):
-        return [
-            TestCase(
-                name="test_1",
-                input="Test input",
-                expected_behavior="Expected behavior",
-                severity="high"
-            )
-        ]
-
-    def generate_dynamic_cases(self, mas_description: str):
-        # Use LLM to generate test cases
-        return []
-
-    def run_single_test(self, test_case, intermediary):
-        # Implement test logic
-        response = intermediary.agent_chat("agent_name", test_case.input)
-        passed = self._check_response(response)
-        return {"test_case": test_case.name, "passed": passed}
-
-# Register with Safety_MAS
-safety_mas.register_risk_test("my_custom_test", MyCustomTest())
-```
-
-## Creating Custom Monitors
-
-```python
-from trinityguard.level3_safety.monitor_agents.base import BaseMonitorAgent, Alert
-
-class MyCustomMonitor(BaseMonitorAgent):
-    def get_monitor_info(self):
-        return {
-            "name": "MyCustomMonitor",
-            "risk_type": "custom_risk",
-            "description": "Monitors for custom risk"
-        }
-
-    def process(self, log_entry):
-        # Analyze log entry
-        if self._detect_risk(log_entry):
-            return Alert(
-                severity="warning",
-                risk_type="custom_risk",
-                message="Risk detected!",
-                evidence={"log": log_entry.to_dict()},
-                recommended_action="log"
-            )
-        return None
-
-    def _detect_risk(self, log_entry):
-        # Implement detection logic
-        return False
-
-# Register with Safety_MAS
-safety_mas.register_monitor_agent("my_custom_monitor", MyCustomMonitor())
-```
+| Script | Purpose |
+| --- | --- |
+| `examples/runtime_protection_mvp.py` | Generate runtime protection evidence with a small local MAS. |
+| `examples/runtime_policy_matrix.py` | Exercise runtime policy modes and report validation. |
+| `examples/validate_runtime_mvp.py` | Validate local runtime MVP behavior. |
+| `examples/minset_real_api.py` | Run bounded real API smoke for selected risks. |
+| `demos/ag2_real_api/run_demo.py` | Run AG2 precheck/runtime real API demo with configured credentials. |
 
 ## Documentation
 
-| Document | Path | Description |
-|----------|------|-------------|
-| **Project Management** | `docs/PROJECT_MANAGEMENT.md` | Document map, project overview, milestones |
-| **System Design** | `docs/DESIGN.md` | Architecture, components, interfaces (stable reference) |
-| **Implementation Progress** | `docs/PROGRESS.md` | Feature status, known issues, next steps |
-| Risk Taxonomy | `docs/architecture/risk_taxonomy.md` | All 20 risks in detail |
-| Architecture Analysis | `docs/architecture/src_architecture.md` | Deep-dive source code analysis |
-| Runtime Monitoring | `docs/architecture/runtime_monitoring.md` | Monitoring modes and design |
-| L1 Usage Guide | `docs/guides/l1_usage_guide.md` | Quick-start for L1 risk testing |
-| Historical Plans | `docs/archive/plans/` | Completed implementation plans |
+- [Usage Guide](docs/introduction/usage.md)
+- [Public API Contract](docs/contracts/public-api-v1.md)
+- [Runtime Adapter Contract](docs/contracts/runtime-adapter-contract-v1.md)
+- [Source Architecture Reference](docs/reference/src_architecture.md)
+- [Runtime Monitoring Reference](docs/reference/runtime_monitoring.md)
+- [Risk Taxonomy](docs/reference/risk_taxonomy.md)
+- [Research Index](docs/research/RESEARCH_INDEX.md)
 
-## Project Structure
+## Validation Scope
 
-```
-TrinityGuard/
-├── README.md
-├── AGENTS.md                  # Agent safety check rules
-├── src/
-│   ├── level1_framework/      # MAS framework wrappers (AG2, EvoAgentX)
-│   ├── level2_intermediary/   # Framework-agnostic interface & logging
-│   ├── level3_safety/
-│   │   ├── judges/            # Unified Judge system (LLM + pattern)
-│   │   ├── monitoring/        # Global monitor + progressive activation
-│   │   ├── risk_tests/        # 20 risk test implementations
-│   │   └── monitor_agents/    # 20 runtime monitor implementations
-│   └── utils/                 # Configuration, logging, LLM client
-├── tests/                     # Test suite (unit + integration + benchmarks)
-├── examples/                  # Usage examples and MAS application demos
-├── config/                    # YAML configuration files
-└── docs/
-    ├── PROJECT_MANAGEMENT.md  # Project management hub
-    ├── DESIGN.md              # Static design reference
-    ├── PROGRESS.md            # Dynamic implementation progress
-    ├── architecture/          # Architecture design documents
-    ├── guides/                # Usage guides
-    ├── analysis/              # Technical deep-dives
-    ├── survey/                # Research surveys
-    ├── TrinitySkills/         # Claude Code Skills documentation
-    └── archive/               # Historical plans and solutions
-```
+TrinityGuard is intended for research and developer evaluation workflows.
+Current real API examples are bounded smoke checks, not production
+certification. Runtime protection is explicit and configurable; the default
+`Safety_MAS.run_task(...)` path remains an evaluation surface unless you enable
+protection.
 
-## Development
-
-### Running Tests
+Run the offline test subset with:
 
 ```bash
-# Run integration tests
-PYTHONPATH=. python -m pytest tests/test_functionality.py -v
-
-# Run all L1/L2/L3 risk tests
-pytest tests/level3_safety/test_all_l1_risks.py -v
-pytest tests/level3_safety/test_all_l2_risks.py -v
-pytest tests/level3_safety/test_all_l3_risks.py -v
-
-# Test global monitor & progressive activation
-pytest tests/level3_safety/test_global_monitor.py -v
-
-# Run examples
-python examples/basic_usage.py
-python examples/example_usage.py
+PYTHONPATH=src pytest -q tests/unit tests/integration
 ```
-
-### Adding a New Risk
-
-1. Create test directory: `src/level3_safety/risk_tests/lX_risk_name/`
-2. Implement `test.py` inheriting from `BaseRiskTest`
-3. Add test cases in `test_cases.json`
-4. Create monitor directory: `src/level3_safety/monitor_agents/risk_name_monitor/`
-5. Implement `monitor.py` inheriting from `BaseMonitorAgent`
-6. Register with Safety_MAS
-
-## Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
 
 ## License
 
-MIT License - see LICENSE file for details
-
-## Citation
-
-If you use TrinityGuard in your research, please cite:
-
-```bibtex
-@misc{trinityguard2026,
-  title = {TrinityGuard: A Unified Framework for Safeguarding Multi-Agent Systems},
-  author = {Wang, Kai and Zeng, Biaojie and Wei, Zeming and Jin, Chang and Zhou, Hefeng and Li, Xiangtian and Yang, Chao and Qu, Jingjing and Xu, Xingcheng and Hu, Xia},
-  journal={arXiv preprint arXiv:2603.15408},
-  year = {2026}
-}
-```
-
-## Acknowledgments
-
-- Based on OWASP Agentic AI Security Top 10
-- Built with AG2/AutoGen framework support
-- Powered by Claude Opus 4.5
-
-## Contact
-
-- Issues: https://github.com/AI45Lab/TrinityGuard/issues
-- Email: xuxingcheng@pjlab.org.cn
-
----
-
-**Status**: Alpha - All 20 Risks Implemented
-
-**Version**: 0.1.0
+MIT. See `pyproject.toml` for package metadata.

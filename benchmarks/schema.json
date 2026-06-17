@@ -1,0 +1,144 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "TrinityGuard Benchmark Result",
+    "description": "Standard output format for TrinityGuard safety evaluation runs",
+    "type": "object",
+    "required": [
+        "run_id",
+        "timestamp",
+        "trinityguard_version",
+        "mas_config",
+        "llm_config",
+        "results",
+        "overall_summary",
+    ],
+    "properties": {
+        "run_id": {"type": "string", "format": "uuid"},
+        "timestamp": {"type": "string", "format": "date-time"},
+        "trinityguard_version": {"type": "string"},
+        "mas_config": {
+            "type": "object",
+            "properties": {
+                "framework": {"type": "string"},
+                "agents": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string"},
+                            "role": {"type": "string"},
+                            "model": {"type": "string"},
+                        },
+                    },
+                },
+                "mode": {"type": "string", "enum": ["group_chat", "direct"]},
+            },
+        },
+        "llm_config": {
+            "type": "object",
+            "properties": {
+                "mas_model": {"type": "string"},
+                "judge_model": {"type": "string"},
+                "judge_consensus_n": {"type": "integer", "minimum": 1},
+            },
+        },
+        "results": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["attack_type", "level", "cases", "summary"],
+                "properties": {
+                    "attack_type": {"type": "string"},
+                    "level": {"type": "string", "enum": ["L1", "L2", "L3"]},
+                    "attack_engine": {
+                        "type": "object",
+                        "properties": {
+                            "mode": {
+                                "type": "string",
+                                "enum": [
+                                    "static",
+                                    "openrt_direct",
+                                    "openrt_pair",
+                                    "openrt_crescendo",
+                                ],
+                            },
+                            "method": {"type": "string"},
+                            "evidence_scope": {"type": "string"},
+                            "final_verdict_authority": {
+                                "type": "string",
+                                "enum": ["trinityguard_judge"],
+                            },
+                        },
+                    },
+                    "cases": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "case_id",
+                                "attack_input",
+                                "agent_response",
+                                "judge_verdict",
+                            ],
+                            "properties": {
+                                "case_id": {"type": "string"},
+                                "attack_input": {"type": "string"},
+                                "agent_response": {"type": "string"},
+                                "judge_verdict": {
+                                    "type": "object",
+                                    "properties": {
+                                        "has_risk": {"type": "boolean"},
+                                        "severity": {
+                                            "type": "string",
+                                            "enum": ["none", "info", "warning", "critical"],
+                                        },
+                                        "reason": {"type": "string"},
+                                        "consensus_votes": {"type": "string"},
+                                    },
+                                },
+                                "target_agent": {"type": "string"},
+                                "engine_metadata": {"type": "object"},
+                                "latency_ms": {"type": "number"},
+                                "tokens_used": {"type": "integer"},
+                            },
+                        },
+                    },
+                    "summary": {
+                        "type": "object",
+                        "properties": {
+                            "total_cases": {"type": "integer"},
+                            "risk_detected": {"type": "integer"},
+                            "attack_success_rate": {"type": "number", "minimum": 0, "maximum": 1},
+                            "by_severity": {
+                                "type": "object",
+                                "properties": {
+                                    "critical": {"type": "integer"},
+                                    "warning": {"type": "integer"},
+                                    "info": {"type": "integer"},
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        "overall_summary": {
+            "type": "object",
+            "properties": {
+                "total_attacks": {"type": "integer"},
+                "total_cases": {"type": "integer"},
+                "overall_risk_rate": {"type": "number"},
+                "by_level": {
+                    "type": "object",
+                    "properties": {
+                        "L1": {"type": "number"},
+                        "L2": {"type": "number"},
+                        "L3": {"type": "number"},
+                    },
+                },
+                "total_cost_usd": {"type": "number"},
+                "total_duration_seconds": {"type": "number"},
+            },
+        },
+    },
+}
